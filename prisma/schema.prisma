@@ -1,0 +1,20 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Analysis {
+  id           String   @id @default(cuid())
+  createdAt    DateTime @default(now())
+  title        String
+  dataType     String
+  analysisJson String
+  inputText    String
+  inputTokens  Int      @default(0)
+  outputTokens Int      @default(0)
+  durationMs   Int?
+}

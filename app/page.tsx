@@ -7,6 +7,7 @@ import UrlScraper from "@/components/UrlScraper";
 import SocialListener from "@/components/SocialListener";
 import SourcesPanel from "@/components/SourcesPanel";
 import AnalysisResults from "@/components/AnalysisResults";
+import AnalysisHistory from "@/components/AnalysisHistory";
 import type { AnalysisState, DataType, BehaviourAnalysis } from "@/lib/types";
 import type { Source } from "@/lib/scraper";
 import { formatSourcesAsText } from "@/lib/scraper";
@@ -66,6 +67,10 @@ export default function Home() {
   const [usage, setUsage] = useState<{ inputTokens: number; outputTokens: number } | undefined>();
   const startTimeRef = useRef<number>(0);
 
+  // History panel
+  const [showHistory, setShowHistory] = useState(false);
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
+
   const isLoading = analysisState.status === "streaming";
 
   // ── Analysis runner ─────────────────────────────────────────────────────
@@ -116,6 +121,7 @@ export default function Home() {
             } else if (event.type === "complete") {
               setUsage(event.usage);
               setAnalysisState({ status: "complete", streamingText: "", analysis: event.analysis, error: null, durationMs: Date.now() - startTimeRef.current });
+              setHistoryRefreshKey((k) => k + 1);
             } else if (event.type === "error") {
               setAnalysisState({ status: "error", streamingText: "", analysis: null, error: event.error, durationMs: null });
             }
@@ -149,6 +155,12 @@ export default function Home() {
   };
 
   const clearSources = () => setSources([]);
+
+  const handleLoadFromHistory = (analysis: BehaviourAnalysis, dt: DataType) => {
+    setUsage(undefined);
+    setAnalysisState({ status: "complete", streamingText: "", analysis, error: null, durationMs: null });
+    setShowHistory(false);
+  };
 
   const activeInputText =
     mode === "paste" ? pasteText : formatSourcesAsText(sources);
@@ -225,12 +237,56 @@ export default function Home() {
           </div>
 
           {/* ── Results panel ── */}
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm min-h-96 overflow-hidden">
-            <AnalysisResults
-              state={analysisState}
-              inputText={activeInputText}
-              usage={usage}
-            />
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm min-h-96 overflow-hidden flex flex-col">
+            {/* Panel header with history toggle */}
+            <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 shrink-0">
+              <div className="flex items-center gap-2">
+                {showHistory ? (
+                  <>
+                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="text-sm font-medium text-gray-700">Analysis history</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                    <span className="text-sm font-medium text-gray-700">Results</span>
+                  </>
+                )}
+              </div>
+              <button
+                onClick={() => setShowHistory((v) => !v)}
+                className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg transition-all ${
+                  showHistory
+                    ? "bg-brand-50 text-brand-600 hover:bg-brand-100"
+                    : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {showHistory ? "Back to results" : "History"}
+              </button>
+            </div>
+
+            {/* Panel body */}
+            <div className="flex-1 overflow-hidden">
+              {showHistory ? (
+                <AnalysisHistory
+                  onLoad={handleLoadFromHistory}
+                  refreshKey={historyRefreshKey}
+                />
+              ) : (
+                <AnalysisResults
+                  state={analysisState}
+                  inputText={activeInputText}
+                  usage={usage}
+                />
+              )}
+            </div>
           </div>
         </div>
       </main>
