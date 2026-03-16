@@ -1,11 +1,103 @@
 "use client";
 
 import { useState } from "react";
-import type { Source, RedditPost, HNItem } from "@/lib/scraper";
+import type {
+  Source,
+  RedditPost,
+  HNItem,
+  GNewsItem,
+  StockTwitsMessage,
+  TrustpilotReview,
+  AppStoreReview,
+  RssFeedItem,
+} from "@/lib/scraper";
 
 interface SocialListenerProps {
   onSourcesReady: (sources: Source[]) => void;
 }
+
+// ─── Source definitions ───────────────────────────────────────────────────────
+
+const SOURCE_DEFS = [
+  {
+    id: "reddit" as const,
+    label: "Reddit",
+    group: "community",
+    activeClass: "border-orange-300 bg-orange-50 text-orange-700",
+    icon: (
+      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.196-2.512-.73a.326.326 0 0 0-.232-.095z" />
+      </svg>
+    ),
+  },
+  {
+    id: "hackernews" as const,
+    label: "Hacker News",
+    group: "community",
+    activeClass: "border-amber-300 bg-amber-50 text-amber-700",
+    icon: <span className="font-black text-sm leading-none">Y</span>,
+  },
+  {
+    id: "gnews" as const,
+    label: "Google News",
+    group: "news",
+    activeClass: "border-blue-300 bg-blue-50 text-blue-700",
+    icon: (
+      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1M19 20a2 2 0 002-2V8a2 2 0 00-2-2h-1M9 12h6M9 16h3" />
+      </svg>
+    ),
+  },
+  {
+    id: "stocktwits" as const,
+    label: "StockTwits",
+    group: "finance",
+    activeClass: "border-emerald-300 bg-emerald-50 text-emerald-700",
+    icon: (
+      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+        <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+        <polyline points="16 7 22 7 22 13" />
+      </svg>
+    ),
+  },
+  {
+    id: "trustpilot" as const,
+    label: "Trustpilot",
+    group: "reviews",
+    activeClass: "border-green-300 bg-green-50 text-green-700",
+    icon: (
+      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+      </svg>
+    ),
+  },
+  {
+    id: "appstore" as const,
+    label: "App Store",
+    group: "reviews",
+    activeClass: "border-sky-300 bg-sky-50 text-sky-700",
+    icon: (
+      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+        <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+        <line x1="12" y1="18" x2="12.01" y2="18" strokeWidth="3" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
+    id: "rss" as const,
+    label: "RSS Feeds",
+    group: "feeds",
+    activeClass: "border-purple-300 bg-purple-50 text-purple-700",
+    icon: (
+      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+        <path d="M4 11a9 9 0 019 9M4 4a16 16 0 0116 16" strokeLinecap="round" />
+        <circle cx="5" cy="19" r="1" fill="currentColor" stroke="none" />
+      </svg>
+    ),
+  },
+];
+
+type SourceId = (typeof SOURCE_DEFS)[number]["id"];
 
 const TIMEFRAMES = [
   { value: "week", label: "Past week" },
@@ -20,140 +112,397 @@ const SORT_OPTIONS = [
   { value: "new", label: "New" },
 ];
 
+const COUNTRY_OPTIONS = [
+  { value: "gb", label: "🇬🇧 United Kingdom" },
+  { value: "us", label: "🇺🇸 United States" },
+  { value: "au", label: "🇦🇺 Australia" },
+  { value: "ca", label: "🇨🇦 Canada" },
+  { value: "ie", label: "🇮🇪 Ireland" },
+  { value: "nz", label: "🇳🇿 New Zealand" },
+];
+
+const RSS_PRESETS = [
+  { label: "GamblingInsider", url: "https://www.gamblinginsider.com/feed" },
+  { label: "iGaming Business", url: "https://igamingbusiness.com/feed/" },
+  { label: "Gambling Commission", url: "https://www.gamblingcommission.gov.uk/rss.xml" },
+  { label: "FCA News", url: "https://www.fca.org.uk/news/rss.xml" },
+  { label: "FT Finance", url: "https://www.ft.com/rss/home/finance" },
+  { label: "Reuters Business", url: "https://feeds.reuters.com/reuters/businessNews" },
+];
+
+// ─── Source toggle pill ───────────────────────────────────────────────────────
+
+function SourcePill({
+  def,
+  active,
+  onToggle,
+}: {
+  def: (typeof SOURCE_DEFS)[number];
+  active: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-all ${
+        active
+          ? def.activeClass
+          : "border-gray-200 text-gray-500 hover:border-gray-300 hover:text-gray-700"
+      }`}
+    >
+      {def.icon}
+      {def.label}
+    </button>
+  );
+}
+
+// ─── Group header ─────────────────────────────────────────────────────────────
+
+function GroupLabel({ label }: { label: string }) {
+  return (
+    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">{label}</p>
+  );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
+
 export default function SocialListener({ onSourcesReady }: SocialListenerProps) {
+  const [active, setActive] = useState<Set<SourceId>>(new Set<SourceId>(["reddit"]));
+
+  // Shared search
   const [query, setQuery] = useState("");
+  // StockTwits
+  const [symbol, setSymbol] = useState("");
+  // Reddit-specific
   const [subreddit, setSubreddit] = useState("");
   const [timeframe, setTimeframe] = useState("year");
   const [sort, setSort] = useState("relevance");
   const [limit, setLimit] = useState(30);
   const [includeComments, setIncludeComments] = useState(true);
-  const [useReddit, setUseReddit] = useState(true);
-  const [useHN, setUseHN] = useState(false);
+  // Trustpilot
+  const [tpDomain, setTpDomain] = useState("");
+  const [tpPages, setTpPages] = useState(2);
+  // App Store
+  const [appId, setAppId] = useState("");
+  const [appCountry, setAppCountry] = useState("gb");
+  const [appPages, setAppPages] = useState(3);
+  // RSS
+  const [rssUrls, setRssUrls] = useState("");
+
   const [isFetching, setIsFetching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fetchedCount, setFetchedCount] = useState<number | null>(null);
 
+  const toggle = (id: SourceId) =>
+    setActive((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
+  const needsQuery = active.has("reddit") || active.has("hackernews") || active.has("gnews");
+  const hasSocialSearch =
+    active.has("reddit") || active.has("hackernews") || active.has("gnews") || active.has("stocktwits");
+
+  const canSubmit =
+    active.size > 0 &&
+    (!needsQuery || query.trim()) &&
+    (!active.has("stocktwits") || query.trim() || symbol.trim()) &&
+    (!active.has("trustpilot") || tpDomain.trim()) &&
+    (!active.has("appstore") || appId.trim()) &&
+    (!active.has("rss") || rssUrls.trim());
+
+  // ─── Converters ──────────────────────────────────────────────────────────────
+
+  function socialItemToSource(item: RedditPost | HNItem | GNewsItem | StockTwitsMessage): Source {
+    switch (item.source) {
+      case "reddit": {
+        const r = item as RedditPost;
+        return {
+          id: `reddit-${r.id}`,
+          title: r.title,
+          text: r.text,
+          url: r.url,
+          wordCount: r.text.split(/\s+/).length,
+          source: "reddit",
+          meta: `r/${r.subreddit} · ${r.type} · ↑${r.score}`,
+          selected: true,
+        };
+      }
+      case "hackernews": {
+        const h = item as HNItem;
+        return {
+          id: `hn-${h.id}`,
+          title: h.title,
+          text: h.text,
+          url: h.url,
+          wordCount: h.text.split(/\s+/).length,
+          source: "hackernews",
+          meta: `HN · ${h.type} · ↑${h.score}`,
+          selected: true,
+        };
+      }
+      case "gnews": {
+        const g = item as GNewsItem;
+        return {
+          id: `gnews-${encodeURIComponent(g.url).slice(0, 40)}`,
+          title: g.title,
+          text: g.text,
+          url: g.url,
+          wordCount: g.text.split(/\s+/).length,
+          source: "gnews",
+          meta: "Google News",
+          selected: true,
+        };
+      }
+      case "stocktwits": {
+        const s = item as StockTwitsMessage;
+        return {
+          id: `st-${s.id}`,
+          title: s.text.slice(0, 60),
+          text: s.text,
+          url: s.url,
+          wordCount: s.text.split(/\s+/).length,
+          source: "stocktwits",
+          meta: s.sentiment ? `${s.sentiment} · ♥${s.likes}` : `♥${s.likes}`,
+          selected: true,
+        };
+      }
+    }
+  }
+
+  function trustpilotToSource(r: TrustpilotReview, company: string): Source {
+    const stars = "★".repeat(r.rating) + "☆".repeat(Math.max(0, 5 - r.rating));
+    return {
+      id: `tp-${company}-${r.date}-${r.title.slice(0, 10)}`,
+      title: r.title || `${r.rating}★ review`,
+      text: [r.title, r.text].filter(Boolean).join("\n"),
+      url: r.url,
+      wordCount: r.text.split(/\s+/).length,
+      source: "trustpilot",
+      meta: `${stars} · ${r.date.slice(0, 10)}`,
+      selected: true,
+    };
+  }
+
+  function appStoreToSource(r: AppStoreReview): Source {
+    const stars = "★".repeat(r.rating) + "☆".repeat(Math.max(0, 5 - r.rating));
+    return {
+      id: `as-${encodeURIComponent(r.url).slice(0, 30)}-${r.title.slice(0, 10)}`,
+      title: r.title || `${r.rating}★ review`,
+      text: [r.title, r.text].filter(Boolean).join("\n"),
+      url: r.url,
+      wordCount: r.text.split(/\s+/).length,
+      source: "appstore",
+      meta: stars + (r.version ? ` · v${r.version}` : ""),
+      selected: true,
+    };
+  }
+
+  function rssFeedItemToSource(item: RssFeedItem): Source {
+    return {
+      id: `rss-${encodeURIComponent(item.url).slice(0, 40)}`,
+      title: item.title,
+      text: [item.title, item.text].filter(Boolean).join("\n"),
+      url: item.url,
+      wordCount: item.text.split(/\s+/).length,
+      source: "rss",
+      meta: item.feedTitle,
+      selected: true,
+    };
+  }
+
+  // ─── Fetch handler ───────────────────────────────────────────────────────────
+
   const handleFetch = async () => {
-    if (!query.trim()) return;
+    if (!canSubmit) return;
     setIsFetching(true);
     setError(null);
     setFetchedCount(null);
 
-    const sources: string[] = [];
-    if (useReddit) sources.push("reddit");
-    if (useHN) sources.push("hackernews");
-    if (!sources.length) { setError("Select at least one source"); setIsFetching(false); return; }
+    const allSources: Source[] = [];
+    const allErrors: string[] = [];
 
     try {
-      const res = await fetch("/api/social", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query: query.trim(),
-          subreddit: subreddit.trim() || undefined,
-          timeframe,
-          sort,
-          limit,
-          includeComments,
-          sources,
-        }),
-      });
+      // 1. Social / news via /api/social
+      const socialSources = (["reddit", "hackernews", "gnews", "stocktwits"] as SourceId[]).filter(
+        (s) => active.has(s)
+      );
+      if (socialSources.length > 0) {
+        const res = await fetch("/api/social", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            query: query.trim() || undefined,
+            symbol: symbol.trim() || undefined,
+            subreddit: subreddit.trim() || undefined,
+            timeframe,
+            sort,
+            limit,
+            includeComments,
+            sources: socialSources,
+          }),
+        });
+        const data = (await res.json()) as {
+          items?: (RedditPost | HNItem | GNewsItem | StockTwitsMessage)[];
+          errors?: string[];
+          error?: string;
+        };
+        if (data.error) allErrors.push(data.error);
+        if (data.errors?.length) allErrors.push(...data.errors);
+        for (const item of data.items ?? []) allSources.push(socialItemToSource(item));
+      }
 
-      const data = (await res.json()) as {
-        items: (RedditPost | HNItem)[];
-        errors?: string[];
-        error?: string;
-      };
+      // 2. Trustpilot
+      if (active.has("trustpilot") && tpDomain.trim()) {
+        const res = await fetch("/api/sources/trustpilot", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ company: tpDomain.trim(), pages: tpPages }),
+        });
+        const data = (await res.json()) as {
+          reviews?: TrustpilotReview[];
+          errors?: string[];
+          error?: string;
+        };
+        if (data.error) allErrors.push(`Trustpilot: ${data.error}`);
+        if (data.errors?.length) allErrors.push(...data.errors.map((e) => `Trustpilot: ${e}`));
+        for (const r of data.reviews ?? []) allSources.push(trustpilotToSource(r, tpDomain.trim()));
+      }
 
-      if (data.error) { setError(data.error); return; }
-      if (data.errors?.length) setError(data.errors.join("; "));
+      // 3. App Store
+      if (active.has("appstore") && appId.trim()) {
+        const res = await fetch("/api/sources/appstore", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ appId: appId.trim(), country: appCountry, pages: appPages }),
+        });
+        const data = (await res.json()) as {
+          reviews?: AppStoreReview[];
+          errors?: string[];
+          error?: string;
+        };
+        if (data.error) allErrors.push(`App Store: ${data.error}`);
+        if (data.errors?.length) allErrors.push(...data.errors.map((e) => `App Store: ${e}`));
+        for (const r of data.reviews ?? []) allSources.push(appStoreToSource(r));
+      }
 
-      const items = data.items ?? [];
-      setFetchedCount(items.length);
-
-      const result: Source[] = items.map((item) => {
-        if (item.source === "reddit") {
-          const r = item as RedditPost;
-          return {
-            id: `reddit-${r.id}`,
-            title: r.title,
-            text: r.text,
-            url: r.url,
-            wordCount: r.text.split(/\s+/).length,
-            source: "reddit" as const,
-            meta: `r/${r.subreddit} · ${r.type} · ↑${r.score}`,
-            selected: true,
-          };
-        } else {
-          const h = item as HNItem;
-          return {
-            id: `hn-${h.id}`,
-            title: h.title,
-            text: h.text,
-            url: h.url,
-            wordCount: h.text.split(/\s+/).length,
-            source: "hackernews" as const,
-            meta: `HN · ${h.type} · ↑${h.score}`,
-            selected: true,
-          };
-        }
-      });
-
-      onSourcesReady(result);
+      // 4. RSS
+      if (active.has("rss") && rssUrls.trim()) {
+        const urls = rssUrls
+          .split(/[\n,]+/)
+          .map((u) => u.trim())
+          .filter(Boolean);
+        const res = await fetch("/api/sources/rss", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ urls }),
+        });
+        const data = (await res.json()) as {
+          items?: RssFeedItem[];
+          errors?: string[];
+          error?: string;
+        };
+        if (data.error) allErrors.push(`RSS: ${data.error}`);
+        if (data.errors?.length) allErrors.push(...data.errors.map((e) => `RSS: ${e}`));
+        for (const item of data.items ?? []) allSources.push(rssFeedItemToSource(item));
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Network error");
-    } finally {
-      setIsFetching(false);
+      allErrors.push(err instanceof Error ? err.message : "Network error");
     }
+
+    setFetchedCount(allSources.length);
+    if (allErrors.length) setError(allErrors.join(" · "));
+    if (allSources.length > 0) onSourcesReady(allSources);
+    setIsFetching(false);
   };
 
+  // ─── Shared class helpers ────────────────────────────────────────────────────
+
+  const inputCls =
+    "w-full px-3 py-2.5 text-sm text-gray-800 placeholder-gray-400 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent disabled:opacity-50";
+  const labelCls = "block text-sm font-medium text-gray-700 mb-1.5";
+  const smallLabelCls = "block text-xs font-medium text-gray-500 mb-1";
+
+  const groupedDefs = {
+    community: SOURCE_DEFS.filter((s) => s.group === "community"),
+    news: SOURCE_DEFS.filter((s) => s.group === "news"),
+    finance: SOURCE_DEFS.filter((s) => s.group === "finance"),
+    reviews: SOURCE_DEFS.filter((s) => s.group === "reviews"),
+    feeds: SOURCE_DEFS.filter((s) => s.group === "feeds"),
+  };
+
+  // ─── Render ───────────────────────────────────────────────────────────────────
+
   return (
-    <div className="space-y-4">
-      {/* Sources */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Sources</label>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setUseReddit(!useReddit)}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-all ${
-              useReddit ? "border-orange-300 bg-orange-50 text-orange-700" : "border-gray-200 text-gray-500 hover:border-gray-300"
-            }`}
-          >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.196-2.512-.73a.326.326 0 0 0-.232-.095z"/>
-            </svg>
-            Reddit
-          </button>
-          <button
-            onClick={() => setUseHN(!useHN)}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-all ${
-              useHN ? "border-amber-300 bg-amber-50 text-amber-700" : "border-gray-200 text-gray-500 hover:border-gray-300"
-            }`}
-          >
-            <span className="font-bold text-sm">Y</span>
-            Hacker News
-          </button>
+    <div className="space-y-5">
+      {/* Source toggles */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <label className="block text-sm font-medium text-gray-700">Sources</label>
+          <span className="text-xs text-gray-400">Toggle to combine</span>
         </div>
+        {(Object.entries(groupedDefs) as [string, typeof SOURCE_DEFS[number][]][]).map(([group, defs]) => (
+          <div key={group}>
+            <GroupLabel label={group === "community" ? "Community" : group === "news" ? "News" : group === "finance" ? "Finance" : group === "reviews" ? "Reviews" : "Feeds"} />
+            <div className="flex flex-wrap gap-2">
+              {defs.map((def) => (
+                <SourcePill key={def.id} def={def} active={active.has(def.id)} onToggle={() => toggle(def.id)} />
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
 
-      {/* Query */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1.5">Search query</label>
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleFetch()}
-          placeholder="e.g. diabetes prevention NHS experience"
-          className="w-full px-3 py-2.5 text-sm text-gray-800 placeholder-gray-400 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-          disabled={isFetching}
-        />
-      </div>
-
-      {/* Subreddit */}
-      {useReddit && (
+      {/* ── Search query (Reddit / HN / Google News) ── */}
+      {needsQuery && (
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+          <label className={labelCls}>
+            Search query{" "}
+            <span className="font-normal text-gray-400">
+              ({[active.has("reddit") && "Reddit", active.has("hackernews") && "HN", active.has("gnews") && "Google News"].filter(Boolean).join(" · ")})
+            </span>
+          </label>
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleFetch()}
+            placeholder="e.g. Bet365 review, responsible gambling, FCA regulated broker"
+            className={inputCls}
+            disabled={isFetching}
+          />
+        </div>
+      )}
+
+      {/* ── StockTwits ticker ── */}
+      {active.has("stocktwits") && (
+        <div>
+          <label className={labelCls}>
+            Ticker symbol <span className="font-normal text-gray-400">(StockTwits)</span>
+          </label>
+          <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-brand-500">
+            <span className="px-3 py-2.5 text-sm text-gray-400 bg-gray-50 border-r border-gray-200">$</span>
+            <input
+              type="text"
+              value={symbol}
+              onChange={(e) => setSymbol(e.target.value.toUpperCase())}
+              placeholder="DKNG, 888, EVRI, IGT, CMC, IG"
+              className="flex-1 px-3 py-2.5 text-sm text-gray-800 placeholder-gray-400 bg-white focus:outline-none disabled:opacity-50"
+              disabled={isFetching}
+            />
+          </div>
+          <p className="mt-1 text-xs text-gray-400">
+            Enter ticker for symbol stream, or leave blank to search by query above.
+          </p>
+        </div>
+      )}
+
+      {/* ── Reddit subreddit ── */}
+      {active.has("reddit") && (
+        <div>
+          <label className={labelCls}>
             Subreddit <span className="font-normal text-gray-400">(optional)</span>
           </label>
           <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-brand-500">
@@ -162,73 +511,221 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
               type="text"
               value={subreddit}
               onChange={(e) => setSubreddit(e.target.value)}
-              placeholder="diabetes, mentalhealth, NHS, careerguidance…"
-              className="flex-1 px-3 py-2.5 text-sm text-gray-800 placeholder-gray-400 bg-white focus:outline-none"
+              placeholder="gambling, sportsbook, UKPersonalFinance, stocks, wallstreetbets…"
+              className="flex-1 px-3 py-2.5 text-sm text-gray-800 placeholder-gray-400 bg-white focus:outline-none disabled:opacity-50"
               disabled={isFetching}
             />
           </div>
         </div>
       )}
 
-      {/* Filters row */}
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">Time range</label>
-          <select
-            value={timeframe}
-            onChange={(e) => setTimeframe(e.target.value)}
-            className="w-full px-2.5 py-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
-            disabled={isFetching}
-          >
-            {TIMEFRAMES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">Sort by</label>
-          <select
-            value={sort}
-            onChange={(e) => setSort(e.target.value)}
-            className="w-full px-2.5 py-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
-            disabled={isFetching}
-          >
-            {SORT_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-          </select>
-        </div>
-      </div>
+      {/* ── Time / sort / limit controls ── */}
+      {hasSocialSearch && (
+        <>
+          <div className="grid grid-cols-2 gap-3">
+            {(active.has("reddit") || active.has("hackernews")) && (
+              <div>
+                <label className={smallLabelCls}>Time range</label>
+                <select
+                  value={timeframe}
+                  onChange={(e) => setTimeframe(e.target.value)}
+                  className="w-full px-2.5 py-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50"
+                  disabled={isFetching}
+                >
+                  {TIMEFRAMES.map((t) => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {active.has("reddit") && (
+              <div>
+                <label className={smallLabelCls}>Sort by</label>
+                <select
+                  value={sort}
+                  onChange={(e) => setSort(e.target.value)}
+                  className="w-full px-2.5 py-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50"
+                  disabled={isFetching}
+                >
+                  {SORT_OPTIONS.map((s) => (
+                    <option key={s.value} value={s.value}>{s.label}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
 
-      {/* Volume + comments */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <label className="text-xs font-medium text-gray-500">Posts</label>
-          <input
-            type="number"
-            value={limit}
-            onChange={(e) => setLimit(Math.min(100, Math.max(5, parseInt(e.target.value) || 25)))}
-            className="w-16 px-2 py-1.5 text-sm text-gray-700 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 text-center"
-            min={5}
-            max={100}
-            disabled={isFetching}
-          />
-        </div>
-        {useReddit && (
-          <label className="flex items-center gap-2 cursor-pointer">
-            <div
-              onClick={() => setIncludeComments(!includeComments)}
-              className={`relative w-9 h-5 rounded-full transition-colors ${includeComments ? "bg-brand-600" : "bg-gray-200"}`}
-            >
-              <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${includeComments ? "translate-x-4" : ""}`} />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-medium text-gray-500">Results per source</label>
+              <input
+                type="number"
+                value={limit}
+                onChange={(e) =>
+                  setLimit(Math.min(100, Math.max(5, parseInt(e.target.value) || 25)))
+                }
+                className="w-16 px-2 py-1.5 text-sm text-gray-700 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 text-center disabled:opacity-50"
+                min={5}
+                max={100}
+                disabled={isFetching}
+              />
             </div>
-            <span className="text-xs text-gray-600">Include comments</span>
-          </label>
-        )}
-      </div>
+            {active.has("reddit") && (
+              <label className="flex items-center gap-2 cursor-pointer">
+                <div
+                  onClick={() => setIncludeComments(!includeComments)}
+                  className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer ${
+                    includeComments ? "bg-brand-600" : "bg-gray-200"
+                  }`}
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                      includeComments ? "translate-x-4" : ""
+                    }`}
+                  />
+                </div>
+                <span className="text-xs text-gray-600">Include comments</span>
+              </label>
+            )}
+          </div>
+        </>
+      )}
 
-      {/* Fetch button */}
+      {/* ── Trustpilot settings ── */}
+      {active.has("trustpilot") && (
+        <div className="space-y-3 pt-3 border-t border-gray-100">
+          <GroupLabel label="Trustpilot" />
+          <div>
+            <label className={labelCls}>Company domain</label>
+            <input
+              type="text"
+              value={tpDomain}
+              onChange={(e) => setTpDomain(e.target.value)}
+              placeholder="bet365.com · williamhill.com · ig.com · etoro.com"
+              className={inputCls}
+              disabled={isFetching}
+            />
+            <p className="mt-1 text-xs text-gray-400">
+              Domain as shown in: trustpilot.com/review/<strong>bet365.com</strong>
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="text-xs font-medium text-gray-500 whitespace-nowrap">Pages</label>
+            <input
+              type="number"
+              value={tpPages}
+              onChange={(e) =>
+                setTpPages(Math.min(5, Math.max(1, parseInt(e.target.value) || 1)))
+              }
+              className="w-16 px-2 py-1.5 text-sm text-gray-700 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 text-center disabled:opacity-50"
+              min={1}
+              max={5}
+              disabled={isFetching}
+            />
+            <span className="text-xs text-gray-400">≈20 reviews / page · max 5</span>
+          </div>
+        </div>
+      )}
+
+      {/* ── App Store settings ── */}
+      {active.has("appstore") && (
+        <div className="space-y-3 pt-3 border-t border-gray-100">
+          <GroupLabel label="App Store (Apple)" />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>App ID</label>
+              <input
+                type="text"
+                value={appId}
+                onChange={(e) => setAppId(e.target.value)}
+                placeholder="1234567890"
+                className={inputCls}
+                disabled={isFetching}
+              />
+              <p className="mt-1 text-xs text-gray-400">
+                From URL: apps.apple.com/.../id<strong>1234567890</strong>
+              </p>
+            </div>
+            <div>
+              <label className={labelCls}>Store</label>
+              <select
+                value={appCountry}
+                onChange={(e) => setAppCountry(e.target.value)}
+                className="w-full px-2.5 py-2.5 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50"
+                disabled={isFetching}
+              >
+                {COUNTRY_OPTIONS.map((c) => (
+                  <option key={c.value} value={c.value}>{c.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="text-xs font-medium text-gray-500 whitespace-nowrap">Pages</label>
+            <input
+              type="number"
+              value={appPages}
+              onChange={(e) =>
+                setAppPages(Math.min(10, Math.max(1, parseInt(e.target.value) || 1)))
+              }
+              className="w-16 px-2 py-1.5 text-sm text-gray-700 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 text-center disabled:opacity-50"
+              min={1}
+              max={10}
+              disabled={isFetching}
+            />
+            <span className="text-xs text-gray-400">50 reviews / page · max 10</span>
+          </div>
+        </div>
+      )}
+
+      {/* ── RSS feeds ── */}
+      {active.has("rss") && (
+        <div className="space-y-3 pt-3 border-t border-gray-100">
+          <GroupLabel label="RSS / Atom feeds" />
+          <div>
+            <label className={labelCls}>
+              Feed URLs <span className="font-normal text-gray-400">(one per line)</span>
+            </label>
+            <textarea
+              value={rssUrls}
+              onChange={(e) => setRssUrls(e.target.value)}
+              placeholder={"https://www.gamblinginsider.com/feed\nhttps://igamingbusiness.com/feed/"}
+              rows={4}
+              className={`${inputCls} resize-none font-mono text-xs`}
+              disabled={isFetching}
+            />
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 mb-2">Quick-add:</p>
+            <div className="flex flex-wrap gap-1.5">
+              {RSS_PRESETS.map((p) => (
+                <button
+                  key={p.url}
+                  type="button"
+                  onClick={() => {
+                    const existing = rssUrls.split(/[\n,]+/).map((u) => u.trim()).filter(Boolean);
+                    if (!existing.includes(p.url)) {
+                      setRssUrls((prev) => (prev.trim() ? `${prev.trim()}\n${p.url}` : p.url));
+                    }
+                  }}
+                  className="px-2 py-1 text-xs bg-purple-50 border border-purple-200 text-purple-700 rounded hover:bg-purple-100 transition-colors disabled:opacity-50"
+                  disabled={isFetching}
+                >
+                  + {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Collect button ── */}
       <button
+        type="button"
         onClick={handleFetch}
-        disabled={!query.trim() || isFetching || (!useReddit && !useHN)}
+        disabled={!canSubmit || isFetching}
         className={`w-full py-2.5 px-4 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
-          query.trim() && !isFetching && (useReddit || useHN)
+          canSubmit && !isFetching
             ? "bg-brand-600 hover:bg-brand-700 text-white shadow-sm"
             : "bg-gray-100 text-gray-400 cursor-not-allowed"
         }`}
@@ -239,19 +736,23 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
-            Collecting posts…
+            Collecting data…
           </>
         ) : (
           <>
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
-            Search &amp; collect
+            Collect — {active.size} source{active.size !== 1 ? "s" : ""}
           </>
         )}
       </button>
 
-      {error && <p className="text-xs text-red-500">{error}</p>}
+      {error && (
+        <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 leading-relaxed">
+          {error}
+        </p>
+      )}
 
       {fetchedCount !== null && !isFetching && (
         <p className="text-xs text-emerald-600 font-medium">

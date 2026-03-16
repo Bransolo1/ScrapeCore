@@ -30,7 +30,50 @@ export interface HNItem {
   type: "story" | "comment";
 }
 
-export type SocialItem = RedditPost | HNItem;
+export interface GNewsItem {
+  title: string;
+  text: string;
+  url: string;
+  publishedAt: string;
+  source: "gnews";
+}
+
+export interface StockTwitsMessage {
+  id: number;
+  text: string;
+  url: string;
+  sentiment?: string;
+  likes: number;
+  source: "stocktwits";
+}
+
+export interface TrustpilotReview {
+  title: string;
+  text: string;
+  rating: number;
+  date: string;
+  url: string;
+  source: "trustpilot";
+}
+
+export interface AppStoreReview {
+  title: string;
+  text: string;
+  rating: number;
+  version: string;
+  url: string;
+  source: "appstore";
+}
+
+export interface RssFeedItem {
+  title: string;
+  text: string;
+  url: string;
+  feedTitle: string;
+  source: "rss";
+}
+
+export type SocialItem = RedditPost | HNItem | GNewsItem | StockTwitsMessage;
 
 export interface Source {
   id: string;
@@ -38,7 +81,7 @@ export interface Source {
   text: string;
   url: string;
   wordCount: number;
-  source: "url" | "reddit" | "hackernews";
+  source: "url" | "reddit" | "hackernews" | "gnews" | "stocktwits" | "trustpilot" | "appstore" | "rss";
   meta?: string;
   selected: boolean;
 }
@@ -71,12 +114,8 @@ function extractJsonLd(html: string): string {
       const data = JSON.parse(m[1]);
       const items = Array.isArray(data) ? data : [data];
       for (const item of items) {
-        // ArticleBody is the richest field
         const body = item.articleBody ?? item.description ?? item.text ?? null;
-        if (typeof body === "string" && body.length > 100) {
-          results.push(body.trim());
-        }
-        // Crawl @graph arrays (common in WordPress)
+        if (typeof body === "string" && body.length > 100) results.push(body.trim());
         if (Array.isArray(item["@graph"])) {
           for (const node of item["@graph"]) {
             const nb = node.articleBody ?? node.description ?? null;
@@ -85,7 +124,7 @@ function extractJsonLd(html: string): string {
         }
       }
     } catch {
-      // Malformed JSON-LD — skip silently
+      // Malformed JSON-LD — skip
     }
   }
   return results.join("\n\n");
@@ -94,16 +133,16 @@ function extractJsonLd(html: string): string {
 // ─── Title extraction ─────────────────────────────────────────────────────────
 
 function extractTitle(html: string): string {
-  // og:title is usually the cleanest article title (no " | Site Name" suffix)
-  const ogTitle = html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i)
-    ?? html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:title["']/i);
+  const ogTitle =
+    html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i) ??
+    html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:title["']/i);
   if (ogTitle?.[1]) return decodeHtmlEntities(ogTitle[1].trim());
 
-  const twitterTitle = html.match(/<meta[^>]+name=["']twitter:title["'][^>]+content=["']([^"']+)["']/i)
-    ?? html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:title["']/i);
+  const twitterTitle =
+    html.match(/<meta[^>]+name=["']twitter:title["'][^>]+content=["']([^"']+)["']/i) ??
+    html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:title["']/i);
   if (twitterTitle?.[1]) return decodeHtmlEntities(twitterTitle[1].trim());
 
-  // h1 — strip inner tags
   const h1 = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
   if (h1?.[1]) {
     const text = decodeHtmlEntities(h1[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim());
@@ -114,24 +153,20 @@ function extractTitle(html: string): string {
   return decodeHtmlEntities((titleTag?.[1] ?? "").trim());
 }
 
-// ─── RSS / Atom feed extraction ───────────────────────────────────────────────
+// ─── RSS / Atom feed: flat text ───────────────────────────────────────────────
 
 function extractFeedText(xml: string): string | null {
-  // Detect RSS or Atom by presence of <rss or <feed
   if (!/(<rss|<feed|<channel)/i.test(xml)) return null;
-
   const items: string[] = [];
-
-  // Strip CDATA wrappers
   const stripped = xml.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1");
-
-  // Extract item/entry blocks
   const itemRe = /<(?:item|entry)[^>]*>([\s\S]*?)<\/(?:item|entry)>/gi;
   let m: RegExpExecArray | null;
   while ((m = itemRe.exec(stripped)) !== null) {
     const block = m[1];
     const titleM = block.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-    const descM = block.match(/<(?:description|summary|content:encoded|content)[^>]*>([\s\S]*?)<\/(?:description|summary|content:encoded|content)>/i);
+    const descM = block.match(
+      /<(?:description|summary|content:encoded|content)[^>]*>([\s\S]*?)<\/(?:description|summary|content:encoded|content)>/i
+    );
     const parts: string[] = [];
     if (titleM?.[1]) parts.push(decodeHtmlEntities(titleM[1].replace(/<[^>]+>/g, "").trim()));
     if (descM?.[1]) {
@@ -140,13 +175,60 @@ function extractFeedText(xml: string): string | null {
     }
     if (parts.length) items.push(parts.join(" — "));
   }
-
   return items.length ? items.join("\n") : null;
+}
+
+// ─── RSS / Atom feed: structured items (exported) ────────────────────────────
+
+export function parseRssItems(
+  xml: string,
+  feedUrl: string
+): RssFeedItem[] {
+  const results: RssFeedItem[] = [];
+  const stripped = xml.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1");
+
+  // Feed-level title
+  const feedTitleM = stripped.match(/<(?:channel|feed)[^>]*>[\s\S]*?<title[^>]*>([\s\S]*?)<\/title>/i);
+  const feedTitle = feedTitleM
+    ? decodeHtmlEntities(feedTitleM[1].replace(/<[^>]+>/g, "").trim())
+    : new URL(feedUrl).hostname;
+
+  const itemRe = /<(?:item|entry)[^>]*>([\s\S]*?)<\/(?:item|entry)>/gi;
+  let m: RegExpExecArray | null;
+
+  while ((m = itemRe.exec(stripped)) !== null) {
+    const block = m[1];
+
+    const titleM = block.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+    const linkM =
+      block.match(/<link[^>]*href=["']([^"']+)["'][^>]*\/?>/i) ??
+      block.match(/<link[^>]*>(https?:\/\/[^<]+)<\/link>/i) ??
+      block.match(/<link>(https?:\/\/[^<]+)<\/link>/i);
+    const descM = block.match(
+      /<(?:description|summary|content:encoded|content)[^>]*>([\s\S]*?)<\/(?:description|summary|content:encoded|content)>/i
+    );
+
+    const title = titleM ? decodeHtmlEntities(titleM[1].replace(/<[^>]+>/g, "").trim()) : "(untitled)";
+    const url = linkM?.[1]?.trim() ?? feedUrl;
+    const rawDesc = descM?.[1] ?? "";
+    const text = decodeHtmlEntities(rawDesc.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim());
+
+    if (!text && title === "(untitled)") continue;
+
+    results.push({
+      title,
+      text: text || title,
+      url,
+      feedTitle,
+      source: "rss",
+    });
+  }
+
+  return results;
 }
 
 // ─── Boilerplate / noise patterns ────────────────────────────────────────────
 
-// Patterns that indicate lines are UI chrome, not article content
 const NOISE_PATTERNS: RegExp[] = [
   /^(accept|reject|manage)\s+(cookies?|all|preferences)/i,
   /^cookie\s+(policy|settings|preferences|notice|consent)/i,
@@ -175,21 +257,16 @@ const MAX_CHARS = 25_000;
 export function extractTextFromHtml(html: string): { title: string; text: string } {
   const title = extractTitle(html);
 
-  // 1. Try JSON-LD first — cleanest source for article text
   const jsonLdText = extractJsonLd(html);
   if (jsonLdText.length > 300) {
     return { title, text: jsonLdText.slice(0, MAX_CHARS) };
   }
 
-  // 2. Try RSS/Atom feed
   const feedText = extractFeedText(html);
   if (feedText && feedText.length > 200) {
     return { title, text: feedText.slice(0, MAX_CHARS) };
   }
 
-  // 3. HTML parse pipeline
-
-  // 3a. Preserve script-type JSON-LD (already extracted above) but strip other scripts
   let cleaned = html
     .replace(/<script(?![^>]+type=["']application\/ld\+json["'])[^>]*>[\s\S]*?<\/script>/gi, " ")
     .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ")
@@ -203,35 +280,24 @@ export function extractTextFromHtml(html: string): { title: string; text: string
     .replace(/<button[^>]*>[\s\S]*?<\/button>/gi, " ")
     .replace(/<!--[\s\S]*?-->/g, " ");
 
-  // 3b. Priority-ordered content area selectors
-  // Try each in order; use the longest match (most content)
   const contentSelectors: RegExp[] = [
-    // Semantic HTML5
     /<main[^>]*>([\s\S]*?)<\/main>/i,
     /<article[^>]*>([\s\S]*?)<\/article>/i,
-    // ARIA role
     /<[^>]+role=["']main["'][^>]*>([\s\S]*?)<\/(?:div|section|main)>/i,
-    // Common CMS / WordPress classes
     /<[^>]+class=["'][^"']*\b(?:article-body|entry-content|post-content|post-body|article-content|story-body|content-body|main-content|page-content|single-content)\b[^"']*["'][^>]*>([\s\S]*?)<\/(?:div|section|article)>/i,
-    // id-based
     /<[^>]+id=["'](?:main-content|article-body|post-content|content|story|article)[^"']*["'][^>]*>([\s\S]*?)<\/(?:div|section|main|article)>/i,
-    // itemprop (schema.org)
     /<[^>]+itemprop=["'](?:articleBody|description)["'][^>]*>([\s\S]*?)<\/(?:div|section|article)>/i,
-    // Generic content / body class fallback
     /<[^>]+class=["'][^"']*\b(?:content|body|text|story)\b[^"']*["'][^>]*>([\s\S]*?)<\/(?:div|section|article)>/i,
   ];
 
   let bestContent = "";
   for (const sel of contentSelectors) {
     const m = cleaned.match(sel);
-    if (m && m[1] && m[1].length > bestContent.length) {
-      bestContent = m[1];
-    }
+    if (m && m[1] && m[1].length > bestContent.length) bestContent = m[1];
   }
 
   const content = bestContent.length > 500 ? bestContent : cleaned;
 
-  // 3c. Convert block elements to newlines
   const withBreaks = content
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/p>/gi, "\n")
@@ -239,7 +305,6 @@ export function extractTextFromHtml(html: string): { title: string; text: string
     .replace(/<\/li>/gi, "\n")
     .replace(/<\/(?:h[1-6]|dt|dd|td|th|tr)>/gi, "\n");
 
-  // 3d. Strip all remaining tags, decode entities, filter noise
   const text = withBreaks
     .replace(/<[^>]+>/g, " ")
     .split("\n")
@@ -259,12 +324,32 @@ export function formatSourcesAsText(sources: Source[]): string {
   return sources
     .filter((s) => s.selected && s.text.trim())
     .map((s) => {
-      const header =
-        s.source === "reddit"
-          ? `[Reddit — ${s.meta ?? s.url}]`
-          : s.source === "hackernews"
-          ? `[Hacker News — ${s.title}]`
-          : `[${s.title || s.url}]`;
+      let header: string;
+      switch (s.source) {
+        case "reddit":
+          header = `[Reddit — ${s.meta ?? s.url}]`;
+          break;
+        case "hackernews":
+          header = `[Hacker News — ${s.title}]`;
+          break;
+        case "gnews":
+          header = `[Google News — ${s.title}]`;
+          break;
+        case "stocktwits":
+          header = `[StockTwits${s.meta ? ` — ${s.meta}` : ""}]`;
+          break;
+        case "trustpilot":
+          header = `[Trustpilot Review${s.meta ? ` — ${s.meta}` : ""}]`;
+          break;
+        case "appstore":
+          header = `[App Store Review${s.meta ? ` — ${s.meta}` : ""}]`;
+          break;
+        case "rss":
+          header = `[${s.meta ?? "RSS"} — ${s.title}]`;
+          break;
+        default:
+          header = `[${s.title || s.url}]`;
+      }
       return `${header}\n${s.text.trim()}`;
     })
     .join("\n\n---\n\n");
