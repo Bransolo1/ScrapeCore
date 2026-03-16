@@ -1,8 +1,34 @@
 import { extractTextFromHtml } from "@/lib/scraper";
 import type { ScrapeResult } from "@/lib/scraper";
 
-const FETCH_TIMEOUT_MS = 15_000;
-const MAX_URLS = 10;
+const FETCH_TIMEOUT_MS = 20_000;
+const MAX_URLS = 15;
+
+const FETCH_HEADERS = {
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+  Accept:
+    "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+  "Accept-Language": "en-GB,en;q=0.9,en-US;q=0.8",
+  "Accept-Encoding": "gzip, deflate, br",
+  "Cache-Control": "no-cache",
+  Pragma: "no-cache",
+  "Sec-Fetch-Dest": "document",
+  "Sec-Fetch-Mode": "navigate",
+  "Sec-Fetch-Site": "none",
+  "Sec-Fetch-User": "?1",
+  "Upgrade-Insecure-Requests": "1",
+};
+
+const TEXT_CONTENT_TYPES = [
+  "text/html",
+  "application/xhtml+xml",
+  "application/xml",
+  "text/xml",
+  "text/plain",
+  "application/rss+xml",
+  "application/atom+xml",
+];
 
 export async function POST(req: Request) {
   try {
@@ -17,30 +43,46 @@ export async function POST(req: Request) {
     const results: ScrapeResult[] = await Promise.all(
       limited.map(async (url): Promise<ScrapeResult> => {
         try {
-          // Validate URL
           const parsed = new URL(url);
           if (!["http:", "https:"].includes(parsed.protocol)) {
-            return { url, title: url, text: "", wordCount: 0, success: false, error: "Only http/https URLs are supported" };
+            return {
+              url,
+              title: url,
+              text: "",
+              wordCount: 0,
+              success: false,
+              error: "Only http/https URLs are supported",
+            };
           }
 
           const res = await fetch(url, {
-            headers: {
-              "User-Agent":
-                "Mozilla/5.0 (compatible; BehaviourInsight/1.0; +https://github.com/Bransolo1/ScrapeCore)",
-              Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-              "Accept-Language": "en-GB,en;q=0.9",
-            },
+            headers: FETCH_HEADERS,
             signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
             redirect: "follow",
           });
 
           if (!res.ok) {
-            return { url, title: url, text: "", wordCount: 0, success: false, error: `HTTP ${res.status}` };
+            return {
+              url,
+              title: url,
+              text: "",
+              wordCount: 0,
+              success: false,
+              error: `HTTP ${res.status}`,
+            };
           }
 
-          const contentType = res.headers.get("content-type") ?? "";
-          if (!contentType.includes("text/html") && !contentType.includes("text/plain")) {
-            return { url, title: url, text: "", wordCount: 0, success: false, error: `Unsupported content type: ${contentType.split(";")[0]}` };
+          const contentType = (res.headers.get("content-type") ?? "").toLowerCase();
+          const isTextType = TEXT_CONTENT_TYPES.some((t) => contentType.includes(t));
+          if (!isTextType) {
+            return {
+              url,
+              title: url,
+              text: "",
+              wordCount: 0,
+              success: false,
+              error: `Unsupported content type: ${contentType.split(";")[0].trim()}`,
+            };
           }
 
           const html = await res.text();
@@ -48,7 +90,15 @@ export async function POST(req: Request) {
           const wordCount = text.trim() ? text.trim().split(/\s+/).length : 0;
 
           if (wordCount < 20) {
-            return { url, title: title || url, text: "", wordCount: 0, success: false, error: "Could not extract meaningful text (page may be JavaScript-rendered)" };
+            return {
+              url,
+              title: title || url,
+              text: "",
+              wordCount: 0,
+              success: false,
+              error:
+                "Could not extract meaningful text (page may be JavaScript-rendered or blocked)",
+            };
           }
 
           return { url, title: title || url, text, wordCount, success: true };
