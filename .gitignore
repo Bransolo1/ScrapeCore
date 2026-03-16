@@ -32,3 +32,6 @@ next-env.d.ts
 *.db
 *.db-shm
 *.db-wal
+
+# Desktop build output
+/dist-desktop/

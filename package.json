@@ -1,12 +1,23 @@
 {
-  "name": "behaviour-insight",
-  "version": "0.1.0",
+  "name": "scrapecore",
+  "productName": "ScrapeCore",
+  "version": "1.0.0",
+  "description": "COM-B behavioural insight platform — scrapes web, reviews, social + RSS; analyses with Claude AI",
   "private": true,
+  "main": "electron/main.js",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "electron:dev": "concurrently \"next dev\" \"wait-on http://127.0.0.1:3000 && electron .\"",
+    "build:next": "next build",
+    "build:copy-standalone": "node scripts/copy-standalone.js",
+    "build:desktop": "npm run build:next && npm run build:copy-standalone",
+    "dist:win": "npm run build:desktop && electron-builder --win --x64",
+    "dist:mac": "npm run build:desktop && electron-builder --mac",
+    "dist:linux": "npm run build:desktop && electron-builder --linux",
+    "dist": "npm run build:desktop && electron-builder"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.37.0",
@@ -17,7 +28,6 @@
     "google-play-scraper": "^10.1.2",
     "libsql": "^0.5.22",
     "next": "14.2.29",
-    "prisma": "^7.5.0",
     "react": "^18",
     "react-dom": "^18"
   },
@@ -26,8 +36,12 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "autoprefixer": "^10.4.20",
+    "concurrently": "^9.1.2",
+    "electron": "^33.4.1",
+    "electron-builder": "^25.1.8",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wait-on": "^8.0.2"
   }
 }
