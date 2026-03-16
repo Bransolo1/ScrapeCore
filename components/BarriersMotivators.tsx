@@ -29,6 +29,11 @@ function BarrierCard({ barrier }: { barrier: Barrier }) {
         </span>
         <span className="text-xs text-gray-400">severity</span>
       </div>
+      {barrier.source_text && (
+        <blockquote className="mb-2 pl-3 border-l-2 border-red-200">
+          <p className="text-xs text-gray-500 italic leading-relaxed line-clamp-3">&ldquo;{barrier.source_text}&rdquo;</p>
+        </blockquote>
+      )}
       {barrier.evidence.length > 0 && (
         <div className="space-y-1.5">
           {barrier.evidence.slice(0, 2).map((q, i) => (
@@ -53,6 +58,11 @@ function MotivatorCard({ motivator }: { motivator: Motivator }) {
         </span>
         <span className="text-xs text-gray-400">strength</span>
       </div>
+      {motivator.source_text && (
+        <blockquote className="mb-2 pl-3 border-l-2 border-emerald-200">
+          <p className="text-xs text-gray-500 italic leading-relaxed line-clamp-3">&ldquo;{motivator.source_text}&rdquo;</p>
+        </blockquote>
+      )}
       {motivator.evidence.length > 0 && (
         <div className="space-y-1.5">
           {motivator.evidence.slice(0, 2).map((q, i) => (

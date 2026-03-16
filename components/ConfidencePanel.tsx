@@ -17,6 +17,9 @@ export default function ConfidencePanel({ confidence, recommendedResearch, usage
           <h2 className="text-sm font-semibold text-gray-900">Evidence Confidence</h2>
           <ConfidenceBadge level={confidence.overall} size="md" />
         </div>
+        {confidence.rationale && (
+          <p className="text-xs font-medium text-gray-700 leading-relaxed mb-2">{confidence.rationale}</p>
+        )}
         <p className="text-xs text-gray-600 leading-relaxed mb-3">{confidence.notes}</p>
         <p className="text-xs text-gray-500 mb-2">{confidence.sample_size_note}</p>
         {confidence.limitations.length > 0 && (

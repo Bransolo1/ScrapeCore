@@ -30,6 +30,11 @@ export default function KeyBehaviours({ behaviours }: KeyBehavioursProps) {
                 <ConfidenceBadge level={b.importance} />
               </div>
             </div>
+            {b.source_text && (
+              <blockquote className="mb-2 pl-3 border-l-2 border-brand-200">
+                <p className="text-xs text-gray-500 italic leading-relaxed line-clamp-3">&ldquo;{b.source_text}&rdquo;</p>
+              </blockquote>
+            )}
             {b.evidence.length > 0 && (
               <div className="space-y-1.5">
                 {b.evidence.slice(0, 1).map((q, qi) => (

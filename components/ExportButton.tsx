@@ -35,7 +35,7 @@ export default function ExportButton({ analysis, inputText }: ExportButtonProps)
       ``,
       `## Key Behaviours`,
       ...analysis.key_behaviours.map((b) =>
-        `- **${b.behaviour}** (frequency: ${b.frequency}, importance: ${b.importance})\n  > ${b.evidence[0] ?? ""}`
+        `- **${b.behaviour}** (frequency: ${b.frequency}, importance: ${b.importance})\n${b.source_text ? `  > "${b.source_text}"\n` : ""}  ${b.evidence[0] ?? ""}`
       ),
       ``,
       `## COM-B Mapping`,
@@ -50,19 +50,42 @@ export default function ExportButton({ analysis, inputText }: ExportButtonProps)
       `**Automatic:** ${analysis.com_b_mapping.motivation.automatic.join("; ") || "None identified"}`,
       ``,
       `## Barriers`,
-      ...analysis.barriers.map((b) => `- **[${b.severity.toUpperCase()}]** ${b.barrier} *(${b.com_b_type})*`),
+      ...analysis.barriers.map((b) =>
+        `- **[${b.severity.toUpperCase()}]** ${b.barrier} *(${b.com_b_type})*${b.source_text ? `\n  > "${b.source_text}"` : ""}`
+      ),
       ``,
       `## Motivators`,
-      ...analysis.motivators.map((m) => `- **[${m.strength.toUpperCase()}]** ${m.motivator} *(${m.com_b_type})*`),
+      ...analysis.motivators.map((m) =>
+        `- **[${m.strength.toUpperCase()}]** ${m.motivator} *(${m.com_b_type})*${m.source_text ? `\n  > "${m.source_text}"` : ""}`
+      ),
       ``,
       `## Intervention Opportunities`,
       ...analysis.intervention_opportunities.map((item, i) =>
-        `${i + 1}. **${item.intervention}** — ${item.bcw_category} [${item.priority}]\n   ${item.rationale}`
+        [
+          `${i + 1}. **${item.intervention}** — ${item.bcw_category} [${item.priority}]`,
+          `   ${item.rationale}`,
+          item.bct_specifics?.length ? `   *BCTs: ${item.bct_specifics.join(", ")}*` : "",
+          item.implementation_guidance ? `   ${item.implementation_guidance}` : "",
+        ].filter(Boolean).join("\n")
       ),
       ``,
+      ...(analysis.contradictions?.length ? [
+        `## Contradictions & Tensions`,
+        ...analysis.contradictions.map((c) =>
+          `**${c.description}**\n- A: "${c.evidence_a}"\n- B: "${c.evidence_b}"\n- *${c.interpretation}*`
+        ),
+        ``,
+      ] : []),
+      ...(analysis.subgroup_insights?.length ? [
+        `## Subgroup Insights`,
+        ...analysis.subgroup_insights.map((sg) =>
+          `- **${sg.subgroup}** (${sg.com_b_implication}): ${sg.insight}`
+        ),
+        ``,
+      ] : []),
       `## Confidence & Limitations`,
       `**Overall:** ${analysis.confidence.overall}`,
-      ``,
+      ...(analysis.confidence.rationale ? [`**Rationale:** ${analysis.confidence.rationale}`, ``] : [``]),
       analysis.confidence.notes,
       ``,
       `**Limitations:**`,

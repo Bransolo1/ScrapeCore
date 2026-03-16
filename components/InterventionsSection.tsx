@@ -46,7 +46,21 @@ export default function InterventionsSection({ interventions }: InterventionsSec
               <span className="text-xs text-gray-400">→</span>
               <span className="text-xs text-gray-600">{item.target_com_b}</span>
             </div>
-            <p className="ml-7 text-xs text-gray-500 leading-relaxed">{item.rationale}</p>
+            <p className="ml-7 text-xs text-gray-500 leading-relaxed mb-2">{item.rationale}</p>
+            {item.bct_specifics?.length > 0 && (
+              <div className="ml-7 flex flex-wrap gap-1.5 mb-2">
+                {item.bct_specifics.map((bct, bi) => (
+                  <span key={bi} className="text-xs bg-brand-50 text-brand-700 border border-brand-100 px-2 py-0.5 rounded-full font-medium">
+                    {bct}
+                  </span>
+                ))}
+              </div>
+            )}
+            {item.implementation_guidance && (
+              <div className="ml-7 mt-2 p-2.5 bg-gray-50 rounded-lg border border-gray-100">
+                <p className="text-xs text-gray-600 leading-relaxed">{item.implementation_guidance}</p>
+              </div>
+            )}
           </div>
         ))}
       </div>

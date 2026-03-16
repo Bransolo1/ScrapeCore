@@ -5,6 +5,8 @@ import ComBSection from "./ComBSection";
 import KeyBehaviours from "./KeyBehaviours";
 import { BarriersList, MotivatorsList } from "./BarriersMotivators";
 import InterventionsSection from "./InterventionsSection";
+import ContradictionsSection from "./ContradictionsSection";
+import SubgroupInsights from "./SubgroupInsights";
 import ConfidencePanel from "./ConfidencePanel";
 import ExportButton from "./ExportButton";
 
@@ -107,6 +109,12 @@ export default function AnalysisResults({ state, inputText, usage }: AnalysisRes
 
       {/* Interventions */}
       <InterventionsSection interventions={analysis.intervention_opportunities} />
+
+      {/* Contradictions */}
+      <ContradictionsSection contradictions={analysis.contradictions ?? []} />
+
+      {/* Subgroup Insights */}
+      <SubgroupInsights insights={analysis.subgroup_insights ?? []} />
 
       {/* Confidence */}
       <ConfidencePanel
