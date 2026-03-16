@@ -10,6 +10,7 @@ import type {
   TrustpilotReview,
   AppStoreReview,
   RssFeedItem,
+  GooglePlayReview,
 } from "@/lib/scraper";
 
 interface SocialListenerProps {
@@ -92,6 +93,17 @@ const SOURCE_DEFS = [
       <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
         <path d="M4 11a9 9 0 019 9M4 4a16 16 0 0116 16" strokeLinecap="round" />
         <circle cx="5" cy="19" r="1" fill="currentColor" stroke="none" />
+      </svg>
+    ),
+  },
+  {
+    id: "googleplay" as const,
+    label: "Google Play",
+    group: "reviews",
+    activeClass: "border-teal-300 bg-teal-50 text-teal-700",
+    icon: (
+      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M3.18 23.76A1.5 1.5 0 0 1 1.5 22.5V1.5A1.5 1.5 0 0 1 3.18.24L14.93 12 3.18 23.76zm2.64-2.14 8.11-8.11L6.06 5.62 3.44 20.74l2.38.88zM19.28 14.1l-2.82 1.63L13.2 12l3.26-3.73 2.82 1.63c.8.46.8 1.64 0 2.2z" />
       </svg>
     ),
   },
@@ -189,6 +201,10 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
   const [appPages, setAppPages] = useState(3);
   // RSS
   const [rssUrls, setRssUrls] = useState("");
+  // Google Play
+  const [gpPackageId, setGpPackageId] = useState("");
+  const [gpCountry, setGpCountry] = useState("gb");
+  const [gpNum, setGpNum] = useState(100);
 
   const [isFetching, setIsFetching] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -211,7 +227,8 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
     (!active.has("stocktwits") || query.trim() || symbol.trim()) &&
     (!active.has("trustpilot") || tpDomain.trim()) &&
     (!active.has("appstore") || appId.trim()) &&
-    (!active.has("rss") || rssUrls.trim());
+    (!active.has("rss") || rssUrls.trim()) &&
+    (!active.has("googleplay") || gpPackageId.trim());
 
   // ─── Converters ──────────────────────────────────────────────────────────────
 
@@ -313,6 +330,20 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
     };
   }
 
+  function googlePlayToSource(r: GooglePlayReview): Source {
+    const stars = "★".repeat(r.rating) + "☆".repeat(Math.max(0, 5 - r.rating));
+    return {
+      id: `gp-${r.date}-${r.title.slice(0, 10)}`,
+      title: r.title || `${r.rating}★ review`,
+      text: [r.title, r.text].filter(Boolean).join("\n"),
+      url: r.url,
+      wordCount: r.text.split(/\s+/).length,
+      source: "googleplay",
+      meta: `${stars} · ${r.date.slice(0, 10)}`,
+      selected: true,
+    };
+  }
+
   // ─── Fetch handler ───────────────────────────────────────────────────────────
 
   const handleFetch = async () => {
@@ -388,7 +419,22 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
         for (const r of data.reviews ?? []) allSources.push(appStoreToSource(r));
       }
 
-      // 4. RSS
+      // 4. Google Play
+      if (active.has("googleplay") && gpPackageId.trim()) {
+        const res = await fetch("/api/sources/googleplay", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ packageId: gpPackageId.trim(), country: gpCountry, num: gpNum }),
+        });
+        const data = (await res.json()) as {
+          reviews?: GooglePlayReview[];
+          error?: string;
+        };
+        if (data.error) allErrors.push(`Google Play: ${data.error}`);
+        for (const r of data.reviews ?? []) allSources.push(googlePlayToSource(r));
+      }
+
+      // 5. RSS
       if (active.has("rss") && rssUrls.trim()) {
         const urls = rssUrls
           .split(/[\n,]+/)
@@ -432,6 +478,14 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
     reviews: SOURCE_DEFS.filter((s) => s.group === "reviews"),
     feeds: SOURCE_DEFS.filter((s) => s.group === "feeds"),
   };
+
+  const COUNTRY_OPTIONS_GP = [
+    { value: "gb", label: "🇬🇧 United Kingdom" },
+    { value: "us", label: "🇺🇸 United States" },
+    { value: "au", label: "🇦🇺 Australia" },
+    { value: "ie", label: "🇮🇪 Ireland" },
+    { value: "ca", label: "🇨🇦 Canada" },
+  ];
 
   // ─── Render ───────────────────────────────────────────────────────────────────
 
@@ -714,6 +768,54 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
                   + {p.label}
                 </button>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Google Play settings ── */}
+      {active.has("googleplay") && (
+        <div className="space-y-3 pt-3 border-t border-gray-100">
+          <GroupLabel label="Google Play (Android)" />
+          <div>
+            <label className={labelCls}>Package ID</label>
+            <input
+              type="text"
+              value={gpPackageId}
+              onChange={(e) => setGpPackageId(e.target.value)}
+              placeholder="com.bet365.android · com.williamhill.racing"
+              className={inputCls}
+              disabled={isFetching}
+            />
+            <p className="mt-1 text-xs text-gray-400">
+              Reverse-domain format — from Play Store URL <strong>id=com.example.app</strong>
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={smallLabelCls}>Store country</label>
+              <select
+                value={gpCountry}
+                onChange={(e) => setGpCountry(e.target.value)}
+                className="w-full px-2.5 py-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50"
+                disabled={isFetching}
+              >
+                {COUNTRY_OPTIONS_GP.map((c) => (
+                  <option key={c.value} value={c.value}>{c.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className={smallLabelCls}>Number of reviews</label>
+              <input
+                type="number"
+                value={gpNum}
+                onChange={(e) => setGpNum(Math.min(200, Math.max(10, parseInt(e.target.value) || 100)))}
+                className="w-full px-2.5 py-2 text-sm text-gray-700 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 text-center disabled:opacity-50"
+                min={10}
+                max={200}
+                disabled={isFetching}
+              />
             </div>
           </div>
         </div>

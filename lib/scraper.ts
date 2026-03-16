@@ -73,6 +73,23 @@ export interface RssFeedItem {
   source: "rss";
 }
 
+export interface GooglePlayReview {
+  title: string;
+  text: string;
+  rating: number;
+  date: string;
+  version: string;
+  url: string;
+  source: "googleplay";
+}
+
+export interface WebSearchResult {
+  title: string;
+  url: string;
+  snippet: string;
+  source: "websearch";
+}
+
 export type SocialItem = RedditPost | HNItem | GNewsItem | StockTwitsMessage;
 
 export interface Source {
@@ -81,9 +98,70 @@ export interface Source {
   text: string;
   url: string;
   wordCount: number;
-  source: "url" | "reddit" | "hackernews" | "gnews" | "stocktwits" | "trustpilot" | "appstore" | "rss";
+  source: "url" | "reddit" | "hackernews" | "gnews" | "stocktwits" | "trustpilot" | "appstore" | "rss" | "googleplay" | "websearch";
   meta?: string;
   selected: boolean;
+}
+
+// ─── Shared fetch headers + scrapeUrl utility ────────────────────────────────
+
+export const SCRAPE_HEADERS = {
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+  Accept:
+    "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+  "Accept-Language": "en-GB,en;q=0.9",
+  "Cache-Control": "no-cache",
+  Pragma: "no-cache",
+  "Sec-Fetch-Dest": "document",
+  "Sec-Fetch-Mode": "navigate",
+  "Sec-Fetch-Site": "none",
+  "Upgrade-Insecure-Requests": "1",
+};
+
+const TEXT_CONTENT_TYPES = [
+  "text/html",
+  "application/xhtml+xml",
+  "application/xml",
+  "text/xml",
+  "text/plain",
+  "application/rss+xml",
+  "application/atom+xml",
+];
+
+/** Fetch a URL, extract its text, and return a Source object — or null on failure. */
+export async function scrapeUrl(url: string): Promise<Source | null> {
+  try {
+    const parsed = new URL(url);
+    if (!["http:", "https:"].includes(parsed.protocol)) return null;
+
+    const res = await fetch(url, {
+      headers: SCRAPE_HEADERS,
+      signal: AbortSignal.timeout(20_000),
+      redirect: "follow",
+    });
+
+    if (!res.ok) return null;
+
+    const ct = res.headers.get("content-type") ?? "";
+    if (!TEXT_CONTENT_TYPES.some((t) => ct.includes(t))) return null;
+
+    const html = await res.text();
+    const { title, text } = extractTextFromHtml(html);
+    if (!text.trim() || text.trim().length < 100) return null;
+
+    return {
+      id: `url-${res.url || url}`,
+      title: title || parsed.hostname,
+      text,
+      url: res.url || url,
+      wordCount: text.trim().split(/\s+/).length,
+      source: "url",
+      selected: true,
+    };
+  } catch {
+    return null;
+  }
 }
 
 // ─── HTML entity decoder ──────────────────────────────────────────────────────
@@ -346,6 +424,12 @@ export function formatSourcesAsText(sources: Source[]): string {
           break;
         case "rss":
           header = `[${s.meta ?? "RSS"} — ${s.title}]`;
+          break;
+        case "googleplay":
+          header = `[Google Play Review${s.meta ? ` — ${s.meta}` : ""}]`;
+          break;
+        case "websearch":
+          header = `[Web — ${s.title || s.url}]`;
           break;
         default:
           header = `[${s.title || s.url}]`;

@@ -5,6 +5,7 @@ import Header from "@/components/Header";
 import DataInput from "@/components/DataInput";
 import UrlScraper from "@/components/UrlScraper";
 import SocialListener from "@/components/SocialListener";
+import CompanyFootprint from "@/components/CompanyFootprint";
 import SourcesPanel from "@/components/SourcesPanel";
 import AnalysisResults from "@/components/AnalysisResults";
 import AnalysisHistory from "@/components/AnalysisHistory";
@@ -12,7 +13,7 @@ import type { AnalysisState, DataType, BehaviourAnalysis } from "@/lib/types";
 import type { Source } from "@/lib/scraper";
 import { formatSourcesAsText } from "@/lib/scraper";
 
-type InputMode = "paste" | "scrape" | "social";
+type InputMode = "paste" | "scrape" | "social" | "footprint";
 
 const INITIAL_STATE: AnalysisState = {
   status: "idle",
@@ -47,6 +48,15 @@ const MODE_TABS: { id: InputMode; label: string; icon: React.ReactNode }[] = [
     icon: (
       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
+      </svg>
+    ),
+  },
+  {
+    id: "footprint",
+    label: "Digital footprint",
+    icon: (
+      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
       </svg>
     ),
   },
@@ -222,9 +232,24 @@ export default function Home() {
               {mode === "social" && (
                 <>
                   <SocialListener onSourcesReady={handleNewSources} />
-                  {sources.filter((s) => s.source === "reddit" || s.source === "hackernews").length > 0 && (
+                  {sources.filter((s) => s.source !== "url").length > 0 && (
                     <SourcesPanel
-                      sources={sources.filter((s) => s.source === "reddit" || s.source === "hackernews")}
+                      sources={sources.filter((s) => s.source !== "url")}
+                      onToggle={toggleSource}
+                      onClear={clearSources}
+                      onAnalyse={handleSourcesAnalyse}
+                      isLoading={isLoading}
+                    />
+                  )}
+                </>
+              )}
+
+              {mode === "footprint" && (
+                <>
+                  <CompanyFootprint onSourcesReady={handleNewSources} />
+                  {sources.length > 0 && (
+                    <SourcesPanel
+                      sources={sources}
                       onToggle={toggleSource}
                       onClear={clearSources}
                       onAnalyse={handleSourcesAnalyse}
