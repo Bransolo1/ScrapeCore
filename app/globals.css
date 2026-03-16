@@ -38,3 +38,89 @@
     border-radius: 9999px;
   }
 }
+
+/* ─── Dark mode overrides ──────────────────────────────────────────────────── */
+/* These cascade through all components without requiring per-component changes */
+
+html.dark {
+  color-scheme: dark;
+}
+
+html.dark body {
+  background-color: #020617;
+  color: #e2e8f0;
+}
+
+/* Panel / surface overrides */
+html.dark .bg-white        { background-color: #0f172a; }
+html.dark .bg-gray-50      { background-color: #020617; }
+html.dark .bg-gray-100     { background-color: #1e293b; }
+
+/* Border overrides */
+html.dark .border-gray-100 { border-color: #1e293b; }
+html.dark .border-gray-200 { border-color: #1e293b; }
+html.dark .border-gray-300 { border-color: #334155; }
+
+/* Text overrides */
+html.dark .text-gray-900 { color: #f1f5f9; }
+html.dark .text-gray-800 { color: #e2e8f0; }
+html.dark .text-gray-700 { color: #cbd5e1; }
+html.dark .text-gray-600 { color: #94a3b8; }
+html.dark .text-gray-500 { color: #64748b; }
+html.dark .text-gray-400 { color: #475569; }
+
+/* Divider overrides */
+html.dark .divide-gray-100 > * + * { border-color: #1e293b; }
+html.dark .divide-gray-200 > * + * { border-color: #1e293b; }
+
+/* Brand accents stay vibrant in dark */
+html.dark .bg-brand-50  { background-color: #1e1b4b; }
+html.dark .bg-brand-100 { background-color: #312e81; }
+html.dark .border-brand-200 { border-color: #4338ca; }
+html.dark .text-brand-700   { color: #a5b4fc; }
+
+/* COM-B colored sections — dark variants of the colored bg chips */
+html.dark .bg-violet-50  { background-color: rgba(109, 40, 217, 0.12); }
+html.dark .bg-sky-50     { background-color: rgba(14,  165, 233, 0.10); }
+html.dark .bg-amber-50   { background-color: rgba(245, 158,  11, 0.10); }
+html.dark .bg-emerald-50 { background-color: rgba(16,  185, 129, 0.10); }
+html.dark .bg-red-50     { background-color: rgba(239,  68,  68, 0.10); }
+html.dark .bg-rose-50    { background-color: rgba(244,  63,  94, 0.10); }
+html.dark .bg-indigo-50  { background-color: rgba(99,  102, 241, 0.12); }
+html.dark .bg-teal-50    { background-color: rgba(20,  184, 166, 0.10); }
+html.dark .bg-orange-50  { background-color: rgba(249, 115,  22, 0.10); }
+html.dark .bg-pink-50    { background-color: rgba(236,  72, 153, 0.10); }
+html.dark .bg-purple-50  { background-color: rgba(168,  85, 247, 0.10); }
+
+/* Chip border overrides */
+html.dark .border-violet-200  { border-color: rgba(139, 92, 246, 0.3); }
+html.dark .border-sky-200     { border-color: rgba(56, 189, 248, 0.3); }
+html.dark .border-amber-200   { border-color: rgba(251, 191, 36, 0.3); }
+html.dark .border-emerald-200 { border-color: rgba(52, 211, 153, 0.3); }
+html.dark .border-red-200     { border-color: rgba(252, 165, 165, 0.3); }
+html.dark .border-indigo-200  { border-color: rgba(165, 180, 252, 0.3); }
+
+/* Input / textarea dark */
+html.dark input,
+html.dark textarea,
+html.dark select {
+  background-color: #0f172a;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #475569;
+}
+
+/* Hover states */
+html.dark .hover\:bg-gray-50:hover  { background-color: #1e293b; }
+html.dark .hover\:bg-gray-100:hover { background-color: #334155; }
+
+/* Scrollbar in dark */
+html.dark .scrollbar-thin {
+  scrollbar-color: #334155 transparent;
+}
+html.dark .scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: #334155;
+}

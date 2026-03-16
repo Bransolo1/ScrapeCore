@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { ThemeProvider } from "@/lib/theme";
 
 export const metadata: Metadata = {
-  title: "BehaviourInsight — AI Behavioural Analysis Platform",
+  title: "ScrapeCore — Behavioural Market Intelligence",
   description:
-    "Transform qualitative text into evidence-grounded behavioural insights using COM-B, Behaviour Change Wheel, and Claude AI.",
+    "Multi-source market intelligence platform. Scrape web, reviews, and social signals, then analyse with COM-B, BCW, and Claude AI.",
 };
 
 export default function RootLayout({
@@ -13,8 +14,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className="min-h-screen">{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <body className="min-h-screen">
+        <ThemeProvider>{children}</ThemeProvider>
+      </body>
     </html>
   );
 }

@@ -2,11 +2,13 @@
 
 import type { AnalysisState } from "@/lib/types";
 import ComBSection from "./ComBSection";
+import ComBChart from "./ComBChart";
 import KeyBehaviours from "./KeyBehaviours";
 import { BarriersList, MotivatorsList } from "./BarriersMotivators";
 import InterventionsSection from "./InterventionsSection";
 import ContradictionsSection from "./ContradictionsSection";
 import SubgroupInsights from "./SubgroupInsights";
+import PersonaCards from "./PersonaCards";
 import ConfidencePanel from "./ConfidencePanel";
 import ExportButton from "./ExportButton";
 
@@ -97,7 +99,12 @@ export default function AnalysisResults({ state, inputText, usage }: AnalysisRes
         <ExportButton analysis={analysis} inputText={inputText} />
       </div>
 
-      {/* COM-B */}
+      {/* COM-B Chart */}
+      <div className="bg-gray-50 rounded-xl border border-gray-100 px-5 py-4">
+        <ComBChart mapping={analysis.com_b_mapping} />
+      </div>
+
+      {/* COM-B Detail */}
       <ComBSection mapping={analysis.com_b_mapping} />
 
       {/* Key Behaviours */}
@@ -115,6 +122,15 @@ export default function AnalysisResults({ state, inputText, usage }: AnalysisRes
 
       {/* Subgroup Insights */}
       <SubgroupInsights insights={analysis.subgroup_insights ?? []} />
+
+      {/* Persona Cards */}
+      {(analysis.subgroup_insights?.length ?? 0) > 0 && (
+        <PersonaCards
+          insights={analysis.subgroup_insights}
+          barriers={analysis.barriers}
+          motivators={analysis.motivators}
+        />
+      )}
 
       {/* Confidence */}
       <ConfidencePanel
