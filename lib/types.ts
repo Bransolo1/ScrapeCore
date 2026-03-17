@@ -134,6 +134,7 @@ export interface BehaviourAnalysis {
   subgroup_insights: SubgroupInsight[];
   confidence: ConfidenceAssessment;
   recommended_next_research: string[];
+  clarification_note?: string;             // fallback re-prompt result when confidence=low
 }
 
 export interface AnalysisState {

@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "@/lib/theme";
+import { useSession, signOut } from "next-auth/react";
+import PlainModeToggle from "./PlainModeToggle";
 
 function SunIcon() {
   return (
@@ -30,6 +32,7 @@ const NAV = [
 export default function Header() {
   const { theme, toggle } = useTheme();
   const pathname = usePathname();
+  const { data: session } = useSession();
 
   return (
     <header className="border-b border-gray-200 bg-white/95 sticky top-0 z-30 backdrop-blur-md shadow-sm">
@@ -74,6 +77,9 @@ export default function Header() {
             COM-B · BCW · BCT
           </span>
 
+          {/* Plain language mode toggle */}
+          <PlainModeToggle />
+
           {/* Dark mode toggle */}
           <button
             onClick={toggle}
@@ -82,6 +88,24 @@ export default function Header() {
           >
             {theme === "dark" ? <SunIcon /> : <MoonIcon />}
           </button>
+
+          {/* User avatar + sign-out */}
+          {session?.user && (
+            <div className="flex items-center gap-2 pl-2 border-l border-gray-200">
+              <div className="w-7 h-7 rounded-full bg-brand-600 flex items-center justify-center shrink-0" title={session.user.email ?? ""}>
+                <span className="text-xs font-bold text-white leading-none">
+                  {(session.user.name ?? session.user.email ?? "?")[0].toUpperCase()}
+                </span>
+              </div>
+              <button
+                onClick={() => signOut({ callbackUrl: "/login" })}
+                className="text-xs text-gray-400 hover:text-gray-700 transition-colors"
+                title="Sign out"
+              >
+                Sign out
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>

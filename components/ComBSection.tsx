@@ -1,7 +1,9 @@
 import type { ComBMapping } from "@/lib/types";
+import { plainify } from "@/lib/plainLanguage";
 
 interface ComBSectionProps {
   mapping: ComBMapping;
+  isPlainMode?: boolean;
 }
 
 interface ColumnProps {
@@ -12,9 +14,10 @@ interface ColumnProps {
   dotColor: string;
   icon: React.ReactNode;
   groups: { label: string; items: string[] }[];
+  isPlainMode?: boolean;
 }
 
-function ComBColumn({ title, accentColor, headerBg, borderColor, dotColor, icon, groups }: ColumnProps) {
+function ComBColumn({ title, accentColor, headerBg, borderColor, dotColor, icon, groups, isPlainMode }: ColumnProps) {
   const allItems = groups.flatMap((g) => g.items);
   if (allItems.length === 0) return null;
 
@@ -25,7 +28,7 @@ function ComBColumn({ title, accentColor, headerBg, borderColor, dotColor, icon,
         <div className={`w-6 h-6 rounded-lg ${accentColor} flex items-center justify-center shrink-0`}>
           {icon}
         </div>
-        <h3 className="text-sm font-semibold text-gray-800">{title}</h3>
+        <h3 className="text-sm font-semibold text-gray-800">{plainify(title, isPlainMode ?? false)}</h3>
         <span className="ml-auto text-xs font-medium text-gray-400">{allItems.length}</span>
       </div>
       {/* Column body */}
@@ -34,7 +37,7 @@ function ComBColumn({ title, accentColor, headerBg, borderColor, dotColor, icon,
           group.items.length > 0 ? (
             <div key={group.label}>
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">
-                {group.label}
+                {plainify(group.label, isPlainMode ?? false)}
               </p>
               <ul className="space-y-2">
                 {group.items.map((item, i) => (
@@ -52,16 +55,19 @@ function ComBColumn({ title, accentColor, headerBg, borderColor, dotColor, icon,
   );
 }
 
-export default function ComBSection({ mapping }: ComBSectionProps) {
+export default function ComBSection({ mapping, isPlainMode }: ComBSectionProps) {
   return (
     <div>
       <div className="flex items-center gap-2.5 mb-4">
         <h2 className="text-base font-semibold text-gray-900">COM-B Mapping</h2>
-        <span className="text-xs text-gray-400 font-normal">Capability · Opportunity · Motivation</span>
+        <span className="text-xs text-gray-400 font-normal">
+          {plainify("Capability", isPlainMode ?? false)} · {plainify("Opportunity", isPlainMode ?? false)} · {plainify("Motivation", isPlainMode ?? false)}
+        </span>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <ComBColumn
           title="Capability"
+          isPlainMode={isPlainMode}
           accentColor="bg-violet-600"
           headerBg="bg-violet-50"
           borderColor="border-violet-200"
@@ -82,6 +88,7 @@ export default function ComBSection({ mapping }: ComBSectionProps) {
           headerBg="bg-sky-50"
           borderColor="border-sky-200"
           dotColor="bg-sky-400"
+          isPlainMode={isPlainMode}
           icon={
             <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
@@ -98,6 +105,7 @@ export default function ComBSection({ mapping }: ComBSectionProps) {
           headerBg="bg-amber-50"
           borderColor="border-amber-200"
           dotColor="bg-amber-400"
+          isPlainMode={isPlainMode}
           icon={
             <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />

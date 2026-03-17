@@ -7,6 +7,27 @@ datasource db {
   provider = "sqlite"
 }
 
+model User {
+  id             String        @id @default(cuid())
+  createdAt      DateTime      @default(now())
+  email          String        @unique
+  name           String?
+  passwordHash   String
+  role           String        @default("analyst")  // analyst | admin
+  organisationId String?
+  organisation   Organisation? @relation(fields: [organisationId], references: [id])
+  analyses       Analysis[]
+  auditLogs      AuditLog[]
+}
+
+model Organisation {
+  id        String     @id @default(cuid())
+  createdAt DateTime   @default(now())
+  name      String
+  users     User[]
+  analyses  Analysis[]
+}
+
 model Analysis {
   id           String   @id @default(cuid())
   createdAt    DateTime @default(now())
@@ -39,6 +60,12 @@ model Analysis {
   // Rubric auto-score — 10-dimension evaluation_rubric.md scores, computed at save time
   rubricJson   String?  // JSON: { dimensions: [{name, score, rationale}], total, grade }
 
+  // Multi-tenancy
+  userId         String?
+  user           User?         @relation(fields: [userId], references: [id])
+  organisationId String?
+  organisation   Organisation? @relation(fields: [organisationId], references: [id])
+
   auditLogs    AuditLog[]
   corrections  AnalysisCorrection[]
 }
@@ -69,4 +96,7 @@ model AuditLog {
 
   analysisId String?
   analysis   Analysis? @relation(fields: [analysisId], references: [id], onDelete: SetNull)
+
+  userId  String?
+  user    User?    @relation(fields: [userId], references: [id])
 }

@@ -26,6 +26,7 @@ import RubricPanel from "./RubricPanel";
 import LowConfidenceGate from "./LowConfidenceGate";
 import CompetitorProfilePanel from "./CompetitorProfilePanel";
 import { scoreRubric } from "@/lib/rubric";
+import { usePlainMode } from "./PlainModeToggle";
 
 interface AnalysisResultsProps {
   state: AnalysisState;
@@ -96,6 +97,9 @@ export default function AnalysisResults({ state, inputText, usage }: AnalysisRes
   // Low-confidence gate
   const [gateAcknowledged, setGateAcknowledged] = useState(false);
   const prevStatusRef = useRef<string>("");
+
+  // Plain language mode
+  const { isPlainMode } = usePlainMode();
 
   // Load existing corrections when a saved analysis is loaded
   useEffect(() => {
@@ -261,7 +265,7 @@ export default function AnalysisResults({ state, inputText, usage }: AnalysisRes
       </div>
 
       {/* COM-B Detail */}
-      <ComBSection mapping={analysis.com_b_mapping} />
+      <ComBSection mapping={analysis.com_b_mapping} isPlainMode={isPlainMode} />
 
       {/* Key Behaviours */}
       <KeyBehaviours
@@ -279,6 +283,7 @@ export default function AnalysisResults({ state, inputText, usage }: AnalysisRes
         corrections={corrections}
         onCorrect={hasCorrections ? handleCorrect : undefined}
         onInspect={inputText ? setInspectQuote : undefined}
+        isPlainMode={isPlainMode}
       />
       <AnalystAnnotations sectionKey="barriers" analysisId={state.savedId} />
       <MotivatorsList
@@ -287,6 +292,7 @@ export default function AnalysisResults({ state, inputText, usage }: AnalysisRes
         corrections={corrections}
         onCorrect={hasCorrections ? handleCorrect : undefined}
         onInspect={inputText ? setInspectQuote : undefined}
+        isPlainMode={isPlainMode}
       />
       <AnalystAnnotations sectionKey="motivators" analysisId={state.savedId} />
 
@@ -300,6 +306,7 @@ export default function AnalysisResults({ state, inputText, usage }: AnalysisRes
         validityScores={validityScores}
         corrections={corrections}
         onCorrect={hasCorrections ? handleCorrect : undefined}
+        isPlainMode={isPlainMode}
       />
 
       {/* Contradictions */}
@@ -323,6 +330,7 @@ export default function AnalysisResults({ state, inputText, usage }: AnalysisRes
         recommendedResearch={analysis.recommended_next_research}
         usage={usage}
         durationMs={state.durationMs}
+        clarificationNote={analysis.clarification_note}
       />
 
       {/* Analyst Review */}

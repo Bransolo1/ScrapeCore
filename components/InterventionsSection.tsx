@@ -8,12 +8,14 @@ import ConfidenceBadge from "./ConfidenceBadge";
 import ValidityScore from "./ValidityScore";
 import CorrectionControls from "./CorrectionControls";
 import { describeBCT } from "@/lib/bctDescriptions";
+import { plainify } from "@/lib/plainLanguage";
 
 interface InterventionsSectionProps {
   interventions: InterventionOpportunity[];
   validityScores?: ValidityResult[];
   corrections?: Map<string, Correction>;
   onCorrect?: (section: string, index: number, status: string, note?: string) => Promise<void>;
+  isPlainMode?: boolean;
 }
 
 const BCW_COLORS: Record<string, { pill: string; dot: string }> = {
@@ -82,7 +84,7 @@ function ReasoningPanel({ item }: { item: InterventionOpportunity }) {
   );
 }
 
-export default function InterventionsSection({ interventions, validityScores, corrections, onCorrect }: InterventionsSectionProps) {
+export default function InterventionsSection({ interventions, validityScores, corrections, onCorrect, isPlainMode }: InterventionsSectionProps) {
   const [expandedReasoning, setExpandedReasoning] = useState<Set<number>>(new Set());
 
   if (!interventions.length) return null;
@@ -135,7 +137,7 @@ export default function InterventionsSection({ interventions, validityScores, co
                   <div className="flex flex-wrap items-center gap-2 mt-2">
                     <span className={`inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full font-medium ${colors.pill}`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${colors.dot}`} />
-                      {item.bcw_category}
+                      {plainify(item.bcw_category, isPlainMode ?? false)}
                     </span>
                     <svg className="w-3 h-3 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />

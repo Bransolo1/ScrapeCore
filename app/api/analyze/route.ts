@@ -1,6 +1,33 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { SYSTEM_PROMPT, COMPETITOR_PROMPT_SUFFIX, buildUserPrompt, PROMPT_VERSION } from "@/lib/prompts";
 import type { BehaviourAnalysis, DataType } from "@/lib/types";
+
+const CLARIFICATION_SYSTEM = `You are a concise behavioural science analyst. You have just completed a low-confidence analysis of some qualitative data. Your task is to write a short, helpful clarification note (2–4 sentences) for the human analyst that:
+1. Explains the key reason confidence is low (e.g. thin data, ambiguous signals, single source)
+2. Suggests the most important gap to address — a concrete data collection action (e.g. "Run 6–8 user interviews focusing on...")
+3. Notes any tentative signal that, if confirmed, would most change the intervention recommendations
+
+Keep it plain English. No jargon. No bullet points. Speak directly to the analyst.`;
+
+async function fetchClarificationNote(
+  analysis: BehaviourAnalysis,
+  originalText: string,
+  claudeClient: Anthropic
+): Promise<string | null> {
+  try {
+    const prompt = `Here is the low-confidence analysis JSON:\n${JSON.stringify({ confidence: analysis.confidence, key_behaviours: analysis.key_behaviours?.slice(0, 3), barriers: analysis.barriers?.slice(0, 3), text_units_analysed: analysis.text_units_analysed }, null, 2)}\n\nOriginal input excerpt (first 800 chars):\n${originalText.slice(0, 800)}\n\nWrite the clarification note now.`;
+    const msg = await claudeClient.messages.create({
+      model: "claude-opus-4-6",
+      max_tokens: 512,
+      system: CLARIFICATION_SYSTEM,
+      messages: [{ role: "user", content: prompt }],
+    });
+    const block = msg.content[0];
+    return block.type === "text" ? block.text.trim() : null;
+  } catch {
+    return null;
+  }
+}
 import { prisma } from "@/lib/db";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 import { logAudit } from "@/lib/audit";
@@ -160,6 +187,12 @@ export async function POST(req: Request) {
           const analysis = parseAnalysis(fullText);
 
           if (analysis) {
+            // Fallback clarification note when confidence is low
+            if (analysis.confidence?.overall === "low") {
+              const note = await fetchClarificationNote(analysis, text, client);
+              if (note) analysis.clarification_note = note;
+            }
+
             // PII check on the input text (server-side confirmation)
             const piiScan = scanForPII(text);
             const hasPII = clientPiiFlag || piiScan.hasPII;

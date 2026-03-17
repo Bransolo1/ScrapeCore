@@ -5,6 +5,7 @@ import ConfidenceBadge from "./ConfidenceBadge";
 import EvidenceChip from "./EvidenceChip";
 import GroundingBadge from "./GroundingBadge";
 import CorrectionControls from "./CorrectionControls";
+import { plainify } from "@/lib/plainLanguage";
 
 const COM_B_COLORS: Record<string, string> = {
   capability: "bg-violet-100 text-violet-700",
@@ -18,6 +19,7 @@ interface BarriersListProps {
   corrections?: Map<string, Correction>;
   onCorrect?: (section: string, index: number, status: string, note?: string) => Promise<void>;
   onInspect?: (quote: string) => void;
+  isPlainMode?: boolean;
 }
 
 interface MotivatorsListProps {
@@ -26,6 +28,7 @@ interface MotivatorsListProps {
   corrections?: Map<string, Correction>;
   onCorrect?: (section: string, index: number, status: string, note?: string) => Promise<void>;
   onInspect?: (quote: string) => void;
+  isPlainMode?: boolean;
 }
 
 function InspectButton({ quote, onInspect }: { quote: string; onInspect: (q: string) => void }) {
@@ -48,12 +51,14 @@ function BarrierCard({
   correction,
   onCorrect,
   onInspect,
+  isPlainMode,
 }: {
   barrier: Barrier;
   grounding?: GroundingItem;
   correction?: Correction;
   onCorrect?: (status: string, note?: string) => Promise<void>;
   onInspect?: (quote: string) => void;
+  isPlainMode?: boolean;
 }) {
   const removed = correction?.status === "removed";
   const disputed = correction?.status === "disputed";
@@ -75,7 +80,7 @@ function BarrierCard({
         </div>
         <div className="flex items-center gap-2 mb-3">
           <span className={`text-xs px-2 py-0.5 rounded-full font-medium capitalize ${COM_B_COLORS[barrier.com_b_type] ?? "bg-gray-100 text-gray-600"}`}>
-            {barrier.com_b_type}
+            {plainify(barrier.com_b_type, isPlainMode ?? false)}
           </span>
           <span className="text-xs text-gray-400">severity</span>
         </div>
@@ -111,12 +116,14 @@ function MotivatorCard({
   correction,
   onCorrect,
   onInspect,
+  isPlainMode,
 }: {
   motivator: Motivator;
   grounding?: GroundingItem;
   correction?: Correction;
   onCorrect?: (status: string, note?: string) => Promise<void>;
   onInspect?: (quote: string) => void;
+  isPlainMode?: boolean;
 }) {
   const removed = correction?.status === "removed";
   const disputed = correction?.status === "disputed";
@@ -138,7 +145,7 @@ function MotivatorCard({
         </div>
         <div className="flex items-center gap-2 mb-3">
           <span className={`text-xs px-2 py-0.5 rounded-full font-medium capitalize ${COM_B_COLORS[motivator.com_b_type] ?? "bg-gray-100 text-gray-600"}`}>
-            {motivator.com_b_type}
+            {plainify(motivator.com_b_type, isPlainMode ?? false)}
           </span>
           <span className="text-xs text-gray-400">strength</span>
         </div>
@@ -168,7 +175,7 @@ function MotivatorCard({
   );
 }
 
-export function BarriersList({ barriers, groundingMap, corrections, onCorrect, onInspect }: BarriersListProps) {
+export function BarriersList({ barriers, groundingMap, corrections, onCorrect, onInspect, isPlainMode }: BarriersListProps) {
   if (!barriers.length) return null;
   return (
     <div>
@@ -190,6 +197,7 @@ export function BarriersList({ barriers, groundingMap, corrections, onCorrect, o
             correction={corrections?.get(`barriers:${i}`)}
             onCorrect={onCorrect ? (status, note) => onCorrect("barriers", i, status, note) : undefined}
             onInspect={onInspect}
+            isPlainMode={isPlainMode}
           />
         ))}
       </div>
@@ -197,7 +205,7 @@ export function BarriersList({ barriers, groundingMap, corrections, onCorrect, o
   );
 }
 
-export function MotivatorsList({ motivators, groundingMap, corrections, onCorrect, onInspect }: MotivatorsListProps) {
+export function MotivatorsList({ motivators, groundingMap, corrections, onCorrect, onInspect, isPlainMode }: MotivatorsListProps) {
   if (!motivators.length) return null;
   return (
     <div>
@@ -219,6 +227,7 @@ export function MotivatorsList({ motivators, groundingMap, corrections, onCorrec
             correction={corrections?.get(`motivators:${i}`)}
             onCorrect={onCorrect ? (status, note) => onCorrect("motivators", i, status, note) : undefined}
             onInspect={onInspect}
+            isPlainMode={isPlainMode}
           />
         ))}
       </div>
