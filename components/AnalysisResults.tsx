@@ -1,6 +1,10 @@
 "use client";
 
+import { useMemo, useState, useEffect, useCallback } from "react";
 import type { AnalysisState } from "@/lib/types";
+import { groundAnalysis, buildGroundingMap } from "@/lib/grounding";
+import { scoreAllInterventions } from "@/lib/validity";
+import type { Correction, CorrectionStatus } from "./CorrectionControls";
 import ComBSection from "./ComBSection";
 import ComBChart from "./ComBChart";
 import KeyBehaviours from "./KeyBehaviours";
@@ -12,11 +16,17 @@ import PersonaCards from "./PersonaCards";
 import ConfidencePanel from "./ConfidencePanel";
 import ExportButton from "./ExportButton";
 import ReviewPanel from "./ReviewPanel";
+import GroundingPanel from "./GroundingPanel";
 
 interface AnalysisResultsProps {
   state: AnalysisState;
   inputText: string;
   usage?: { inputTokens: number; outputTokens: number };
+}
+
+function getActor() {
+  if (typeof window === "undefined") return "analyst";
+  return localStorage.getItem("scrapecore-user") ?? "analyst";
 }
 
 function EmptyState() {
@@ -68,6 +78,54 @@ function StreamingState({ text }: { text: string }) {
 }
 
 export default function AnalysisResults({ state, inputText, usage }: AnalysisResultsProps) {
+  // Corrections state: key = "section:index"
+  const [corrections, setCorrections] = useState<Map<string, Correction>>(new Map());
+
+  // Load existing corrections when a saved analysis is loaded
+  useEffect(() => {
+    if (!state.savedId || state.status !== "complete") return;
+    fetch(`/api/analyses/${state.savedId}/corrections`)
+      .then((r) => r.json())
+      .then((data: { corrections?: { section: string; itemIndex: number; status: string; note?: string }[] }) => {
+        if (!data.corrections) return;
+        const map = new Map<string, Correction>();
+        for (const c of data.corrections) {
+          map.set(`${c.section}:${c.itemIndex}`, {
+            status: c.status as CorrectionStatus,
+            note: c.note ?? undefined,
+          });
+        }
+        setCorrections(map);
+      })
+      .catch(() => {});
+  }, [state.savedId, state.status]);
+
+  // Reset corrections when a new analysis starts
+  useEffect(() => {
+    if (state.status === "streaming") setCorrections(new Map());
+  }, [state.status]);
+
+  const handleCorrect = useCallback(
+    async (section: string, index: number, status: string, note?: string) => {
+      if (!state.savedId) return;
+      try {
+        const res = await fetch(`/api/analyses/${state.savedId}/corrections`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ section, itemIndex: index, status, note, actor: getActor() }),
+        });
+        if (res.ok) {
+          setCorrections((prev) => {
+            const next = new Map(prev);
+            next.set(`${section}:${index}`, { status: status as CorrectionStatus, note });
+            return next;
+          });
+        }
+      } catch { /* silent */ }
+    },
+    [state.savedId]
+  );
+
   if (state.status === "idle") return <EmptyState />;
   if (state.status === "streaming") return <StreamingState text={state.streamingText} />;
 
@@ -84,6 +142,28 @@ export default function AnalysisResults({ state, inputText, usage }: AnalysisRes
 
   const { analysis } = state;
   if (!analysis) return null;
+
+  // Grounding — computed once per analysis+inputText
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const groundingReport = useMemo(
+    () => (inputText ? groundAnalysis(analysis, inputText) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [analysis, inputText]
+  );
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const groundingMap = useMemo(
+    () => (groundingReport ? buildGroundingMap(groundingReport) : undefined),
+    [groundingReport]
+  );
+
+  // Validity scores for interventions
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const validityScores = useMemo(
+    () => scoreAllInterventions(analysis.intervention_opportunities ?? []),
+    [analysis.intervention_opportunities]
+  );
+
+  const hasCorrections = !!state.savedId;
 
   return (
     <div className="p-6 space-y-8 animate-fade-in">
@@ -103,6 +183,11 @@ export default function AnalysisResults({ state, inputText, usage }: AnalysisRes
         <ExportButton analysis={analysis} inputText={inputText} />
       </div>
 
+      {/* Evidence Grounding report — shown immediately after header */}
+      {groundingReport && groundingReport.total > 0 && (
+        <GroundingPanel report={groundingReport} />
+      )}
+
       {/* COM-B Chart */}
       <div className="bg-gray-50 rounded-xl border border-gray-100 px-5 py-4">
         <ComBChart mapping={analysis.com_b_mapping} />
@@ -112,14 +197,34 @@ export default function AnalysisResults({ state, inputText, usage }: AnalysisRes
       <ComBSection mapping={analysis.com_b_mapping} />
 
       {/* Key Behaviours */}
-      <KeyBehaviours behaviours={analysis.key_behaviours} />
+      <KeyBehaviours
+        behaviours={analysis.key_behaviours}
+        groundingMap={groundingMap}
+        corrections={corrections}
+        onCorrect={hasCorrections ? handleCorrect : undefined}
+      />
 
       {/* Barriers & Motivators */}
-      <BarriersList barriers={analysis.barriers} />
-      <MotivatorsList motivators={analysis.motivators} />
+      <BarriersList
+        barriers={analysis.barriers}
+        groundingMap={groundingMap}
+        corrections={corrections}
+        onCorrect={hasCorrections ? handleCorrect : undefined}
+      />
+      <MotivatorsList
+        motivators={analysis.motivators}
+        groundingMap={groundingMap}
+        corrections={corrections}
+        onCorrect={hasCorrections ? handleCorrect : undefined}
+      />
 
       {/* Interventions */}
-      <InterventionsSection interventions={analysis.intervention_opportunities} />
+      <InterventionsSection
+        interventions={analysis.intervention_opportunities}
+        validityScores={validityScores}
+        corrections={corrections}
+        onCorrect={hasCorrections ? handleCorrect : undefined}
+      />
 
       {/* Contradictions */}
       <ContradictionsSection contradictions={analysis.contradictions ?? []} />

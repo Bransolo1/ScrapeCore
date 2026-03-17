@@ -1,6 +1,10 @@
 import type { Barrier, Motivator } from "@/lib/types";
+import type { GroundingItem } from "@/lib/grounding";
+import type { Correction } from "./CorrectionControls";
 import ConfidenceBadge from "./ConfidenceBadge";
 import EvidenceChip from "./EvidenceChip";
+import GroundingBadge from "./GroundingBadge";
+import CorrectionControls from "./CorrectionControls";
 
 const COM_B_COLORS: Record<string, string> = {
   capability: "bg-violet-100 text-violet-700",
@@ -10,21 +14,46 @@ const COM_B_COLORS: Record<string, string> = {
 
 interface BarriersListProps {
   barriers: Barrier[];
+  groundingMap?: Map<string, GroundingItem>;
+  corrections?: Map<string, Correction>;
+  onCorrect?: (section: string, index: number, status: string, note?: string) => Promise<void>;
 }
 
 interface MotivatorsListProps {
   motivators: Motivator[];
+  groundingMap?: Map<string, GroundingItem>;
+  corrections?: Map<string, Correction>;
+  onCorrect?: (section: string, index: number, status: string, note?: string) => Promise<void>;
 }
 
-function BarrierCard({ barrier }: { barrier: Barrier }) {
+function BarrierCard({
+  barrier,
+  grounding,
+  correction,
+  onCorrect,
+}: {
+  barrier: Barrier;
+  grounding?: GroundingItem;
+  correction?: Correction;
+  onCorrect?: (status: string, note?: string) => Promise<void>;
+}) {
+  const removed = correction?.status === "removed";
+  const disputed = correction?.status === "disputed";
+
   return (
-    <div className="relative border border-gray-200 rounded-xl bg-white overflow-hidden hover:shadow-sm transition-shadow animate-fade-in-up">
-      {/* Left accent stripe */}
-      <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-rose-400" />
+    <div className={`relative border rounded-xl bg-white overflow-hidden hover:shadow-sm transition-all animate-fade-in-up ${
+      removed ? "opacity-40" : disputed ? "border-amber-300" : "border-gray-200"
+    }`}>
+      <div className={`absolute left-0 top-0 bottom-0 w-[3px] ${removed ? "bg-gray-300" : "bg-rose-400"}`} />
       <div className="pl-4 pr-4 pt-4 pb-4">
         <div className="flex items-start justify-between gap-3 mb-2.5">
-          <p className="text-sm font-medium text-gray-800 leading-snug">{barrier.barrier}</p>
-          <ConfidenceBadge level={barrier.severity} />
+          <p className={`text-sm font-medium leading-snug ${removed ? "line-through text-gray-400" : "text-gray-800"}`}>
+            {barrier.barrier}
+          </p>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {grounding && <GroundingBadge level={grounding.level} compact />}
+            <ConfidenceBadge level={barrier.severity} />
+          </div>
         </div>
         <div className="flex items-center gap-2 mb-3">
           <span className={`text-xs px-2 py-0.5 rounded-full font-medium capitalize ${COM_B_COLORS[barrier.com_b_type] ?? "bg-gray-100 text-gray-600"}`}>
@@ -32,32 +61,55 @@ function BarrierCard({ barrier }: { barrier: Barrier }) {
           </span>
           <span className="text-xs text-gray-400">severity</span>
         </div>
-        {barrier.source_text && (
+        {barrier.source_text && !removed && (
           <blockquote className="mb-3 pl-3 border-l-2 border-gray-200">
             <p className="text-xs text-gray-500 italic leading-relaxed line-clamp-3">&ldquo;{barrier.source_text}&rdquo;</p>
           </blockquote>
         )}
-        {barrier.evidence.length > 0 && (
-          <div className="space-y-1.5">
-            {barrier.evidence.slice(0, 2).map((q, i) => (
-              <EvidenceChip key={i} quote={q} />
-            ))}
+        {barrier.evidence.length > 0 && !removed && (
+          <div className="space-y-1.5 mb-2">
+            {barrier.evidence.slice(0, 2).map((q, i) => <EvidenceChip key={i} quote={q} />)}
           </div>
+        )}
+        {onCorrect && (
+          <CorrectionControls
+            correction={correction}
+            onSave={(status, note) => onCorrect(status, note)}
+          />
         )}
       </div>
     </div>
   );
 }
 
-function MotivatorCard({ motivator }: { motivator: Motivator }) {
+function MotivatorCard({
+  motivator,
+  grounding,
+  correction,
+  onCorrect,
+}: {
+  motivator: Motivator;
+  grounding?: GroundingItem;
+  correction?: Correction;
+  onCorrect?: (status: string, note?: string) => Promise<void>;
+}) {
+  const removed = correction?.status === "removed";
+  const disputed = correction?.status === "disputed";
+
   return (
-    <div className="relative border border-gray-200 rounded-xl bg-white overflow-hidden hover:shadow-sm transition-shadow animate-fade-in-up">
-      {/* Left accent stripe */}
-      <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-emerald-400" />
+    <div className={`relative border rounded-xl bg-white overflow-hidden hover:shadow-sm transition-all animate-fade-in-up ${
+      removed ? "opacity-40" : disputed ? "border-amber-300" : "border-gray-200"
+    }`}>
+      <div className={`absolute left-0 top-0 bottom-0 w-[3px] ${removed ? "bg-gray-300" : "bg-emerald-400"}`} />
       <div className="pl-4 pr-4 pt-4 pb-4">
         <div className="flex items-start justify-between gap-3 mb-2.5">
-          <p className="text-sm font-medium text-gray-800 leading-snug">{motivator.motivator}</p>
-          <ConfidenceBadge level={motivator.strength} />
+          <p className={`text-sm font-medium leading-snug ${removed ? "line-through text-gray-400" : "text-gray-800"}`}>
+            {motivator.motivator}
+          </p>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {grounding && <GroundingBadge level={grounding.level} compact />}
+            <ConfidenceBadge level={motivator.strength} />
+          </div>
         </div>
         <div className="flex items-center gap-2 mb-3">
           <span className={`text-xs px-2 py-0.5 rounded-full font-medium capitalize ${COM_B_COLORS[motivator.com_b_type] ?? "bg-gray-100 text-gray-600"}`}>
@@ -65,24 +117,28 @@ function MotivatorCard({ motivator }: { motivator: Motivator }) {
           </span>
           <span className="text-xs text-gray-400">strength</span>
         </div>
-        {motivator.source_text && (
+        {motivator.source_text && !removed && (
           <blockquote className="mb-3 pl-3 border-l-2 border-emerald-200">
             <p className="text-xs text-gray-500 italic leading-relaxed line-clamp-3">&ldquo;{motivator.source_text}&rdquo;</p>
           </blockquote>
         )}
-        {motivator.evidence.length > 0 && (
-          <div className="space-y-1.5">
-            {motivator.evidence.slice(0, 2).map((q, i) => (
-              <EvidenceChip key={i} quote={q} />
-            ))}
+        {motivator.evidence.length > 0 && !removed && (
+          <div className="space-y-1.5 mb-2">
+            {motivator.evidence.slice(0, 2).map((q, i) => <EvidenceChip key={i} quote={q} />)}
           </div>
+        )}
+        {onCorrect && (
+          <CorrectionControls
+            correction={correction}
+            onSave={(status, note) => onCorrect(status, note)}
+          />
         )}
       </div>
     </div>
   );
 }
 
-export function BarriersList({ barriers }: BarriersListProps) {
+export function BarriersList({ barriers, groundingMap, corrections, onCorrect }: BarriersListProps) {
   if (!barriers.length) return null;
   return (
     <div>
@@ -96,13 +152,21 @@ export function BarriersList({ barriers }: BarriersListProps) {
         <span className="text-xs font-medium text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{barriers.length}</span>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {barriers.map((b, i) => <BarrierCard key={i} barrier={b} />)}
+        {barriers.map((b, i) => (
+          <BarrierCard
+            key={i}
+            barrier={b}
+            grounding={groundingMap?.get(`barriers:${i}`)}
+            correction={corrections?.get(`barriers:${i}`)}
+            onCorrect={onCorrect ? (status, note) => onCorrect("barriers", i, status, note) : undefined}
+          />
+        ))}
       </div>
     </div>
   );
 }
 
-export function MotivatorsList({ motivators }: MotivatorsListProps) {
+export function MotivatorsList({ motivators, groundingMap, corrections, onCorrect }: MotivatorsListProps) {
   if (!motivators.length) return null;
   return (
     <div>
@@ -116,7 +180,15 @@ export function MotivatorsList({ motivators }: MotivatorsListProps) {
         <span className="text-xs font-medium text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{motivators.length}</span>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {motivators.map((m, i) => <MotivatorCard key={i} motivator={m} />)}
+        {motivators.map((m, i) => (
+          <MotivatorCard
+            key={i}
+            motivator={m}
+            grounding={groundingMap?.get(`motivators:${i}`)}
+            correction={corrections?.get(`motivators:${i}`)}
+            onCorrect={onCorrect ? (status, note) => onCorrect("motivators", i, status, note) : undefined}
+          />
+        ))}
       </div>
     </div>
   );
