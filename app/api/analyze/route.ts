@@ -1,10 +1,12 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { SYSTEM_PROMPT, buildUserPrompt } from "@/lib/prompts";
+import { SYSTEM_PROMPT, COMPETITOR_PROMPT_SUFFIX, buildUserPrompt, PROMPT_VERSION } from "@/lib/prompts";
 import type { BehaviourAnalysis, DataType } from "@/lib/types";
 import { prisma } from "@/lib/db";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 import { logAudit } from "@/lib/audit";
 import { scanForPII } from "@/lib/pii";
+import { groundAnalysis } from "@/lib/grounding";
+import { scoreAllInterventions } from "@/lib/validity";
 
 const client = new Anthropic();
 
@@ -50,6 +52,9 @@ async function saveAnalysis(params: {
   outputTokens: number;
   durationMs: number;
   piiDetected: boolean;
+  promptVersion: string;
+  projectContext?: string;
+  evalJson?: string;
   actor?: string;
 }): Promise<string | null> {
   try {
@@ -99,11 +104,12 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { text, dataType, actor, piiDetected: clientPiiFlag } = (await req.json()) as {
+    const { text, dataType, actor, piiDetected: clientPiiFlag, projectContext } = (await req.json()) as {
       text: string;
       dataType: DataType;
       actor?: string;
       piiDetected?: boolean;
+      projectContext?: string;
     };
 
     if (!text?.trim()) {
@@ -111,6 +117,10 @@ export async function POST(req: Request) {
     }
 
     const startMs = Date.now();
+    const systemPrompt =
+      dataType === "competitor"
+        ? SYSTEM_PROMPT + COMPETITOR_PROMPT_SUFFIX
+        : SYSTEM_PROMPT;
 
     const stream = new ReadableStream({
       async start(controller) {
@@ -118,11 +128,11 @@ export async function POST(req: Request) {
           const anthropicStream = client.messages.stream({
             model: "claude-opus-4-6",
             max_tokens: 8192,
-            system: SYSTEM_PROMPT,
+            system: systemPrompt,
             messages: [
               {
                 role: "user",
-                content: buildUserPrompt(text, dataType),
+                content: buildUserPrompt(text, dataType, projectContext),
               },
             ],
           });
@@ -161,7 +171,22 @@ export async function POST(req: Request) {
               });
             }
 
-            // Persist to DB (fire-and-forget, non-blocking)
+            // Server-side eval: grounding + validity scores
+            const groundingReport = groundAnalysis(analysis, text);
+            const validityResults = scoreAllInterventions(analysis.intervention_opportunities ?? []);
+            const avgValidityScore =
+              validityResults.length > 0
+                ? Math.round(validityResults.reduce((s, r) => s + r.score, 0) / validityResults.length * 10) / 10
+                : null;
+            const weakInterventions = validityResults.filter((r) => r.level === "weak").map((r) => r.score);
+            const evalJson = JSON.stringify({
+              groundingScore: groundingReport.score,
+              ungroundedCount: groundingReport.ungroundedCount,
+              avgValidityScore,
+              weakInterventions,
+            });
+
+            // Persist to DB
             const savedId = await saveAnalysis({
               title: deriveTitle(analysis),
               dataType,
@@ -171,6 +196,9 @@ export async function POST(req: Request) {
               outputTokens,
               durationMs,
               piiDetected: hasPII,
+              promptVersion: PROMPT_VERSION,
+              projectContext,
+              evalJson,
               actor,
             });
 

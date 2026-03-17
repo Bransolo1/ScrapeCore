@@ -29,6 +29,13 @@ model Analysis {
   // PII flag — set if PII was detected in input text at analysis time
   piiDetected  Boolean  @default(false)
 
+  // Prompt Systems
+  promptVersion  String?  // e.g. "v2.1"
+  projectContext String?  // analyst-supplied research question / target population
+
+  // Eval log — grounding score, validity scores, computed at save time
+  evalJson     String?  // JSON: { groundingScore, ungroundedCount, avgValidityScore, weakInterventions }
+
   auditLogs    AuditLog[]
   corrections  AnalysisCorrection[]
 }

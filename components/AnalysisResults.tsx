@@ -17,6 +17,10 @@ import ConfidencePanel from "./ConfidencePanel";
 import ExportButton from "./ExportButton";
 import ReviewPanel from "./ReviewPanel";
 import GroundingPanel from "./GroundingPanel";
+import TrustBanner from "./TrustBanner";
+import BehaviouralContextPanel from "./BehaviouralContextPanel";
+import FacilitatorsSection from "./FacilitatorsSection";
+import AnalystAnnotations from "./AnalystAnnotations";
 
 interface AnalysisResultsProps {
   state: AnalysisState;
@@ -183,10 +187,16 @@ export default function AnalysisResults({ state, inputText, usage }: AnalysisRes
         <ExportButton analysis={analysis} inputText={inputText} />
       </div>
 
+      {/* Trust banner */}
+      <TrustBanner />
+
       {/* Evidence Grounding report — shown immediately after header */}
       {groundingReport && groundingReport.total > 0 && (
         <GroundingPanel report={groundingReport} />
       )}
+
+      {/* Behavioural context */}
+      <BehaviouralContextPanel context={analysis.behavioural_context} />
 
       {/* COM-B Chart */}
       <div className="bg-gray-50 rounded-xl border border-gray-100 px-5 py-4">
@@ -211,12 +221,18 @@ export default function AnalysisResults({ state, inputText, usage }: AnalysisRes
         corrections={corrections}
         onCorrect={hasCorrections ? handleCorrect : undefined}
       />
+      <AnalystAnnotations sectionKey="barriers" analysisId={state.savedId} />
       <MotivatorsList
         motivators={analysis.motivators}
         groundingMap={groundingMap}
         corrections={corrections}
         onCorrect={hasCorrections ? handleCorrect : undefined}
       />
+      <AnalystAnnotations sectionKey="motivators" analysisId={state.savedId} />
+
+      {/* Facilitators */}
+      <FacilitatorsSection facilitators={analysis.facilitators} />
+      <AnalystAnnotations sectionKey="facilitators" analysisId={state.savedId} />
 
       {/* Interventions */}
       <InterventionsSection

@@ -3,13 +3,16 @@
 import { useRef } from "react";
 import type { DataType } from "@/lib/types";
 import { EXAMPLE_DATA } from "@/lib/prompts";
+import ProjectContextInput from "./ProjectContextInput";
 
 interface DataInputProps {
   text: string;
   dataType: DataType;
   isLoading: boolean;
+  projectContext: string;
   onTextChange: (text: string) => void;
   onDataTypeChange: (dt: DataType) => void;
+  onProjectContextChange: (v: string) => void;
   onSubmit: () => void;
 }
 
@@ -19,14 +22,17 @@ const DATA_TYPES: { value: DataType; label: string; description: string }[] = [
   { value: "reviews", label: "Reviews", description: "Product, service, or app reviews" },
   { value: "free_text", label: "Free text", description: "Any unstructured qualitative text" },
   { value: "social", label: "Social listening", description: "Social media posts or community comments" },
+  { value: "competitor", label: "Competitor intel", description: "Reviews, messaging, or UX signals from a competitor" },
 ];
 
 export default function DataInput({
   text,
   dataType,
   isLoading,
+  projectContext,
   onTextChange,
   onDataTypeChange,
+  onProjectContextChange,
   onSubmit,
 }: DataInputProps) {
   const fileRef = useRef<HTMLInputElement>(null);
@@ -73,6 +79,13 @@ export default function DataInput({
           ))}
         </div>
       </div>
+
+      {/* Research context */}
+      <ProjectContextInput
+        value={projectContext}
+        onChange={onProjectContextChange}
+        disabled={isLoading}
+      />
 
       {/* Text input */}
       <div>

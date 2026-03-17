@@ -10,6 +10,7 @@ import SourcesPanel from "@/components/SourcesPanel";
 import AnalysisResults from "@/components/AnalysisResults";
 import AnalysisHistory from "@/components/AnalysisHistory";
 import PIIWarningModal from "@/components/PIIWarningModal";
+import WizardOverlay from "@/components/WizardOverlay";
 import type { AnalysisState, DataType, BehaviourAnalysis } from "@/lib/types";
 import type { Source } from "@/lib/scraper";
 import { formatSourcesAsText } from "@/lib/scraper";
@@ -76,6 +77,10 @@ export default function Home() {
   // Paste mode state
   const [pasteText, setPasteText] = useState("");
   const [dataType, setDataType] = useState<DataType>("survey");
+  const [projectContext, setProjectContext] = useState("");
+
+  // First-run wizard
+  const [showWizard, setShowWizard] = useState(false);
 
   // Scrape / social sources
   const [sources, setSources] = useState<Source[]>([]);
@@ -95,11 +100,14 @@ export default function Home() {
 
   const isLoading = analysisState.status === "streaming";
 
-  // Prompt for user name on first use (stored in localStorage for audit attribution)
+  // Prompt for user name on first use + show wizard
   useEffect(() => {
     if (!localStorage.getItem("scrapecore-user")) {
       const name = window.prompt("Enter your name (used for audit logs):", "Analyst");
       if (name?.trim()) localStorage.setItem("scrapecore-user", name.trim());
+    }
+    if (!localStorage.getItem("scrapecore-wizard-done")) {
+      setShowWizard(true);
     }
   }, []);
 
@@ -116,7 +124,7 @@ export default function Home() {
       const res = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, dataType: dt, actor: getActor(), piiDetected }),
+        body: JSON.stringify({ text, dataType: dt, actor: getActor(), piiDetected, projectContext: projectContext.trim() || undefined }),
       });
 
       if (!res.ok || !res.body) {
@@ -236,6 +244,14 @@ export default function Home() {
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Header />
 
+      {/* First-run wizard */}
+      {showWizard && (
+        <WizardOverlay onDone={() => {
+          setShowWizard(false);
+          localStorage.setItem("scrapecore-wizard-done", "1");
+        }} />
+      )}
+
       {/* PII warning modal */}
       {piiResult && (
         <PIIWarningModal
@@ -275,8 +291,10 @@ export default function Home() {
                   text={pasteText}
                   dataType={dataType}
                   isLoading={isLoading}
+                  projectContext={projectContext}
                   onTextChange={setPasteText}
                   onDataTypeChange={setDataType}
+                  onProjectContextChange={setProjectContext}
                   onSubmit={handlePasteAnalyse}
                 />
               )}
