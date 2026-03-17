@@ -37,6 +37,8 @@ import { scanForPII } from "@/lib/pii";
 import { groundAnalysis } from "@/lib/grounding";
 import { scoreAllInterventions } from "@/lib/validity";
 import { scoreRubric } from "@/lib/rubric";
+import { appendEvalLog } from "@/lib/evalLog";
+import { buildProjectMemoryBlock } from "@/lib/projectMemory";
 
 const client = new Anthropic();
 
@@ -84,8 +86,11 @@ async function saveAnalysis(params: {
   piiDetected: boolean;
   promptVersion: string;
   projectContext?: string;
+  project?: string;
   evalJson?: string;
   rubricJson?: string;
+  evalPassed?: boolean;
+  evalNotes?: string;
   actor?: string;
   userId?: string;
 }): Promise<string | null> {
@@ -140,17 +145,22 @@ export async function POST(req: Request) {
     const session = await getServerSession(authOptions);
     const sessionUserId = (session?.user as { id?: string } | undefined)?.id ?? undefined;
 
-    const { text, dataType, actor, piiDetected: clientPiiFlag, projectContext } = (await req.json()) as {
+    const { text, dataType, actor, piiDetected: clientPiiFlag, projectContext, project } = (await req.json()) as {
       text: string;
       dataType: DataType;
       actor?: string;
       piiDetected?: boolean;
       projectContext?: string;
+      project?: string;
     };
 
     if (!text?.trim()) {
       return Response.json({ error: "No text provided" }, { status: 400 });
     }
+
+    // Project memory: inject prior findings for same project as additional context
+    const priorMemory = project ? await buildProjectMemoryBlock(project, sessionUserId) : null;
+    const contextWithMemory = [projectContext, priorMemory].filter(Boolean).join("\n\n") || undefined;
 
     const startMs = Date.now();
     const systemPrompt =
@@ -168,7 +178,7 @@ export async function POST(req: Request) {
             messages: [
               {
                 role: "user",
-                content: buildUserPrompt(text, dataType, projectContext),
+                content: buildUserPrompt(text, dataType, contextWithMemory ?? projectContext),
               },
             ],
           });
@@ -230,6 +240,8 @@ export async function POST(req: Request) {
 
             const rubricResult = scoreRubric(analysis, groundingReport.score, avgValidityScore);
             const rubricJson = JSON.stringify(rubricResult);
+            const evalPassed = rubricResult.grade !== "needs_revision";
+            const evalNotes = `${rubricResult.grade.toUpperCase()} — ${rubricResult.total}/50 rubric score. Grounding: ${groundingReport.score}%. Confidence: ${analysis.confidence?.overall ?? "unknown"}.`;
 
             // Persist to DB
             const savedId = await saveAnalysis({
@@ -243,10 +255,25 @@ export async function POST(req: Request) {
               piiDetected: hasPII,
               promptVersion: PROMPT_VERSION,
               projectContext,
+              project,
               evalJson,
               rubricJson,
+              evalPassed,
+              evalNotes,
               actor,
               userId: sessionUserId,
+            });
+
+            // Append to eval log file (fire-and-forget)
+            appendEvalLog({
+              date: new Date().toISOString().slice(0, 10),
+              promptVersion: PROMPT_VERSION,
+              rubricGrade: rubricResult.grade,
+              rubricTotal: rubricResult.total,
+              groundingScore: groundingReport.score,
+              dataType,
+              wordCount: text.trim().split(/\s+/).length,
+              analysisId: savedId ?? "unsaved",
             });
 
             controller.enqueue(

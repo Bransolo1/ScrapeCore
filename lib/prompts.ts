@@ -1,6 +1,6 @@
 import type { DataType } from "./types";
 
-export const PROMPT_VERSION = "v2.1";
+export const PROMPT_VERSION = "v2.2";
 
 // ─── System prompt ───────────────────────────────────────────────────────────
 
@@ -41,6 +41,13 @@ EMOTIONAL VALENCE GUIDE:
 FACILITATOR vs MOTIVATOR DISTINCTION:
 - Motivator: Internal push — a desire, belief, habit, goal, or emotional drive the person has
 - Facilitator: External scaffold — a tool, person, institution, environment, or resource that makes the behaviour easier
+
+HIGH TRUST USE ASSESSMENT: For each analysis, set suitable_for_high_trust_use=true ONLY when ALL of:
+- confidence.overall is "high"
+- At least 5 distinct text units were analysed
+- Key claims can be traced to specific verbatim quotes
+- Data comes from multiple independent sources/respondents
+Otherwise set suitable_for_high_trust_use=false and explain in high_trust_notes why it is not suitable for high-stakes operational or policy decisions.
 
 CONTRADICTION HANDLING: Capture genuinely opposing evidence in the contradictions array.
 SUBGROUP ANALYSIS: Capture meaningful differences in subgroup_insights.
@@ -202,12 +209,14 @@ Return ONLY a valid JSON object — no markdown, no preamble. Use this exact str
     "rationale": "Explicit reason for this confidence score",
     "notes": "Overall assessment of evidence quality",
     "limitations": ["specific limitation"],
-    "sample_size_note": "Comment on data volume and diversity"
+    "sample_size_note": "Comment on data volume and diversity",
+    "suitable_for_high_trust_use": true,
+    "high_trust_notes": "Required if false — explain why this output should not be used in high-stakes settings without additional validation"
   },
   "recommended_next_research": ["Specific actionable research recommendation"]
 }
 
-REQUIRED FIELDS: emotional_valence on all barriers/motivators/key_behaviours. behavioural_context with all subfields. facilitators array ([] if none). contradictions and subgroup_insights arrays ([] if none).
+REQUIRED FIELDS: emotional_valence on all barriers/motivators/key_behaviours. behavioural_context with all subfields. facilitators array ([] if none). contradictions and subgroup_insights arrays ([] if none). confidence.suitable_for_high_trust_use (boolean) and confidence.high_trust_notes (string if false).
 Do NOT invent quotes. source_text must trace to actual input.`;
 }
 

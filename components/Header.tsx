@@ -26,6 +26,8 @@ const NAV = [
   { href: "/", label: "Analyse" },
   { href: "/dashboard", label: "Dashboard" },
   { href: "/compare", label: "Compare" },
+  { href: "/eval", label: "Eval" },
+  { href: "/monitoring", label: "Monitor" },
   { href: "/audit", label: "Audit" },
 ];
 

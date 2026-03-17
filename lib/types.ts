@@ -116,6 +116,8 @@ export interface ConfidenceAssessment {
   notes: string;
   limitations: string[];
   sample_size_note: string;
+  suitable_for_high_trust_use: boolean;  // false when confidence low, sample small, or grounding weak
+  high_trust_notes?: string;             // explanation of why not suitable, if false
 }
 
 export interface BehaviourAnalysis {
