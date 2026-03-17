@@ -1,11 +1,11 @@
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { requireAuth } from "@/lib/apiAuth";
 import { prisma } from "@/lib/db";
 
 export async function GET(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    const sessionUserId = (session?.user as { id?: string } | undefined)?.id ?? undefined;
+    const authResult = await requireAuth();
+    if (authResult instanceof Response) return authResult;
+    const sessionUserId = authResult.userId;
 
     const { searchParams } = new URL(req.url);
     const page = Math.max(1, parseInt(searchParams.get("page") ?? "1"));

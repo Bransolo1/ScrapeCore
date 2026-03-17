@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { SYSTEM_PROMPT, COMPETITOR_PROMPT_SUFFIX, buildUserPrompt, PROMPT_VERSION } from "@/lib/prompts";
 import type { BehaviourAnalysis, DataType } from "@/lib/types";
+import { validateAnalysis } from "@/lib/analysisSchema";
 
 const CLARIFICATION_SYSTEM = `You are a concise behavioural science analyst. You have just completed a low-confidence analysis of some qualitative data. Your task is to write a short, helpful clarification note (2–4 sentences) for the human analyst that:
 1. Explains the key reason confidence is low (e.g. thin data, ambiguous signals, single source)
@@ -28,8 +29,7 @@ async function fetchClarificationNote(
     return null;
   }
 }
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { requireAuth } from "@/lib/apiAuth";
 import { prisma } from "@/lib/db";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 import { logAudit } from "@/lib/audit";
@@ -39,28 +39,34 @@ import { scoreAllInterventions } from "@/lib/validity";
 import { scoreRubric } from "@/lib/rubric";
 import { appendEvalLog } from "@/lib/evalLog";
 import { buildProjectMemoryBlock } from "@/lib/projectMemory";
+import { validateCSRF } from "@/lib/csrf";
 
 const client = new Anthropic();
 
 function parseAnalysis(text: string): BehaviourAnalysis | null {
+  let raw: unknown;
   try {
     const cleaned = text
       .replace(/^```json\s*/i, "")
       .replace(/^```\s*/i, "")
       .replace(/```\s*$/i, "")
       .trim();
-    return JSON.parse(cleaned) as BehaviourAnalysis;
+    raw = JSON.parse(cleaned);
   } catch {
     const match = text.match(/\{[\s\S]*\}/);
     if (match) {
       try {
-        return JSON.parse(match[0]) as BehaviourAnalysis;
+        raw = JSON.parse(match[0]);
       } catch {
         return null;
       }
     }
-    return null;
+    if (!raw) return null;
   }
+
+  // Runtime validation with Zod — fills defaults for missing optional fields
+  const validated = validateAnalysis(raw);
+  return validated as BehaviourAnalysis | null;
 }
 
 function encodeSSE(data: object): Uint8Array {
@@ -118,6 +124,10 @@ async function saveAnalysis(params: {
 }
 
 export async function POST(req: Request) {
+  // CSRF protection
+  const csrfError = validateCSRF(req);
+  if (csrfError) return csrfError;
+
   // Rate limit check
   const ip = getClientIp(req);
   const rateLimit = checkRateLimit(ip);
@@ -141,9 +151,10 @@ export async function POST(req: Request) {
   }
 
   try {
-    // Extract authenticated user if available
-    const session = await getServerSession(authOptions);
-    const sessionUserId = (session?.user as { id?: string } | undefined)?.id ?? undefined;
+    // Enforce authentication
+    const authResult = await requireAuth();
+    if (authResult instanceof Response) return authResult;
+    const sessionUserId = authResult.userId;
 
     const { text, dataType, actor, piiDetected: clientPiiFlag, projectContext, project } = (await req.json()) as {
       text: string;
@@ -156,6 +167,15 @@ export async function POST(req: Request) {
 
     if (!text?.trim()) {
       return Response.json({ error: "No text provided" }, { status: 400 });
+    }
+
+    // Input size limit: 100KB
+    const INPUT_LIMIT = 100 * 1024;
+    if (text.length > INPUT_LIMIT) {
+      return Response.json(
+        { error: `Input too large (${Math.round(text.length / 1024)}KB). Maximum is 100KB (~20,000 words). Trim your input and try again.` },
+        { status: 413 }
+      );
     }
 
     // Project memory: inject prior findings for same project as additional context
@@ -200,6 +220,7 @@ export async function POST(req: Request) {
           const inputTokens = finalMessage.usage.input_tokens;
           const outputTokens = finalMessage.usage.output_tokens;
           const durationMs = Date.now() - startMs;
+          const wasTruncated = finalMessage.stop_reason === "max_tokens";
 
           const analysis = parseAnalysis(fullText);
 
@@ -282,6 +303,7 @@ export async function POST(req: Request) {
                 analysis,
                 savedId,
                 usage: { inputTokens, outputTokens },
+                truncated: wasTruncated,
               })
             );
           } else {

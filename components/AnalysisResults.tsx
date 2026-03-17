@@ -33,6 +33,7 @@ interface AnalysisResultsProps {
   state: AnalysisState;
   inputText: string;
   usage?: { inputTokens: number; outputTokens: number };
+  onCancel?: () => void;
 }
 
 function getActor() {
@@ -63,10 +64,28 @@ function EmptyState() {
   );
 }
 
-function StreamingState({ text }: { text: string }) {
+const PROGRESS_STEPS = [
+  { trigger: 0, label: "Sending data to Claude…", icon: "upload" },
+  { trigger: 50, label: "Reading and understanding your text…", icon: "read" },
+  { trigger: 200, label: "Identifying key behaviours…", icon: "search" },
+  { trigger: 500, label: "Mapping to COM-B framework…", icon: "map" },
+  { trigger: 1200, label: "Analysing barriers & motivators…", icon: "analyse" },
+  { trigger: 2500, label: "Designing intervention opportunities…", icon: "design" },
+  { trigger: 4000, label: "Assessing confidence & finalising…", icon: "check" },
+];
+
+function StreamingState({ text, onCancel }: { text: string; onCancel?: () => void }) {
+  const charCount = text.length;
+  const currentStep = PROGRESS_STEPS.reduce(
+    (best, step) => (charCount >= step.trigger ? step : best),
+    PROGRESS_STEPS[0]
+  );
+  const stepIndex = PROGRESS_STEPS.indexOf(currentStep);
+  const progressPct = Math.min(95, Math.round((stepIndex / (PROGRESS_STEPS.length - 1)) * 100));
+
   return (
     <div className="p-6 animate-fade-in">
-      <div className="flex items-center gap-3 mb-5">
+      <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2.5 px-3 py-1.5 bg-brand-50 border border-brand-100 rounded-full">
           <div className="flex gap-1">
             <span className="w-1.5 h-1.5 bg-brand-500 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
@@ -75,20 +94,68 @@ function StreamingState({ text }: { text: string }) {
           </div>
           <span className="text-xs font-medium text-brand-700">Analysing with Claude Opus 4.6…</span>
         </div>
+        {onCancel && (
+          <button
+            onClick={onCancel}
+            className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-50 border border-gray-200 hover:border-red-200 transition-all"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            Cancel
+          </button>
+        )}
       </div>
-      <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 max-h-96 overflow-y-auto scrollbar-thin">
-        <pre className="text-xs text-gray-500 font-mono whitespace-pre-wrap leading-relaxed">
-          {text || "Thinking…"}
-        </pre>
+
+      {/* Progress bar */}
+      <div className="mb-4">
+        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-brand-500 rounded-full transition-all duration-700 ease-out"
+            style={{ width: `${progressPct}%` }}
+          />
+        </div>
       </div>
-      <p className="mt-3 text-xs text-gray-400 text-center">
+
+      {/* Steps list */}
+      <div className="space-y-2 mb-4">
+        {PROGRESS_STEPS.map((step, i) => {
+          const isDone = i < stepIndex;
+          const isCurrent = i === stepIndex;
+          return (
+            <div
+              key={step.trigger}
+              className={`flex items-center gap-2.5 text-sm transition-all duration-300 ${
+                isDone ? "text-emerald-600" : isCurrent ? "text-brand-700 font-medium" : "text-gray-300"
+              }`}
+            >
+              {isDone ? (
+                <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              ) : isCurrent ? (
+                <div className="w-4 h-4 shrink-0 flex items-center justify-center">
+                  <span className="w-2 h-2 bg-brand-500 rounded-full animate-pulse" />
+                </div>
+              ) : (
+                <div className="w-4 h-4 shrink-0 flex items-center justify-center">
+                  <span className="w-1.5 h-1.5 bg-gray-200 rounded-full" />
+                </div>
+              )}
+              <span>{step.label}</span>
+            </div>
+          );
+        })}
+      </div>
+
+      <p className="text-xs text-gray-400 text-center">
         Applying COM-B framework · BCW taxonomy · Identifying patterns…
       </p>
     </div>
   );
 }
 
-export default function AnalysisResults({ state, inputText, usage }: AnalysisResultsProps) {
+export default function AnalysisResults({ state, inputText, usage, onCancel }: AnalysisResultsProps) {
   // Corrections state: key = "section:index"
   const [corrections, setCorrections] = useState<Map<string, Correction>>(new Map());
 
@@ -152,7 +219,7 @@ export default function AnalysisResults({ state, inputText, usage }: AnalysisRes
   );
 
   if (state.status === "idle") return <EmptyState />;
-  if (state.status === "streaming") return <StreamingState text={state.streamingText} />;
+  if (state.status === "streaming") return <StreamingState text={state.streamingText} onCancel={onCancel} />;
 
   if (state.status === "error") {
     return (
@@ -243,6 +310,19 @@ export default function AnalysisResults({ state, inputText, usage }: AnalysisRes
           <ExportButton analysis={analysis} inputText={inputText} />
         </div>
       </div>
+
+      {/* Truncation warning */}
+      {state.truncated && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+          <svg className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+          </svg>
+          <div>
+            <p className="text-sm font-medium text-amber-800">Analysis was truncated</p>
+            <p className="text-xs text-amber-600 mt-0.5">The output hit the token limit and may be incomplete. Consider splitting your input into smaller sections for a more thorough analysis.</p>
+          </div>
+        </div>
+      )}
 
       {/* Trust banner */}
       <TrustBanner />

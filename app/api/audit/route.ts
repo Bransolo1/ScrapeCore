@@ -1,7 +1,10 @@
 import { prisma } from "@/lib/db";
+import { requireAuth } from "@/lib/apiAuth";
 
 export async function GET(req: Request) {
   try {
+    const authResult = await requireAuth();
+    if (authResult instanceof Response) return authResult;
     const { searchParams } = new URL(req.url);
     const page = Math.max(1, parseInt(searchParams.get("page") ?? "1"));
     const event = searchParams.get("event") ?? "";

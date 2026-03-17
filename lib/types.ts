@@ -146,4 +146,5 @@ export interface AnalysisState {
   error: string | null;
   durationMs: number | null;
   savedId?: string | null;
+  truncated?: boolean;
 }

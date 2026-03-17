@@ -10,6 +10,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test": "vitest run",
     "electron:dev": "concurrently \"next dev\" \"wait-on http://127.0.0.1:3000 && electron .\"",
     "build:next": "next build",
     "build:copy-standalone": "node scripts/copy-standalone.js",
@@ -33,7 +34,8 @@
     "next-auth": "^4.24.13",
     "react": "^18",
     "react-dom": "^18",
-    "recharts": "^2.15.4"
+    "recharts": "^2.15.4",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "^20",
@@ -46,6 +48,7 @@
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
     "typescript": "^5",
+    "vitest": "^4.1.0",
     "wait-on": "^8.0.2"
   }
 }

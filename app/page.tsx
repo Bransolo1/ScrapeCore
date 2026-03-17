@@ -75,10 +75,23 @@ function getActor(): string {
 export default function Home() {
   const [mode, setMode] = useState<InputMode>("paste");
 
-  // Paste mode state
+  // Paste mode state — restored from localStorage on mount
   const [pasteText, setPasteText] = useState("");
   const [dataType, setDataType] = useState<DataType>("survey");
   const [projectContext, setProjectContext] = useState("");
+
+  // Auto-save input text to localStorage (recover on tab close / refresh)
+  useEffect(() => {
+    const saved = localStorage.getItem("scrapecore-draft-text");
+    const savedDt = localStorage.getItem("scrapecore-draft-datatype") as DataType | null;
+    const savedCtx = localStorage.getItem("scrapecore-draft-context");
+    if (saved) setPasteText(saved);
+    if (savedDt) setDataType(savedDt);
+    if (savedCtx) setProjectContext(savedCtx);
+  }, []);
+  useEffect(() => { localStorage.setItem("scrapecore-draft-text", pasteText); }, [pasteText]);
+  useEffect(() => { localStorage.setItem("scrapecore-draft-datatype", dataType); }, [dataType]);
+  useEffect(() => { localStorage.setItem("scrapecore-draft-context", projectContext); }, [projectContext]);
 
   // First-run onboarding overlay
   const [showWizard, setShowWizard] = useState(false);
@@ -102,6 +115,17 @@ export default function Home() {
   const pendingRef = useRef<{ text: string; dt: DataType } | null>(null);
 
   const isLoading = analysisState.status === "streaming";
+  const abortRef = useRef<AbortController | null>(null);
+
+  const cancelAnalysis = () => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setAnalysisState((prev) =>
+      prev.status === "streaming"
+        ? { status: "idle", streamingText: "", analysis: null, error: null, durationMs: null }
+        : prev
+    );
+  };
 
   // Prompt for user name on first use + show wizard
   useEffect(() => {
@@ -123,11 +147,15 @@ export default function Home() {
     setUsage(undefined);
     startTimeRef.current = Date.now();
 
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     try {
       const res = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text, dataType: dt, actor: getActor(), piiDetected, projectContext: projectContext.trim() || undefined }),
+        signal: controller.signal,
       });
 
       if (!res.ok || !res.body) {
@@ -154,7 +182,7 @@ export default function Home() {
           try {
             const event = JSON.parse(raw) as
               | { type: "chunk"; text: string }
-              | { type: "complete"; analysis: BehaviourAnalysis; savedId?: string; usage: { inputTokens: number; outputTokens: number } }
+              | { type: "complete"; analysis: BehaviourAnalysis; savedId?: string; usage: { inputTokens: number; outputTokens: number }; truncated?: boolean }
               | { type: "error"; error: string };
 
             if (event.type === "chunk") {
@@ -168,6 +196,7 @@ export default function Home() {
                 error: null,
                 durationMs: Date.now() - startTimeRef.current,
                 savedId: event.savedId ?? null,
+                truncated: event.truncated,
               });
               setHistoryRefreshKey((k) => k + 1);
             } else if (event.type === "error") {
@@ -435,6 +464,7 @@ export default function Home() {
                   state={analysisState}
                   inputText={activeInputText}
                   usage={usage}
+                  onCancel={cancelAnalysis}
                 />
               )}
             </div>

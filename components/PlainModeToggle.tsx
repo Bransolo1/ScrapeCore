@@ -9,7 +9,13 @@ export function usePlainMode() {
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === "true") setIsPlainMode(true);
+    if (stored !== null) {
+      setIsPlainMode(stored === "true");
+    } else {
+      // Auto-enable plain mode for first-time users
+      setIsPlainMode(true);
+      localStorage.setItem(STORAGE_KEY, "true");
+    }
   }, []);
 
   function toggle() {
