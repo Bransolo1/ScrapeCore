@@ -1,0 +1,49 @@
+version: "3.9"
+
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      # SQLite stored in a named volume — survives container restarts/upgrades
+      DATABASE_URL: file:/data/scrapecore.db
+
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:?NEXTAUTH_SECRET is required}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:?ANTHROPIC_API_KEY is required}
+      PERPLEXITY_API_KEY: ${PERPLEXITY_API_KEY:-}
+
+      # Set to false or omit in production
+      SKIP_AUTH: ${SKIP_AUTH:-false}
+    volumes:
+      # Persistent SQLite database — survives image rebuilds
+      - scrapecore_data:/data
+
+# ── Postgres upgrade path ─────────────────────────────────────────────────────
+# To use Postgres instead of SQLite:
+#   1. npm install @prisma/adapter-pg pg
+#   2. In lib/db.ts, replace PrismaLibSql with PrismaAdapter from @prisma/adapter-pg
+#   3. In prisma/schema.prisma, change provider to "postgresql"
+#   4. Run: npx prisma migrate dev
+#   5. Uncomment the db service below and update DATABASE_URL
+#
+# db:
+#   image: postgres:16-alpine
+#   restart: unless-stopped
+#   environment:
+#     POSTGRES_USER: scrapecore
+#     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+#     POSTGRES_DB: scrapecore
+#   volumes:
+#     - postgres_data:/var/lib/postgresql/data
+#   healthcheck:
+#     test: ["CMD-SHELL", "pg_isready -U scrapecore"]
+#     interval: 5s
+#     timeout: 5s
+#     retries: 5
+
+volumes:
+  scrapecore_data:
+  # postgres_data:

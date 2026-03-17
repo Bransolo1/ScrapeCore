@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { getChangesBetween, type PromptVersionEntry } from "@/lib/promptVersions";
 
 interface EvalItem {
   id: string;
@@ -54,6 +55,86 @@ function MetricRow({ label, a, b, higherIsBetter = true }: {
         </span>
         {winner === "b" && <span className="text-xs text-emerald-500 ml-1">▲</span>}
       </div>
+    </div>
+  );
+}
+
+const CHANGE_TYPE_STYLES: Record<string, { pill: string; dot: string; label: string }> = {
+  added:   { pill: "bg-emerald-50 text-emerald-700 border-emerald-200", dot: "bg-emerald-500", label: "Added" },
+  changed: { pill: "bg-amber-50 text-amber-700 border-amber-200",       dot: "bg-amber-500",   label: "Changed" },
+  removed: { pill: "bg-rose-50 text-rose-700 border-rose-200",          dot: "bg-rose-500",    label: "Removed" },
+  fixed:   { pill: "bg-sky-50 text-sky-700 border-sky-200",             dot: "bg-sky-500",     label: "Fixed" },
+};
+
+function PromptDiff({ versionA, versionB }: { versionA: string | null | undefined; versionB: string | null | undefined }) {
+  if (!versionA || !versionB) return null;
+  if (versionA === versionB) {
+    return (
+      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-5">
+        <div className="flex items-center gap-2 mb-1">
+          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+          </svg>
+          <h2 className="text-sm font-semibold text-gray-900">Prompt Version Diff</h2>
+        </div>
+        <p className="text-xs text-gray-400 mt-2">Both analyses used <span className="font-mono text-brand-600">{versionA}</span> — no changes between them.</p>
+      </div>
+    );
+  }
+
+  const entries = getChangesBetween(versionA, versionB);
+  const allVersions = [versionA, versionB].sort();
+  const direction = versionA < versionB ? "upgrade" : "rollback";
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+          </svg>
+          <h2 className="text-sm font-semibold text-gray-900">Prompt Version Diff</h2>
+        </div>
+        <div className="flex items-center gap-2 text-xs">
+          <span className="font-mono text-brand-600 bg-brand-50 border border-brand-100 px-1.5 py-0.5 rounded">{versionA}</span>
+          <svg className={`w-3.5 h-3.5 ${direction === "rollback" ? "rotate-180 text-rose-400" : "text-gray-400"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+          <span className="font-mono text-brand-600 bg-brand-50 border border-brand-100 px-1.5 py-0.5 rounded">{versionB}</span>
+          {direction === "rollback" && (
+            <span className="text-xs text-rose-600 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded-full font-medium">rollback</span>
+          )}
+        </div>
+      </div>
+
+      {entries.length === 0 ? (
+        <p className="text-xs text-gray-400">No changelog entries found between these versions.</p>
+      ) : (
+        <div className="space-y-4">
+          {entries.map((entry: PromptVersionEntry) => (
+            <div key={entry.version} className="border border-gray-100 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-xs font-mono font-bold text-brand-600 bg-brand-50 border border-brand-100 px-2 py-0.5 rounded">{entry.version}</span>
+                <span className="text-xs text-gray-400">{entry.date}</span>
+                <span className="text-xs text-gray-600 font-medium">{entry.summary}</span>
+              </div>
+              <div className="space-y-1.5">
+                {entry.changes.map((change, i) => {
+                  const style = CHANGE_TYPE_STYLES[change.type] ?? CHANGE_TYPE_STYLES.changed;
+                  return (
+                    <div key={i} className="flex items-start gap-2">
+                      <span className={`shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded border mt-0.5 ${style.pill}`}>
+                        {style.label}
+                      </span>
+                      <p className="text-xs text-gray-600 leading-relaxed">{change.description}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -211,6 +292,11 @@ export default function EvalPage() {
               </div>
             )}
           </div>
+        )}
+
+        {/* Prompt version diff */}
+        {analysisA && analysisB && (
+          <PromptDiff versionA={analysisA.promptVersion} versionB={analysisB.promptVersion} />
         )}
 
         {/* Analysis picker modal */}
