@@ -23,6 +23,7 @@ function MoonIcon() {
 const NAV = [
   { href: "/", label: "Analyse" },
   { href: "/dashboard", label: "Dashboard" },
+  { href: "/compare", label: "Compare" },
 ];
 
 export default function Header() {

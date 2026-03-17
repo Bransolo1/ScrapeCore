@@ -13,8 +13,12 @@ interface FetchStatus {
   message?: string;
 }
 
+const FIRECRAWL_NOTE =
+  "Firecrawl renders JavaScript, handles SPAs and dynamic sites. Requires FIRECRAWL_API_KEY.";
+
 export default function UrlScraper({ onSourcesReady }: UrlScraperProps) {
   const [urlInput, setUrlInput] = useState("");
+  const [useFirecrawl, setUseFirecrawl] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
   const [statuses, setStatuses] = useState<FetchStatus[]>([]);
 
@@ -23,7 +27,12 @@ export default function UrlScraper({ onSourcesReady }: UrlScraperProps) {
       .split(/[\n,]+/)
       .map((u) => u.trim())
       .filter((u) => {
-        try { new URL(u); return true; } catch { return false; }
+        try {
+          new URL(u);
+          return true;
+        } catch {
+          return false;
+        }
       });
 
   const handleFetch = async () => {
@@ -33,12 +42,23 @@ export default function UrlScraper({ onSourcesReady }: UrlScraperProps) {
     setIsFetching(true);
     setStatuses(urls.map((url) => ({ url, status: "pending" })));
 
+    const endpoint = useFirecrawl ? "/api/sources/firecrawl" : "/api/scrape";
+
     try {
-      const res = await fetch("/api/scrape", {
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ urls }),
       });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        setStatuses((prev) =>
+          prev.map((s) => ({ ...s, status: "error", message: err.error ?? "Failed" }))
+        );
+        return;
+      }
+
       const data = (await res.json()) as {
         results: Array<{
           url: string;
@@ -48,17 +68,25 @@ export default function UrlScraper({ onSourcesReady }: UrlScraperProps) {
           success: boolean;
           error?: string;
         }>;
+        error?: string;
       };
 
+      if (data.error) {
+        setStatuses((prev) =>
+          prev.map((s) => ({ ...s, status: "error", message: data.error }))
+        );
+        return;
+      }
+
       setStatuses(
-        data.results.map((r) => ({
+        (data.results ?? []).map((r) => ({
           url: r.url,
           status: r.success ? "success" : "error",
           message: r.error,
         }))
       );
 
-      const sources: Source[] = data.results
+      const sources: Source[] = (data.results ?? [])
         .filter((r) => r.success)
         .map((r) => ({
           id: `url-${r.url}`,
@@ -68,11 +96,18 @@ export default function UrlScraper({ onSourcesReady }: UrlScraperProps) {
           wordCount: r.wordCount,
           source: "url" as const,
           selected: true,
+          meta: useFirecrawl ? "Firecrawl" : undefined,
         }));
 
       onSourcesReady(sources);
-    } catch {
-      setStatuses((prev) => prev.map((s) => ({ ...s, status: "error", message: "Network error" })));
+    } catch (err) {
+      setStatuses((prev) =>
+        prev.map((s) => ({
+          ...s,
+          status: "error",
+          message: err instanceof Error ? err.message : "Network error",
+        }))
+      );
     } finally {
       setIsFetching(false);
     }
@@ -84,19 +119,52 @@ export default function UrlScraper({ onSourcesReady }: UrlScraperProps) {
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1.5">
-          URLs to scrape
-        </label>
+        <label className="block text-sm font-medium text-gray-700 mb-1.5">URLs to scrape</label>
         <textarea
           value={urlInput}
           onChange={(e) => setUrlInput(e.target.value)}
-          placeholder={`Paste one URL per line:\nhttps://www.nhs.uk/conditions/diabetes/\nhttps://pubmed.ncbi.nlm.nih.gov/...\nhttps://www.nice.org.uk/guidance/...`}
+          placeholder={`Paste one URL per line:\nhttps://www.g2.com/products/salesforce-crm/reviews\nhttps://techcrunch.com/2025/...\nhttps://competitor.com/pricing`}
           className="w-full h-36 px-3 py-2.5 text-sm text-gray-800 placeholder-gray-400 bg-white border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent font-mono"
           disabled={isFetching}
         />
         <p className="text-xs text-gray-400 mt-1">
-          {hasUrls ? `${urls.length} URL${urls.length > 1 ? "s" : ""} detected · max 10` : "Paste URLs — one per line"}
+          {hasUrls
+            ? `${urls.length} URL${urls.length > 1 ? "s" : ""} detected · max 15`
+            : "Paste URLs — one per line"}
         </p>
+      </div>
+
+      {/* Firecrawl toggle */}
+      <div className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 bg-gray-50">
+        <button
+          type="button"
+          role="switch"
+          aria-checked={useFirecrawl}
+          onClick={() => setUseFirecrawl((v) => !v)}
+          disabled={isFetching}
+          className={`relative w-9 h-5 rounded-full transition-colors shrink-0 mt-0.5 ${
+            useFirecrawl ? "bg-violet-600" : "bg-gray-200"
+          }`}
+        >
+          <span
+            className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+              useFirecrawl ? "translate-x-4" : ""
+            }`}
+          />
+        </button>
+        <div>
+          <div className="flex items-center gap-2">
+            <p className="text-xs font-semibold text-gray-700">
+              Use Firecrawl
+              {useFirecrawl && (
+                <span className="ml-1.5 text-xs font-medium text-violet-600 bg-violet-50 border border-violet-200 px-1.5 py-0.5 rounded-full">
+                  Active
+                </span>
+              )}
+            </p>
+          </div>
+          <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">{FIRECRAWL_NOTE}</p>
+        </div>
       </div>
 
       <button
@@ -104,7 +172,9 @@ export default function UrlScraper({ onSourcesReady }: UrlScraperProps) {
         disabled={!hasUrls || isFetching}
         className={`w-full py-2.5 px-4 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
           hasUrls && !isFetching
-            ? "bg-brand-600 hover:bg-brand-700 text-white shadow-sm"
+            ? useFirecrawl
+              ? "bg-violet-600 hover:bg-violet-700 text-white shadow-sm"
+              : "bg-brand-600 hover:bg-brand-700 text-white shadow-sm"
             : "bg-gray-100 text-gray-400 cursor-not-allowed"
         }`}
       >
@@ -114,14 +184,14 @@ export default function UrlScraper({ onSourcesReady }: UrlScraperProps) {
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
-            Scraping…
+            {useFirecrawl ? "Firecrawling…" : "Scraping…"}
           </>
         ) : (
           <>
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
             </svg>
-            Fetch &amp; extract text
+            {useFirecrawl ? "Firecrawl extract" : "Fetch & extract text"}
           </>
         )}
       </button>
@@ -131,7 +201,9 @@ export default function UrlScraper({ onSourcesReady }: UrlScraperProps) {
         <div className="space-y-1.5">
           {statuses.map((s) => (
             <div key={s.url} className="flex items-start gap-2 text-xs">
-              {s.status === "pending" && <span className="w-4 h-4 mt-0.5 shrink-0 border-2 border-gray-300 rounded-full animate-spin border-t-brand-500" />}
+              {s.status === "pending" && (
+                <span className="w-4 h-4 mt-0.5 shrink-0 border-2 border-gray-300 rounded-full animate-spin border-t-brand-500" />
+              )}
               {s.status === "success" && (
                 <svg className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -144,7 +216,7 @@ export default function UrlScraper({ onSourcesReady }: UrlScraperProps) {
               )}
               <div className="min-w-0">
                 <p className={`truncate ${s.status === "error" ? "text-red-600" : "text-gray-700"}`}>
-                  {new URL(s.url).hostname}{new URL(s.url).pathname.slice(0, 30)}
+                  {(() => { try { const u = new URL(s.url); return u.hostname + u.pathname.slice(0, 30); } catch { return s.url; } })()}
                 </p>
                 {s.message && <p className="text-gray-400">{s.message}</p>}
               </div>
@@ -155,7 +227,9 @@ export default function UrlScraper({ onSourcesReady }: UrlScraperProps) {
 
       <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
         <p className="text-xs text-gray-500 leading-relaxed">
-          Fetches and extracts readable text from any public web page — articles, reports, NHS pages, journal abstracts, NICE guidance, PDFs linked as HTML, etc. JavaScript-heavy pages may return limited text.
+          {useFirecrawl
+            ? "Firecrawl renders full pages including JavaScript — ideal for G2, Capterra, SPAs, and paywalled content."
+            : "Basic fetch extracts readable text from public pages. Enable Firecrawl above for JS-heavy sites like G2 or Capterra."}
         </p>
       </div>
     </div>

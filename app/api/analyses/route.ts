@@ -4,11 +4,17 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const page = Math.max(1, parseInt(searchParams.get("page") ?? "1"));
+    const search = (searchParams.get("search") ?? "").trim();
     const limit = 20;
     const skip = (page - 1) * limit;
 
+    const where = search
+      ? { title: { contains: search } }
+      : undefined;
+
     const [analyses, total] = await Promise.all([
       prisma.analysis.findMany({
+        where,
         orderBy: { createdAt: "desc" },
         skip,
         take: limit,
@@ -20,9 +26,11 @@ export async function GET(req: Request) {
           inputTokens: true,
           outputTokens: true,
           durationMs: true,
+          project: true,
+          tags: true,
         },
       }),
-      prisma.analysis.count(),
+      prisma.analysis.count({ where }),
     ]);
 
     return Response.json({
@@ -30,6 +38,7 @@ export async function GET(req: Request) {
       total,
       page,
       pages: Math.ceil(total / limit),
+      search,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

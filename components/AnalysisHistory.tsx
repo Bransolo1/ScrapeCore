@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import type { BehaviourAnalysis, DataType } from "@/lib/types";
 
 interface AnalysisSummary {
@@ -11,6 +11,8 @@ interface AnalysisSummary {
   inputTokens: number;
   outputTokens: number;
   durationMs: number | null;
+  project?: string | null;
+  tags?: string;
 }
 
 interface AnalysisHistoryProps {
@@ -38,6 +40,15 @@ function formatRelativeTime(iso: string): string {
   return new Date(iso).toLocaleDateString();
 }
 
+function parseTags(raw: string): string[] {
+  try {
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr.filter((t): t is string => typeof t === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
 export default function AnalysisHistory({
   onLoad,
   refreshKey,
@@ -49,11 +60,26 @@ export default function AnalysisHistory({
   const [loading, setLoading] = useState(false);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const fetchHistory = useCallback(async (p: number) => {
+  // Debounce search input
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 300);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [search]);
+
+  const fetchHistory = useCallback(async (p: number, q: string) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/analyses?page=${p}`);
+      const params = new URLSearchParams({ page: String(p) });
+      if (q) params.set("search", q);
+      const res = await fetch(`/api/analyses?${params}`);
       const data = await res.json();
       setAnalyses(data.analyses ?? []);
       setTotal(data.total ?? 0);
@@ -64,8 +90,8 @@ export default function AnalysisHistory({
   }, []);
 
   useEffect(() => {
-    fetchHistory(page);
-  }, [fetchHistory, page, refreshKey]);
+    fetchHistory(page, debouncedSearch);
+  }, [fetchHistory, page, debouncedSearch, refreshKey]);
 
   const handleLoad = async (id: string) => {
     setLoadingId(id);
@@ -91,31 +117,48 @@ export default function AnalysisHistory({
     }
   };
 
-  if (loading && analyses.length === 0) {
-    return (
-      <div className="flex items-center justify-center py-12 text-gray-400 text-sm">
-        Loading history…
-      </div>
-    );
-  }
-
-  if (!loading && analyses.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
-        <svg className="w-10 h-10 text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        <p className="text-sm text-gray-400">No saved analyses yet.</p>
-        <p className="text-xs text-gray-300">Completed analyses are saved automatically.</p>
-      </div>
-    );
-  }
+  const hasContent = analyses.length > 0;
 
   return (
     <div className="flex flex-col h-full">
+      {/* Search bar */}
+      <div className="px-5 pt-3 pb-2">
+        <div className="relative">
+          <svg
+            className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search analyses…"
+            className="w-full pl-8 pr-8 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent text-gray-700 placeholder-gray-400"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
-        <p className="text-xs text-gray-400">{total} saved {total === 1 ? "analysis" : "analyses"}</p>
+      <div className="flex items-center justify-between px-5 py-2 border-b border-gray-100">
+        <p className="text-xs text-gray-400">
+          {debouncedSearch
+            ? `${total} result${total !== 1 ? "s" : ""} for "${debouncedSearch}"`
+            : `${total} saved ${total === 1 ? "analysis" : "analyses"}`}
+        </p>
         {loading && (
           <svg className="w-4 h-4 animate-spin text-gray-300" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -124,74 +167,125 @@ export default function AnalysisHistory({
         )}
       </div>
 
-      {/* List */}
-      <div className="flex-1 overflow-y-auto divide-y divide-gray-50">
-        {analyses.map((a) => (
-          <div
-            key={a.id}
-            className="group flex items-start gap-3 px-5 py-3.5 hover:bg-gray-50 transition-colors"
-          >
-            {/* Content */}
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-800 truncate leading-snug">{a.title}</p>
-              <div className="flex items-center gap-2 mt-1 flex-wrap">
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-brand-50 text-brand-600">
-                  {DATA_TYPE_LABELS[a.dataType] ?? a.dataType}
-                </span>
-                <span className="text-xs text-gray-400">{formatRelativeTime(a.createdAt)}</span>
-                <span className="text-xs text-gray-300">·</span>
-                <span className="text-xs text-gray-400">
-                  {(a.inputTokens + a.outputTokens).toLocaleString()} tokens
-                </span>
-                {a.durationMs && (
-                  <>
-                    <span className="text-xs text-gray-300">·</span>
-                    <span className="text-xs text-gray-400">{(a.durationMs / 1000).toFixed(1)}s</span>
-                  </>
-                )}
-              </div>
-            </div>
+      {/* Empty states */}
+      {loading && !hasContent && (
+        <div className="flex items-center justify-center py-12 text-gray-400 text-sm">
+          Loading history…
+        </div>
+      )}
 
-            {/* Actions */}
-            <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button
-                onClick={() => handleLoad(a.id)}
-                disabled={loadingId === a.id}
-                title="Load this analysis"
-                className="p-1.5 rounded-md hover:bg-brand-50 text-gray-400 hover:text-brand-600 transition-colors disabled:opacity-50"
+      {!loading && !hasContent && !debouncedSearch && (
+        <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
+          <svg className="w-10 h-10 text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p className="text-sm text-gray-400">No saved analyses yet.</p>
+          <p className="text-xs text-gray-300">Completed analyses are saved automatically.</p>
+        </div>
+      )}
+
+      {!loading && !hasContent && debouncedSearch && (
+        <div className="flex flex-col items-center justify-center py-10 gap-2 text-center">
+          <p className="text-sm text-gray-400">No results for "{debouncedSearch}"</p>
+          <button
+            onClick={() => setSearch("")}
+            className="text-xs text-brand-600 hover:text-brand-700"
+          >
+            Clear search
+          </button>
+        </div>
+      )}
+
+      {/* List */}
+      {hasContent && (
+        <div className="flex-1 overflow-y-auto divide-y divide-gray-50 scrollbar-thin">
+          {analyses.map((a) => {
+            const tags = parseTags(a.tags ?? "[]");
+            return (
+              <div
+                key={a.id}
+                className="group flex items-start gap-3 px-5 py-3.5 hover:bg-gray-50 transition-colors"
               >
-                {loadingId === a.id ? (
-                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                ) : (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                  </svg>
-                )}
-              </button>
-              <button
-                onClick={() => handleDelete(a.id)}
-                disabled={deletingId === a.id}
-                title="Delete"
-                className="p-1.5 rounded-md hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50"
-              >
-                {deletingId === a.id ? (
-                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                ) : (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                )}
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-800 truncate leading-snug">{a.title}</p>
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-brand-50 text-brand-600">
+                      {DATA_TYPE_LABELS[a.dataType] ?? a.dataType}
+                    </span>
+                    {a.project && (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        {a.project}
+                      </span>
+                    )}
+                    <span className="text-xs text-gray-400">{formatRelativeTime(a.createdAt)}</span>
+                    <span className="text-xs text-gray-300">·</span>
+                    <span className="text-xs text-gray-400">
+                      {(a.inputTokens + a.outputTokens).toLocaleString()} tokens
+                    </span>
+                    {a.durationMs && (
+                      <>
+                        <span className="text-xs text-gray-300">·</span>
+                        <span className="text-xs text-gray-400">{(a.durationMs / 1000).toFixed(1)}s</span>
+                      </>
+                    )}
+                  </div>
+                  {tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="px-1.5 py-0.5 text-xs bg-gray-100 text-gray-500 rounded border border-gray-200"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={() => handleLoad(a.id)}
+                    disabled={loadingId === a.id}
+                    title="Load this analysis"
+                    className="p-1.5 rounded-md hover:bg-brand-50 text-gray-400 hover:text-brand-600 transition-colors disabled:opacity-50"
+                  >
+                    {loadingId === a.id ? (
+                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => handleDelete(a.id)}
+                    disabled={deletingId === a.id}
+                    title="Delete"
+                    className="p-1.5 rounded-md hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50"
+                  >
+                    {deletingId === a.id ? (
+                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Pagination */}
       {pages > 1 && (

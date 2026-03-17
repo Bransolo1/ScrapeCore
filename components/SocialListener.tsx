@@ -107,9 +107,62 @@ const SOURCE_DEFS = [
       </svg>
     ),
   },
+  // ─── The Eyes ────────────────────────────────────────────────────────────────
+  {
+    id: "g2" as const,
+    label: "G2 Reviews",
+    group: "b2b",
+    activeClass: "border-orange-300 bg-orange-50 text-orange-800",
+    icon: (
+      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.31-8.86c-1.77-.45-2.34-.94-2.34-1.67 0-.84.79-1.43 2.1-1.43 1.38 0 1.9.66 1.94 1.64h1.71c-.05-1.34-.87-2.57-2.49-2.97V5H10.9v1.69c-1.51.32-2.72 1.3-2.72 2.81 0 1.79 1.49 2.69 3.66 3.21 1.95.46 2.34 1.15 2.34 1.86 0 .53-.39 1.37-2.1 1.37-1.6 0-2.23-.72-2.32-1.64H8.04c.1 1.7 1.36 2.66 2.86 2.97V19h2.34v-1.67c1.52-.29 2.72-1.16 2.73-2.77-.01-2.2-1.9-2.96-3.66-3.42z" />
+      </svg>
+    ),
+  },
+  {
+    id: "capterra" as const,
+    label: "Capterra",
+    group: "b2b",
+    activeClass: "border-blue-300 bg-blue-50 text-blue-800",
+    icon: (
+      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h8M8 8h8M8 16h4" />
+      </svg>
+    ),
+  },
+  {
+    id: "twitter" as const,
+    label: "Twitter / X",
+    group: "research",
+    activeClass: "border-gray-400 bg-gray-900 text-white",
+    icon: (
+      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+      </svg>
+    ),
+  },
+  {
+    id: "perplexity" as const,
+    label: "Perplexity Research",
+    group: "research",
+    activeClass: "border-violet-300 bg-violet-50 text-violet-800",
+    icon: (
+      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+        <circle cx="11" cy="11" r="8" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-4.35-4.35M11 8v6M8 11h6" />
+      </svg>
+    ),
+  },
 ];
 
 type SourceId = (typeof SOURCE_DEFS)[number]["id"];
+
+const RECENCY_OPTIONS = [
+  { value: "day", label: "Past 24 hours" },
+  { value: "week", label: "Past week" },
+  { value: "month", label: "Past month" },
+];
 
 const TIMEFRAMES = [
   { value: "week", label: "Past week" },
@@ -205,6 +258,18 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
   const [gpPackageId, setGpPackageId] = useState("");
   const [gpCountry, setGpCountry] = useState("gb");
   const [gpNum, setGpNum] = useState(100);
+  // G2
+  const [g2Slug, setG2Slug] = useState("");
+  const [g2Pages, setG2Pages] = useState(2);
+  // Capterra
+  const [capterraSlug, setCapterraSlug] = useState("");
+  const [capterraPages, setCapterraPages] = useState(2);
+  // Twitter/X (via Perplexity)
+  const [twitterQuery, setTwitterQuery] = useState("");
+  const [twitterRecency, setTwitterRecency] = useState("week");
+  // Perplexity Research
+  const [perplexityQuery, setPerplexityQuery] = useState("");
+  const [perplexityRecency, setPerplexityRecency] = useState("month");
 
   const [isFetching, setIsFetching] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -228,7 +293,11 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
     (!active.has("trustpilot") || tpDomain.trim()) &&
     (!active.has("appstore") || appId.trim()) &&
     (!active.has("rss") || rssUrls.trim()) &&
-    (!active.has("googleplay") || gpPackageId.trim());
+    (!active.has("googleplay") || gpPackageId.trim()) &&
+    (!active.has("g2") || g2Slug.trim()) &&
+    (!active.has("capterra") || capterraSlug.trim()) &&
+    (!active.has("twitter") || twitterQuery.trim()) &&
+    (!active.has("perplexity") || perplexityQuery.trim());
 
   // ─── Converters ──────────────────────────────────────────────────────────────
 
@@ -454,6 +523,110 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
         if (data.errors?.length) allErrors.push(...data.errors.map((e) => `RSS: ${e}`));
         for (const item of data.items ?? []) allSources.push(rssFeedItemToSource(item));
       }
+
+      // 6. G2 Reviews
+      if (active.has("g2") && g2Slug.trim()) {
+        const res = await fetch("/api/sources/g2", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ slug: g2Slug.trim(), pages: g2Pages }),
+        });
+        const data = (await res.json()) as {
+          reviews?: Array<{ title: string; text: string; rating: number; author: string; date: string; url: string; pros?: string; cons?: string }>;
+          error?: string;
+          hint?: string;
+        };
+        if (data.error) allErrors.push(`G2: ${data.error}${data.hint ? " — " + data.hint : ""}`);
+        for (const r of data.reviews ?? []) {
+          const stars = "★".repeat(Math.round(r.rating)) + "☆".repeat(Math.max(0, 5 - Math.round(r.rating)));
+          const fullText = [r.pros ? `Pros: ${r.pros}` : "", r.cons ? `Cons: ${r.cons}` : "", r.text].filter(Boolean).join("\n");
+          allSources.push({
+            id: `g2-${r.date}-${r.title.slice(0, 10)}`,
+            title: r.title || `${r.rating}★ G2 review`,
+            text: fullText,
+            url: r.url,
+            wordCount: fullText.split(/\s+/).length,
+            source: "url",
+            meta: `G2 ${stars} · ${r.date.slice(0, 10)}`,
+            selected: true,
+          });
+        }
+      }
+
+      // 7. Capterra Reviews
+      if (active.has("capterra") && capterraSlug.trim()) {
+        const res = await fetch("/api/sources/capterra", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ slug: capterraSlug.trim(), pages: capterraPages }),
+        });
+        const data = (await res.json()) as {
+          reviews?: Array<{ title: string; text: string; pros: string; cons: string; rating: number; author: string; date: string; url: string }>;
+          error?: string;
+          hint?: string;
+        };
+        if (data.error) allErrors.push(`Capterra: ${data.error}${data.hint ? " — " + data.hint : ""}`);
+        for (const r of data.reviews ?? []) {
+          const stars = "★".repeat(Math.round(r.rating)) + "☆".repeat(Math.max(0, 5 - Math.round(r.rating)));
+          const fullText = [r.pros ? `Pros: ${r.pros}` : "", r.cons ? `Cons: ${r.cons}` : "", r.text].filter(Boolean).join("\n");
+          allSources.push({
+            id: `cap-${r.date}-${r.title.slice(0, 10)}`,
+            title: r.title || `${r.rating}★ Capterra review`,
+            text: fullText,
+            url: r.url,
+            wordCount: fullText.split(/\s+/).length,
+            source: "url",
+            meta: `Capterra ${stars} · ${r.date.slice(0, 10)}`,
+            selected: true,
+          });
+        }
+      }
+
+      // 8. Twitter/X via Perplexity
+      if (active.has("twitter") && twitterQuery.trim()) {
+        const res = await fetch("/api/sources/perplexity", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: twitterQuery.trim(), mode: "twitter", recency: twitterRecency }),
+        });
+        const data = (await res.json()) as { title?: string; text?: string; wordCount?: number; citations?: string[]; error?: string };
+        if (data.error) allErrors.push(`Twitter/X: ${data.error}`);
+        if (data.text) {
+          allSources.push({
+            id: `twitter-${Date.now()}`,
+            title: data.title ?? `Twitter/X — ${twitterQuery.trim()}`,
+            text: data.text,
+            url: data.citations?.[0] ?? "https://x.com",
+            wordCount: data.wordCount ?? 0,
+            source: "url",
+            meta: `Twitter/X · ${data.citations?.length ?? 0} citations`,
+            selected: true,
+          });
+        }
+      }
+
+      // 9. Perplexity Research
+      if (active.has("perplexity") && perplexityQuery.trim()) {
+        const res = await fetch("/api/sources/perplexity", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: perplexityQuery.trim(), mode: "research", recency: perplexityRecency }),
+        });
+        const data = (await res.json()) as { title?: string; text?: string; wordCount?: number; citations?: string[]; error?: string };
+        if (data.error) allErrors.push(`Perplexity: ${data.error}`);
+        if (data.text) {
+          allSources.push({
+            id: `perplexity-${Date.now()}`,
+            title: data.title ?? `Perplexity — ${perplexityQuery.trim()}`,
+            text: data.text,
+            url: data.citations?.[0] ?? "https://perplexity.ai",
+            wordCount: data.wordCount ?? 0,
+            source: "url",
+            meta: `Perplexity · ${data.citations?.length ?? 0} citations`,
+            selected: true,
+          });
+        }
+      }
     } catch (err) {
       allErrors.push(err instanceof Error ? err.message : "Network error");
     }
@@ -472,10 +645,12 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
   const smallLabelCls = "block text-xs font-medium text-gray-500 mb-1";
 
   const groupedDefs = {
+    research: SOURCE_DEFS.filter((s) => s.group === "research"),
     community: SOURCE_DEFS.filter((s) => s.group === "community"),
     news: SOURCE_DEFS.filter((s) => s.group === "news"),
-    finance: SOURCE_DEFS.filter((s) => s.group === "finance"),
     reviews: SOURCE_DEFS.filter((s) => s.group === "reviews"),
+    b2b: SOURCE_DEFS.filter((s) => s.group === "b2b"),
+    finance: SOURCE_DEFS.filter((s) => s.group === "finance"),
     feeds: SOURCE_DEFS.filter((s) => s.group === "feeds"),
   };
 
@@ -497,16 +672,28 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
           <label className="block text-sm font-medium text-gray-700">Sources</label>
           <span className="text-xs text-gray-400">Toggle to combine</span>
         </div>
-        {(Object.entries(groupedDefs) as [string, typeof SOURCE_DEFS[number][]][]).map(([group, defs]) => (
-          <div key={group}>
-            <GroupLabel label={group === "community" ? "Community" : group === "news" ? "News" : group === "finance" ? "Finance" : group === "reviews" ? "Reviews" : "Feeds"} />
-            <div className="flex flex-wrap gap-2">
-              {defs.map((def) => (
-                <SourcePill key={def.id} def={def} active={active.has(def.id)} onToggle={() => toggle(def.id)} />
-              ))}
+        {(Object.entries(groupedDefs) as [string, typeof SOURCE_DEFS[number][]][]).map(([group, defs]) => {
+          if (!defs.length) return null;
+          const labels: Record<string, string> = {
+            research: "The Eyes — Perplexity + Twitter/X",
+            community: "Community",
+            news: "News",
+            finance: "Finance",
+            reviews: "Reviews",
+            b2b: "B2B Reviews",
+            feeds: "Feeds",
+          };
+          return (
+            <div key={group}>
+              <GroupLabel label={labels[group] ?? group} />
+              <div className="flex flex-wrap gap-2">
+                {defs.map((def) => (
+                  <SourcePill key={def.id} def={def} active={active.has(def.id)} onToggle={() => toggle(def.id)} />
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* ── Search query (Reddit / HN / Google News) ── */}
@@ -769,6 +956,137 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
                 </button>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── G2 settings ── */}
+      {active.has("g2") && (
+        <div className="space-y-3 pt-3 border-t border-gray-100">
+          <GroupLabel label="G2 Reviews" />
+          <div>
+            <label className={labelCls}>Product slug</label>
+            <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-brand-500">
+              <span className="px-3 py-2.5 text-xs text-gray-400 bg-gray-50 border-r border-gray-200 whitespace-nowrap">g2.com/products/</span>
+              <input
+                type="text"
+                value={g2Slug}
+                onChange={(e) => setG2Slug(e.target.value)}
+                placeholder="salesforce-crm · hubspot · intercom"
+                className="flex-1 px-3 py-2.5 text-sm text-gray-800 placeholder-gray-400 bg-white focus:outline-none disabled:opacity-50"
+                disabled={isFetching}
+              />
+              <span className="px-3 py-2.5 text-xs text-gray-400 bg-gray-50 border-l border-gray-200">/reviews</span>
+            </div>
+            <p className="mt-1 text-xs text-gray-400">From URL: g2.com/products/<strong>salesforce-crm</strong>/reviews</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="text-xs font-medium text-gray-500 whitespace-nowrap">Pages</label>
+            <input
+              type="number"
+              value={g2Pages}
+              onChange={(e) => setG2Pages(Math.min(5, Math.max(1, parseInt(e.target.value) || 2)))}
+              className="w-16 px-2 py-1.5 text-sm text-gray-700 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 text-center disabled:opacity-50"
+              min={1} max={5}
+              disabled={isFetching}
+            />
+            <span className="text-xs text-gray-400">max 5 · Firecrawl gives better results</span>
+          </div>
+        </div>
+      )}
+
+      {/* ── Capterra settings ── */}
+      {active.has("capterra") && (
+        <div className="space-y-3 pt-3 border-t border-gray-100">
+          <GroupLabel label="Capterra Reviews" />
+          <div>
+            <label className={labelCls}>Product slug or ID</label>
+            <input
+              type="text"
+              value={capterraSlug}
+              onChange={(e) => setCapterraSlug(e.target.value)}
+              placeholder="salesforce-crm · hubspot-crm · 12345"
+              className={inputCls}
+              disabled={isFetching}
+            />
+            <p className="mt-1 text-xs text-gray-400">From URL: capterra.com/p/<strong>salesforce-crm</strong> or capterra.com/software/<strong>slug</strong></p>
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="text-xs font-medium text-gray-500 whitespace-nowrap">Pages</label>
+            <input
+              type="number"
+              value={capterraPages}
+              onChange={(e) => setCapterraPages(Math.min(5, Math.max(1, parseInt(e.target.value) || 2)))}
+              className="w-16 px-2 py-1.5 text-sm text-gray-700 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 text-center disabled:opacity-50"
+              min={1} max={5}
+              disabled={isFetching}
+            />
+            <span className="text-xs text-gray-400">max 5 · Firecrawl recommended</span>
+          </div>
+        </div>
+      )}
+
+      {/* ── Twitter / X settings ── */}
+      {active.has("twitter") && (
+        <div className="space-y-3 pt-3 border-t border-gray-100">
+          <GroupLabel label="Twitter / X" />
+          <p className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 leading-relaxed">
+            Searches Twitter/X via <strong>Perplexity AI</strong> — requires <code className="text-xs bg-gray-100 px-1 rounded">PERPLEXITY_API_KEY</code>
+          </p>
+          <div>
+            <label className={labelCls}>Search query</label>
+            <input
+              type="text"
+              value={twitterQuery}
+              onChange={(e) => setTwitterQuery(e.target.value)}
+              placeholder="Bet365 app, DraftKings complaints, CFD trading UK"
+              className={inputCls}
+              disabled={isFetching}
+            />
+          </div>
+          <div>
+            <label className={smallLabelCls}>Time range</label>
+            <select
+              value={twitterRecency}
+              onChange={(e) => setTwitterRecency(e.target.value)}
+              className="w-full px-2.5 py-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50"
+              disabled={isFetching}
+            >
+              {RECENCY_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
+        </div>
+      )}
+
+      {/* ── Perplexity Research settings ── */}
+      {active.has("perplexity") && (
+        <div className="space-y-3 pt-3 border-t border-gray-100">
+          <GroupLabel label="Perplexity Research" />
+          <p className="text-xs text-gray-500 bg-violet-50 border border-violet-200 rounded-lg px-3 py-2 leading-relaxed">
+            AI-powered web research — synthesises market reports, news, competitor intel. Requires <code className="text-xs bg-violet-100 px-1 rounded">PERPLEXITY_API_KEY</code>
+          </p>
+          <div>
+            <label className={labelCls}>Research query</label>
+            <input
+              type="text"
+              value={perplexityQuery}
+              onChange={(e) => setPerplexityQuery(e.target.value)}
+              placeholder="Bet365 market position UK 2025 · CFD platform switching barriers · responsible gambling tools"
+              className={inputCls}
+              disabled={isFetching}
+            />
+            <p className="mt-1 text-xs text-gray-400">Be specific — e.g. company name + topic + market + year</p>
+          </div>
+          <div>
+            <label className={smallLabelCls}>Recency filter</label>
+            <select
+              value={perplexityRecency}
+              onChange={(e) => setPerplexityRecency(e.target.value)}
+              className="w-full px-2.5 py-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50"
+              disabled={isFetching}
+            >
+              {RECENCY_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
           </div>
         </div>
       )}
