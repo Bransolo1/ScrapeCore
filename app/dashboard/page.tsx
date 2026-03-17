@@ -32,6 +32,10 @@ interface Stats {
   byDataType: Record<string, number>;
   comBStrength: Record<string, number>;
   trend: { date: string; count: number }[];
+  rubricGrades: Record<string, number>;
+  rubricTrend: { date: string; avgTotal: number; count: number }[];
+  promptVersions: Record<string, number>;
+  avgGroundingScore: number | null;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -433,6 +437,102 @@ export default function DashboardPage() {
                 </div>
               </SectionCard>
             </div>
+
+            {/* Quality Trends */}
+            {(stats.rubricGrades || stats.promptVersions) && (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Rubric grade distribution */}
+                <SectionCard title="Evaluation Rubric Grades">
+                  {Object.values(stats.rubricGrades).every((v) => v === 0) ? (
+                    <p className="text-sm text-gray-400 py-4 text-center">No rubric data yet.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {(["strong", "acceptable", "needs_revision"] as const).map((grade) => {
+                        const count = stats.rubricGrades[grade] ?? 0;
+                        const total = Object.values(stats.rubricGrades).reduce((s, v) => s + v, 0);
+                        const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+                        const colors: Record<string, { bar: string; text: string }> = {
+                          strong:          { bar: "bg-emerald-500", text: "text-emerald-700" },
+                          acceptable:      { bar: "bg-amber-400",   text: "text-amber-700" },
+                          needs_revision:  { bar: "bg-rose-400",    text: "text-rose-700" },
+                        };
+                        const c = colors[grade];
+                        return (
+                          <div key={grade}>
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className={`text-xs font-semibold capitalize ${c.text}`}>
+                                {grade.replace("_", " ")}
+                              </span>
+                              <span className="text-xs text-gray-400">{count} ({pct}%)</span>
+                            </div>
+                            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                              <div className={`h-full rounded-full transition-all duration-500 ${c.bar}`} style={{ width: `${pct}%` }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {stats.avgGroundingScore !== null && (
+                        <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
+                          <span className="text-xs text-gray-500">Avg grounding score</span>
+                          <span className="text-sm font-bold text-brand-700">{stats.avgGroundingScore}%</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </SectionCard>
+
+                {/* Rubric score trend */}
+                <SectionCard title="Avg Rubric Score Over Time">
+                  {stats.rubricTrend.length < 2 ? (
+                    <p className="text-sm text-gray-400 py-4 text-center">
+                      {stats.rubricTrend.length === 0 ? "No rubric data yet." : "Run more analyses to see trend."}
+                    </p>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={180}>
+                      <AreaChart data={stats.rubricTrend} margin={{ top: 4, right: 8, left: -24, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="rubricGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                            <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={(d) => d.slice(5)} />
+                        <YAxis domain={[0, 50]} tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+                        <Tooltip content={<ChartTooltip />} />
+                        <Area type="monotone" dataKey="avgTotal" name="avg score /50" stroke="#10b981" strokeWidth={2} fill="url(#rubricGrad)" dot={false} activeDot={{ r: 4, fill: "#10b981" }} />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  )}
+                </SectionCard>
+
+                {/* Prompt version breakdown */}
+                <SectionCard title="Prompt Versions Used">
+                  {Object.keys(stats.promptVersions).length === 0 ? (
+                    <p className="text-sm text-gray-400 py-4 text-center">No prompt version data.</p>
+                  ) : (
+                    <div className="space-y-2.5">
+                      {Object.entries(stats.promptVersions)
+                        .sort(([, a], [, b]) => b - a)
+                        .map(([version, count]) => {
+                          const total = Object.values(stats.promptVersions).reduce((s, v) => s + v, 0);
+                          const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+                          return (
+                            <div key={version} className="flex items-center gap-3">
+                              <span className="text-xs font-mono font-semibold text-brand-700 bg-brand-50 border border-brand-100 px-2 py-0.5 rounded-md w-16 text-center shrink-0">
+                                {version}
+                              </span>
+                              <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                                <div className="h-full bg-brand-400 rounded-full" style={{ width: `${pct}%` }} />
+                              </div>
+                              <span className="text-xs text-gray-400 w-8 text-right shrink-0">{count}</span>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  )}
+                </SectionCard>
+              </div>
+            )}
 
             {/* CTA */}
             <div className="bg-gradient-to-r from-brand-600 to-violet-600 rounded-2xl p-6 flex items-center justify-between gap-4">

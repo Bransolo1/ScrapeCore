@@ -28,6 +28,8 @@ async function fetchClarificationNote(
     return null;
   }
 }
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 import { logAudit } from "@/lib/audit";
@@ -85,6 +87,7 @@ async function saveAnalysis(params: {
   evalJson?: string;
   rubricJson?: string;
   actor?: string;
+  userId?: string;
 }): Promise<string | null> {
   try {
     const { actor, ...data } = params;
@@ -133,6 +136,10 @@ export async function POST(req: Request) {
   }
 
   try {
+    // Extract authenticated user if available
+    const session = await getServerSession(authOptions);
+    const sessionUserId = (session?.user as { id?: string } | undefined)?.id ?? undefined;
+
     const { text, dataType, actor, piiDetected: clientPiiFlag, projectContext } = (await req.json()) as {
       text: string;
       dataType: DataType;
@@ -239,6 +246,7 @@ export async function POST(req: Request) {
               evalJson,
               rubricJson,
               actor,
+              userId: sessionUserId,
             });
 
             controller.enqueue(

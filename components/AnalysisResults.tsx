@@ -25,6 +25,7 @@ import SourceInspector from "./SourceInspector";
 import RubricPanel from "./RubricPanel";
 import LowConfidenceGate from "./LowConfidenceGate";
 import CompetitorProfilePanel from "./CompetitorProfilePanel";
+import ShareButton from "./ShareButton";
 import { scoreRubric } from "@/lib/rubric";
 import { usePlainMode } from "./PlainModeToggle";
 
@@ -237,7 +238,10 @@ export default function AnalysisResults({ state, inputText, usage }: AnalysisRes
           </div>
           <p className="text-sm text-gray-600 leading-relaxed">{analysis.summary}</p>
         </div>
-        <ExportButton analysis={analysis} inputText={inputText} />
+        <div className="flex items-center gap-2 shrink-0">
+          {state.savedId && <ShareButton analysisId={state.savedId} />}
+          <ExportButton analysis={analysis} inputText={inputText} />
+        </div>
       </div>
 
       {/* Trust banner */}

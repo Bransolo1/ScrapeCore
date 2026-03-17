@@ -1,9 +1,20 @@
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import type { BehaviourAnalysis } from "@/lib/types";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const session = await getServerSession(authOptions);
+    const sessionUserId = (session?.user as { id?: string } | undefined)?.id ?? undefined;
+
+    const where: Record<string, unknown> = {};
+    if (sessionUserId && process.env.SKIP_AUTH !== "true") {
+      where.OR = [{ userId: sessionUserId }, { userId: null }];
+    }
+
     const all = await prisma.analysis.findMany({
+      where,
       orderBy: { createdAt: "asc" },
       select: {
         id: true,
@@ -13,6 +24,9 @@ export async function GET() {
         outputTokens: true,
         durationMs: true,
         analysisJson: true,
+        promptVersion: true,
+        rubricJson: true,
+        evalJson: true,
       },
     });
 
@@ -52,6 +66,51 @@ export async function GET() {
         // Skip unparseable rows
       }
     }
+
+    // Rubric grade distribution + grounding scores + prompt version breakdown
+    const rubricGrades: Record<string, number> = { strong: 0, acceptable: 0, needs_revision: 0 };
+    const rubricTrend: { date: string; avgTotal: number; count: number }[] = [];
+    const rubricByDay: Record<string, { sum: number; count: number }> = {};
+    const promptVersions: Record<string, number> = {};
+    let totalGrounding = 0;
+    let groundingCount = 0;
+
+    for (const row of all) {
+      // Prompt version tally
+      const pv = row.promptVersion ?? "unknown";
+      promptVersions[pv] = (promptVersions[pv] ?? 0) + 1;
+
+      // Rubric grade
+      if (row.rubricJson) {
+        try {
+          const rubric = JSON.parse(row.rubricJson) as { grade: string; total: number };
+          rubricGrades[rubric.grade] = (rubricGrades[rubric.grade] ?? 0) + 1;
+          const day = row.createdAt.toISOString().slice(0, 10);
+          if (!rubricByDay[day]) rubricByDay[day] = { sum: 0, count: 0 };
+          rubricByDay[day].sum += rubric.total;
+          rubricByDay[day].count += 1;
+        } catch { /* skip */ }
+      }
+
+      // Grounding score
+      if (row.evalJson) {
+        try {
+          const ev = JSON.parse(row.evalJson) as { groundingScore?: number };
+          if (typeof ev.groundingScore === "number") {
+            totalGrounding += ev.groundingScore;
+            groundingCount += 1;
+          }
+        } catch { /* skip */ }
+      }
+    }
+
+    // Build rubric trend (avg rubric total per day)
+    for (const [date, { sum, count }] of Object.entries(rubricByDay)) {
+      rubricTrend.push({ date, avgTotal: Math.round((sum / count) * 10) / 10, count });
+    }
+    rubricTrend.sort((a, b) => a.date.localeCompare(b.date));
+
+    const avgGroundingScore = groundingCount > 0 ? Math.round((totalGrounding / groundingCount) * 10) / 10 : null;
 
     // Analyses by data type
     const byDataType: Record<string, number> = {};
@@ -93,6 +152,10 @@ export async function GET() {
       confidence,
       byDataType,
       comBStrength,
+      rubricGrades,
+      rubricTrend,
+      promptVersions,
+      avgGroundingScore,
       trend,
     });
   } catch (err) {

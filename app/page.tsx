@@ -11,6 +11,7 @@ import AnalysisResults from "@/components/AnalysisResults";
 import AnalysisHistory from "@/components/AnalysisHistory";
 import PIIWarningModal from "@/components/PIIWarningModal";
 import WizardOverlay from "@/components/WizardOverlay";
+import GuidedWizard from "@/components/GuidedWizard";
 import type { AnalysisState, DataType, BehaviourAnalysis } from "@/lib/types";
 import type { Source } from "@/lib/scraper";
 import { formatSourcesAsText } from "@/lib/scraper";
@@ -79,8 +80,10 @@ export default function Home() {
   const [dataType, setDataType] = useState<DataType>("survey");
   const [projectContext, setProjectContext] = useState("");
 
-  // First-run wizard
+  // First-run onboarding overlay
   const [showWizard, setShowWizard] = useState(false);
+  // Interactive guided input wizard
+  const [showGuidedWizard, setShowGuidedWizard] = useState(false);
 
   // Scrape / social sources
   const [sources, setSources] = useState<Source[]>([]);
@@ -244,12 +247,27 @@ export default function Home() {
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Header />
 
-      {/* First-run wizard */}
+      {/* First-run onboarding overlay */}
       {showWizard && (
         <WizardOverlay onDone={() => {
           setShowWizard(false);
           localStorage.setItem("scrapecore-wizard-done", "1");
         }} />
+      )}
+
+      {/* Guided analysis wizard */}
+      {showGuidedWizard && (
+        <GuidedWizard
+          onDismiss={() => setShowGuidedWizard(false)}
+          onComplete={({ text, dataType: dt, projectContext: ctx }) => {
+            setMode("paste");
+            setPasteText(text);
+            setDataType(dt);
+            setProjectContext(ctx);
+            setShowGuidedWizard(false);
+            scanAndRun(text, dt);
+          }}
+        />
       )}
 
       {/* PII warning modal */}
@@ -266,6 +284,29 @@ export default function Home() {
         <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-6 items-start">
           {/* ── Input panel ── */}
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden sticky top-8">
+            {/* Guided setup prompt */}
+            {!pasteText && mode === "paste" && (
+              <div className="px-5 pt-4 pb-0">
+                <button
+                  onClick={() => setShowGuidedWizard(true)}
+                  disabled={isLoading}
+                  className="w-full flex items-center gap-2.5 px-4 py-3 bg-brand-50 hover:bg-brand-100 border border-brand-200 rounded-xl text-sm font-medium text-brand-700 transition-all group"
+                >
+                  <svg className="w-4 h-4 shrink-0 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                  </svg>
+                  <span className="flex-1 text-left">Start with guided setup</span>
+                  <svg className="w-3.5 h-3.5 text-brand-400 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+                <div className="flex items-center gap-2 mt-3 mb-1">
+                  <div className="flex-1 h-px bg-gray-100" />
+                  <span className="text-xs text-gray-400 font-medium">or use expert mode below</span>
+                  <div className="flex-1 h-px bg-gray-100" />
+                </div>
+              </div>
+            )}
             {/* Mode tabs */}
             <div className="flex border-b border-gray-100">
               {MODE_TABS.map((tab) => (

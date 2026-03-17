@@ -66,6 +66,9 @@ model Analysis {
   organisationId String?
   organisation   Organisation? @relation(fields: [organisationId], references: [id])
 
+  // Shareable read-only link
+  shareToken String? @unique
+
   auditLogs    AuditLog[]
   corrections  AnalysisCorrection[]
 }

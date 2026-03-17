@@ -18,6 +18,6 @@ export default withAuth(
 );
 
 export const config = {
-  // Protect the main UI pages — not /api/* routes
-  matcher: ["/", "/dashboard/:path*", "/compare/:path*", "/audit/:path*"],
+  // Protect the main UI pages — not /api/* routes or /share/* (public read-only)
+  matcher: ["/", "/dashboard/:path*", "/compare/:path*", "/audit/:path*", "/login"],
 };
