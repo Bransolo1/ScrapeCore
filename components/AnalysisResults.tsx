@@ -43,20 +43,24 @@ function EmptyState() {
 
 function StreamingState({ text }: { text: string }) {
   return (
-    <div className="p-6">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 bg-brand-500 rounded-full animate-pulse" />
-          <span className="text-sm font-medium text-gray-700">Analysing with Claude Opus…</span>
+    <div className="p-6 animate-fade-in">
+      <div className="flex items-center gap-3 mb-5">
+        <div className="flex items-center gap-2.5 px-3 py-1.5 bg-brand-50 border border-brand-100 rounded-full">
+          <div className="flex gap-1">
+            <span className="w-1.5 h-1.5 bg-brand-500 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+            <span className="w-1.5 h-1.5 bg-brand-500 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+            <span className="w-1.5 h-1.5 bg-brand-500 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+          </div>
+          <span className="text-xs font-medium text-brand-700">Analysing with Claude Opus 4.6…</span>
         </div>
       </div>
-      <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 max-h-96 overflow-y-auto">
+      <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 max-h-96 overflow-y-auto scrollbar-thin">
         <pre className="text-xs text-gray-500 font-mono whitespace-pre-wrap leading-relaxed">
           {text || "Thinking…"}
         </pre>
       </div>
       <p className="mt-3 text-xs text-gray-400 text-center">
-        Applying COM-B framework, identifying barriers and motivators…
+        Applying COM-B framework · BCW taxonomy · Identifying patterns…
       </p>
     </div>
   );
@@ -81,20 +85,19 @@ export default function AnalysisResults({ state, inputText, usage }: AnalysisRes
   if (!analysis) return null;
 
   return (
-    <div className="p-6 space-y-8">
+    <div className="p-6 space-y-8 animate-fade-in">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-2 h-2 bg-emerald-500 rounded-full" />
-            <span className="text-xs font-medium text-emerald-600">Analysis complete</span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-full">
+              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+              <span className="text-xs font-semibold text-emerald-700">Analysis complete</span>
+            </div>
+            <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full capitalize">{analysis.data_type_detected}</span>
+            <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{analysis.text_units_analysed} units</span>
           </div>
-          <p className="text-sm text-gray-600 leading-relaxed max-w-2xl">{analysis.summary}</p>
-          <div className="flex items-center gap-3 mt-2">
-            <span className="text-xs text-gray-400">{analysis.data_type_detected}</span>
-            <span className="text-gray-200">·</span>
-            <span className="text-xs text-gray-400">{analysis.text_units_analysed} text units</span>
-          </div>
+          <p className="text-sm text-gray-600 leading-relaxed">{analysis.summary}</p>
         </div>
         <ExportButton analysis={analysis} inputText={inputText} />
       </div>

@@ -31,7 +31,7 @@ export default function Header() {
   const pathname = usePathname();
 
   return (
-    <header className="border-b border-gray-200 bg-white sticky top-0 z-30 backdrop-blur-sm">
+    <header className="border-b border-gray-200 bg-white/95 sticky top-0 z-30 backdrop-blur-md shadow-sm">
       <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-3 shrink-0">
