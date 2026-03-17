@@ -1,6 +1,11 @@
 # ScrapeCore — Installation Guide
 
-This guide is written for **non-technical users**. No coding knowledge is required. Follow each step in order.
+This guide covers two ways to install ScrapeCore:
+
+- **Web app / Docker** — best for teams, servers, or anyone comfortable with a terminal
+- **Desktop app (Electron)** — best for individual users on Windows, macOS, or Linux
+
+No coding knowledge required for either path. Follow each step in order.
 
 ---
 
@@ -8,12 +13,11 @@ This guide is written for **non-technical users**. No coding knowledge is requir
 
 You will need:
 
-1. **A computer running Windows, macOS, or Linux**
-2. **An Anthropic API key** — this is what powers the AI analysis
-3. *(Optional)* A Perplexity API key — for live web research and Twitter/X listening
-4. *(Optional)* A Firecrawl API key — for scraping review sites like G2 and Capterra
+1. **An Anthropic API key** — this is what powers the AI analysis
+2. *(Optional)* A Perplexity API key — for live web research and Twitter/X listening
+3. *(Optional)* A Firecrawl API key — for scraping review sites like G2 and Capterra
 
-All API keys are obtained online for free (you pay only for what you use). Instructions for each are below.
+All API keys are obtained online (you pay only for what you use). Instructions for each are below.
 
 ---
 
@@ -32,11 +36,50 @@ ScrapeCore uses Claude Opus 4.6 (Anthropic's most capable model) to analyse your
 
 ---
 
-## Step 2 — Download and Install ScrapeCore
+## Step 2 — Choose Your Installation Method
 
-### Windows
+---
 
-1. Go to the **Releases** page of this GitHub repository
+### Option A — Web App (Docker) — Recommended for teams
+
+Docker runs ScrapeCore as a web server. Anyone on your network (or the internet) can use it via a browser — no installation needed on each person's computer.
+
+**Requirements:** [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed on any Windows, macOS, or Linux machine.
+
+1. Download and install **[Docker Desktop](https://www.docker.com/products/docker-desktop/)** if you don't have it
+2. Download the ScrapeCore source code from this repository (click **Code → Download ZIP**, then unzip it)
+3. Open a terminal and navigate to the unzipped folder:
+   ```
+   cd ScrapeCore-main
+   ```
+4. Copy the Docker environment template:
+   ```
+   cp .env.docker.example .env.docker
+   ```
+5. Open `.env.docker` in any text editor and fill in:
+   ```
+   ANTHROPIC_API_KEY=sk-ant-your-key-here
+   NEXTAUTH_SECRET=any-long-random-string-at-least-32-characters
+   ```
+   For `NEXTAUTH_SECRET`, use any long random string (e.g. mash your keyboard). It just needs to be secret and long.
+6. Start ScrapeCore:
+   ```
+   docker compose --env-file .env.docker up -d
+   ```
+7. Open **http://localhost:3000** in your browser
+
+**First use:** The first person to open the app will be prompted to create an admin account (name, email, password). This account is stored locally — it is not linked to any external service.
+
+> To stop ScrapeCore: `docker compose down`
+> To update ScrapeCore: pull the latest code, then run `docker compose --env-file .env.docker up -d --build`
+
+---
+
+### Option B — Desktop App (Electron) — Recommended for individuals
+
+The desktop app installs like any other program. Your data stays entirely on your computer.
+
+#1. Go to the **Releases** page of this GitHub repository
 2. Under the latest release, download **`ScrapeCore-Setup-x.x.x.exe`**
 3. Double-click the downloaded file to run the installer
 4. If Windows shows a "Windows protected your PC" warning, click **More info** → **Run anyway**
@@ -44,7 +87,7 @@ ScrapeCore uses Claude Opus 4.6 (Anthropic's most capable model) to analyse your
 5. Follow the installer steps and click **Install**
 6. Once installed, find **ScrapeCore** in your Start Menu and open it
 
-### macOS
+#### macOS
 
 1. Go to the **Releases** page of this GitHub repository
 2. Under the latest release, download **`ScrapeCore-x.x.x.dmg`**
@@ -56,7 +99,7 @@ ScrapeCore uses Claude Opus 4.6 (Anthropic's most capable model) to analyse your
    - Scroll down and click **Open Anyway** next to the ScrapeCore message
    - Click **Open** in the confirmation dialog
 
-### Linux
+#### Linux
 
 1. Go to the **Releases** page of this GitHub repository
 2. Under the latest release, download **`ScrapeCore-x.x.x.AppImage`**
@@ -69,15 +112,17 @@ ScrapeCore uses Claude Opus 4.6 (Anthropic's most capable model) to analyse your
 
 ---
 
-## Step 3 — First Launch Setup
+## Step 3 — First Launch Setup (Desktop App)
 
-When ScrapeCore opens for the first time, a **setup screen** will appear asking for your API key.
+When the desktop app opens for the first time, a **setup screen** will appear asking for your API key.
 
 1. Paste your Anthropic API key (the one starting with `sk-ant-`) into the field
 2. Click **Save and Launch**
 3. ScrapeCore will open and you are ready to use it
 
 > Your API key is stored securely on your computer. It is never sent anywhere except to Anthropic when you run an analysis.
+
+> **Docker/web users:** Skip this step — you already added your API key to `.env.docker` in Step 2.
 
 ---
 
@@ -189,6 +234,21 @@ The **Compare** tab lets you pick any two saved analyses and see a side-by-side 
 At the top of any analysis result, click the **Export** button to download:
 - **JSON** — full structured data for further processing
 - **PDF** — formatted report for sharing with stakeholders
+
+---
+
+## All the Pages — What Each One Does
+
+Once you are running ScrapeCore, you will see a navigation bar at the top with these pages:
+
+| Page | What it does |
+|---|---|
+| **Analyse** | Your main workspace. Paste text, scrape URLs, or collect reviews — then run the analysis |
+| **Dashboard** | Summary charts across all your past analyses: COM-B patterns, quality scores, activity over time |
+| **Compare** | Pick any two analyses and see a side-by-side COM-B comparison — useful for competitor benchmarking or before/after research |
+| **Eval Lab** | Quality review tools — rubric scores per analysis, side-by-side comparison of two analyses to track whether prompt changes improved results |
+| **Monitor** | Set up scheduled scans of a competitor — ScrapeCore will automatically re-run an analysis on their reviews or web presence at a set interval |
+| **Audit Log** | A full record of every analysis run, export, and review action — useful for regulated or enterprise use |
 
 ---
 

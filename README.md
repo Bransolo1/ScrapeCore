@@ -1,8 +1,145 @@
 # ScrapeCore — Behavioural Market Intelligence
 
-ScrapeCore is a desktop-first AI research platform that converts raw qualitative text — interviews, reviews, social posts, survey responses — into structured behavioural insight using the COM-B framework (Capability, Opportunity, Motivation → Behaviour), the Behaviour Change Wheel, and BCT taxonomy.
+ScrapeCore converts raw qualitative text — interviews, reviews, social posts, survey responses — into structured behavioural insight using the **COM-B model** (Capability, Opportunity, Motivation → Behaviour), the Behaviour Change Wheel, and BCT taxonomy. Powered by Claude Opus 4.6.
 
-Built for startup founders, product managers, behavioural scientists, insight leads, and UX researchers who need actionable intelligence fast — not a chatbot, not a generic summary, but a diagnosis.
+Built for startup founders, product managers, behavioural scientists, and insight researchers who need actionable intelligence fast — not a chatbot summary, but a diagnosis.
+
+---
+
+## Quick start — web app (Docker)
+
+The fastest way to get a production instance running:
+
+```bash
+# 1. Copy env template
+cp .env.docker.example .env.docker
+
+# 2. Fill in the two required values:
+#    ANTHROPIC_API_KEY=sk-ant-...
+#    NEXTAUTH_SECRET=$(openssl rand -base64 32)
+
+# 3. Start
+docker compose --env-file .env.docker up -d
+```
+
+Open **http://localhost:3000** — the first person to visit creates the admin account automatically.
+
+---
+
+## Quick start — local development
+
+```bash
+# 1. Install
+git clone <repo-url>
+cd ScrapeCore
+npm install
+
+# 2. Set up environment
+cp .env.local.example .env.local
+# Edit .env.local:
+#   ANTHROPIC_API_KEY=sk-ant-...
+#   NEXTAUTH_SECRET=$(openssl rand -base64 32)
+
+# 3. Create the database
+npx prisma db push
+
+# 4. Start
+npm run dev
+# → http://localhost:3000
+```
+
+First visit at `/login` creates your admin account. No separate setup step needed.
+
+---
+
+## Environment variables
+
+| Variable | Required | Description |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | **Yes** | Claude Opus 4.6 — core analysis engine |
+| `NEXTAUTH_SECRET` | **Yes** (web) | Random session secret. Generate: `openssl rand -base64 32` |
+| `NEXTAUTH_URL` | In production | Your public URL e.g. `https://scrapecore.myorg.com` |
+| `PERPLEXITY_API_KEY` | Optional | Enables live web research and social listening |
+| `FIRECRAWL_API_KEY` | Optional | Enables JS-rendered site scraping (G2, Capterra, SPAs) |
+| `DATABASE_URL` | Optional | Defaults to `file:./dev.db`. Docker uses `file:/data/scrapecore.db` |
+| `SKIP_AUTH` | Optional | `true` disables login screen — local dev / Electron builds only |
+
+---
+
+## Pages
+
+| Page | What it does |
+|---|---|
+| `/` — **Analyse** | Main workspace: paste text or scrape sources, run COM-B analysis |
+| `/dashboard` — **Dashboard** | Aggregate stats, quality trends, COM-B frequency across all analyses |
+| `/compare` — **Compare** | Side-by-side COM-B diff between two analyses — competitor benchmarking |
+| `/eval` — **Eval Lab** | Rubric scoring, prompt A/B comparison, quality tracking across versions |
+| `/monitoring` — **Monitor** | Scheduled competitor monitoring — recurring scans with change detection |
+| `/audit` — **Audit Log** | Full record of who ran what analysis, when, and any PII events |
+
+---
+
+## What each analysis produces
+
+- **COM-B mapping** — signals per sub-dimension with evidence quotes
+- **Key behaviours** — observed behaviours, rated by frequency and importance
+- **Barriers** — what stops the target behaviour, ranked by severity, with source text
+- **Motivators & Facilitators** — what drives and enables the behaviour
+- **Behavioural context** — where, when, and with whom behaviours occur
+- **Intervention opportunities** — ranked BCW interventions with specific BCT techniques
+- **Contradictions** — where evidence conflicts and what it means
+- **Confidence assessment** — grounding score, high-trust suitability flag, limitations
+- **Evidence click-through** — every quote links back to the original input text
+
+---
+
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| Framework | Next.js 14 (App Router, SSE streaming) |
+| AI | Anthropic Claude Opus 4.6 |
+| Database | Prisma + SQLite (libsql adapter, Turso-compatible) |
+| Auth | NextAuth.js — credentials + JWT, org/user scoping |
+| Styling | Tailwind CSS |
+| Charts | Recharts |
+| Deployment | Docker (single-service, SQLite volume) / Electron (desktop) |
+
+---
+
+## Development commands
+
+```bash
+npm run dev              # Dev server at :3000
+npm run build            # Production build
+npx prisma db push       # Apply schema changes to database
+npx prisma studio        # Browse database in browser
+
+# Reset the database (dev only)
+rm dev.db && npx prisma db push
+```
+
+---
+
+## Desktop (Electron)
+
+```bash
+npm run electron:dev     # Dev mode (Next.js + Electron)
+npm run dist:mac         # Build macOS .dmg
+npm run dist:win         # Build Windows .exe
+npm run dist:linux       # Build Linux .AppImage
+```
+
+Set `SKIP_AUTH=true` in `.env.local` for Electron builds.
+
+See **[INSTALL.md](./INSTALL.md)** for the non-technical installation guide.
+
+---
+
+## Licence
+
+Private — all rights reserved.
+
 
 ---
 

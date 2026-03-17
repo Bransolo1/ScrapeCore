@@ -23,12 +23,12 @@ function MoonIcon() {
 }
 
 const NAV = [
-  { href: "/", label: "Analyse" },
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/compare", label: "Compare" },
-  { href: "/eval", label: "Eval" },
-  { href: "/monitoring", label: "Monitor" },
-  { href: "/audit", label: "Audit" },
+  { href: "/",           label: "Analyse",   title: "Run a new behavioural analysis" },
+  { href: "/dashboard",  label: "Dashboard", title: "Quality trends and aggregate stats" },
+  { href: "/compare",    label: "Compare",   title: "Side-by-side COM-B diff between two analyses" },
+  { href: "/eval",       label: "Eval Lab",  title: "Rubric scoring and prompt A/B comparison" },
+  { href: "/monitoring", label: "Monitor",   title: "Scheduled competitor monitoring" },
+  { href: "/audit",      label: "Audit Log", title: "Full audit trail of analysis activity" },
 ];
 
 export default function Header() {
@@ -54,12 +54,13 @@ export default function Header() {
 
         {/* Nav */}
         <nav className="flex items-center gap-1">
-          {NAV.map(({ href, label }) => {
+          {NAV.map(({ href, label, title }) => {
             const active = pathname === href;
             return (
               <Link
                 key={href}
                 href={href}
+                title={title}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                   active
                     ? "bg-brand-50 text-brand-700 border border-brand-200"
