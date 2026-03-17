@@ -7,6 +7,7 @@ import { logAudit } from "@/lib/audit";
 import { scanForPII } from "@/lib/pii";
 import { groundAnalysis } from "@/lib/grounding";
 import { scoreAllInterventions } from "@/lib/validity";
+import { scoreRubric } from "@/lib/rubric";
 
 const client = new Anthropic();
 
@@ -55,6 +56,7 @@ async function saveAnalysis(params: {
   promptVersion: string;
   projectContext?: string;
   evalJson?: string;
+  rubricJson?: string;
   actor?: string;
 }): Promise<string | null> {
   try {
@@ -186,6 +188,9 @@ export async function POST(req: Request) {
               weakInterventions,
             });
 
+            const rubricResult = scoreRubric(analysis, groundingReport.score, avgValidityScore);
+            const rubricJson = JSON.stringify(rubricResult);
+
             // Persist to DB
             const savedId = await saveAnalysis({
               title: deriveTitle(analysis),
@@ -199,6 +204,7 @@ export async function POST(req: Request) {
               promptVersion: PROMPT_VERSION,
               projectContext,
               evalJson,
+              rubricJson,
               actor,
             });
 

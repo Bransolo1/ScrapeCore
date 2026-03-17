@@ -17,6 +17,7 @@ interface BarriersListProps {
   groundingMap?: Map<string, GroundingItem>;
   corrections?: Map<string, Correction>;
   onCorrect?: (section: string, index: number, status: string, note?: string) => Promise<void>;
+  onInspect?: (quote: string) => void;
 }
 
 interface MotivatorsListProps {
@@ -24,6 +25,21 @@ interface MotivatorsListProps {
   groundingMap?: Map<string, GroundingItem>;
   corrections?: Map<string, Correction>;
   onCorrect?: (section: string, index: number, status: string, note?: string) => Promise<void>;
+  onInspect?: (quote: string) => void;
+}
+
+function InspectButton({ quote, onInspect }: { quote: string; onInspect: (q: string) => void }) {
+  return (
+    <button
+      onClick={() => onInspect(quote)}
+      className="flex items-center gap-1 text-[11px] text-brand-500 hover:text-brand-700 transition-colors mt-1"
+    >
+      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      </svg>
+      Inspect source
+    </button>
+  );
 }
 
 function BarrierCard({
@@ -31,11 +47,13 @@ function BarrierCard({
   grounding,
   correction,
   onCorrect,
+  onInspect,
 }: {
   barrier: Barrier;
   grounding?: GroundingItem;
   correction?: Correction;
   onCorrect?: (status: string, note?: string) => Promise<void>;
+  onInspect?: (quote: string) => void;
 }) {
   const removed = correction?.status === "removed";
   const disputed = correction?.status === "disputed";
@@ -62,9 +80,14 @@ function BarrierCard({
           <span className="text-xs text-gray-400">severity</span>
         </div>
         {barrier.source_text && !removed && (
-          <blockquote className="mb-3 pl-3 border-l-2 border-gray-200">
+          <blockquote className="mb-1 pl-3 border-l-2 border-gray-200">
             <p className="text-xs text-gray-500 italic leading-relaxed line-clamp-3">&ldquo;{barrier.source_text}&rdquo;</p>
           </blockquote>
+        )}
+        {barrier.source_text && !removed && onInspect && (
+          <div className="mb-2">
+            <InspectButton quote={barrier.source_text} onInspect={onInspect} />
+          </div>
         )}
         {barrier.evidence.length > 0 && !removed && (
           <div className="space-y-1.5 mb-2">
@@ -87,11 +110,13 @@ function MotivatorCard({
   grounding,
   correction,
   onCorrect,
+  onInspect,
 }: {
   motivator: Motivator;
   grounding?: GroundingItem;
   correction?: Correction;
   onCorrect?: (status: string, note?: string) => Promise<void>;
+  onInspect?: (quote: string) => void;
 }) {
   const removed = correction?.status === "removed";
   const disputed = correction?.status === "disputed";
@@ -118,9 +143,14 @@ function MotivatorCard({
           <span className="text-xs text-gray-400">strength</span>
         </div>
         {motivator.source_text && !removed && (
-          <blockquote className="mb-3 pl-3 border-l-2 border-emerald-200">
+          <blockquote className="mb-1 pl-3 border-l-2 border-emerald-200">
             <p className="text-xs text-gray-500 italic leading-relaxed line-clamp-3">&ldquo;{motivator.source_text}&rdquo;</p>
           </blockquote>
+        )}
+        {motivator.source_text && !removed && onInspect && (
+          <div className="mb-2">
+            <InspectButton quote={motivator.source_text} onInspect={onInspect} />
+          </div>
         )}
         {motivator.evidence.length > 0 && !removed && (
           <div className="space-y-1.5 mb-2">
@@ -138,7 +168,7 @@ function MotivatorCard({
   );
 }
 
-export function BarriersList({ barriers, groundingMap, corrections, onCorrect }: BarriersListProps) {
+export function BarriersList({ barriers, groundingMap, corrections, onCorrect, onInspect }: BarriersListProps) {
   if (!barriers.length) return null;
   return (
     <div>
@@ -159,6 +189,7 @@ export function BarriersList({ barriers, groundingMap, corrections, onCorrect }:
             grounding={groundingMap?.get(`barriers:${i}`)}
             correction={corrections?.get(`barriers:${i}`)}
             onCorrect={onCorrect ? (status, note) => onCorrect("barriers", i, status, note) : undefined}
+            onInspect={onInspect}
           />
         ))}
       </div>
@@ -166,7 +197,7 @@ export function BarriersList({ barriers, groundingMap, corrections, onCorrect }:
   );
 }
 
-export function MotivatorsList({ motivators, groundingMap, corrections, onCorrect }: MotivatorsListProps) {
+export function MotivatorsList({ motivators, groundingMap, corrections, onCorrect, onInspect }: MotivatorsListProps) {
   if (!motivators.length) return null;
   return (
     <div>
@@ -187,6 +218,7 @@ export function MotivatorsList({ motivators, groundingMap, corrections, onCorrec
             grounding={groundingMap?.get(`motivators:${i}`)}
             correction={corrections?.get(`motivators:${i}`)}
             onCorrect={onCorrect ? (status, note) => onCorrect("motivators", i, status, note) : undefined}
+            onInspect={onInspect}
           />
         ))}
       </div>

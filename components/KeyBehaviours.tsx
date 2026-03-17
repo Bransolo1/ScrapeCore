@@ -11,9 +11,10 @@ interface KeyBehavioursProps {
   groundingMap?: Map<string, GroundingItem>;
   corrections?: Map<string, Correction>;
   onCorrect?: (section: string, index: number, status: string, note?: string) => Promise<void>;
+  onInspect?: (quote: string) => void;
 }
 
-export default function KeyBehaviours({ behaviours, groundingMap, corrections, onCorrect }: KeyBehavioursProps) {
+export default function KeyBehaviours({ behaviours, groundingMap, corrections, onCorrect, onInspect }: KeyBehavioursProps) {
   if (!behaviours.length) return null;
 
   return (
@@ -57,9 +58,20 @@ export default function KeyBehaviours({ behaviours, groundingMap, corrections, o
                   </div>
                 </div>
                 {b.source_text && !removed && (
-                  <blockquote className="mb-2.5 pl-3 border-l-2 border-brand-200">
+                  <blockquote className="mb-1 pl-3 border-l-2 border-brand-200">
                     <p className="text-xs text-gray-500 italic leading-relaxed line-clamp-3">&ldquo;{b.source_text}&rdquo;</p>
                   </blockquote>
+                )}
+                {b.source_text && !removed && onInspect && (
+                  <button
+                    onClick={() => onInspect(b.source_text)}
+                    className="flex items-center gap-1 text-[11px] text-brand-500 hover:text-brand-700 transition-colors mb-2"
+                  >
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    Inspect source
+                  </button>
                 )}
                 {b.evidence.length > 0 && !removed && (
                   <div className="space-y-1.5 mb-2">

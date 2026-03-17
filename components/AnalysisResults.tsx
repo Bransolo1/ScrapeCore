@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import type { AnalysisState } from "@/lib/types";
 import { groundAnalysis, buildGroundingMap } from "@/lib/grounding";
 import { scoreAllInterventions } from "@/lib/validity";
@@ -21,6 +21,10 @@ import TrustBanner from "./TrustBanner";
 import BehaviouralContextPanel from "./BehaviouralContextPanel";
 import FacilitatorsSection from "./FacilitatorsSection";
 import AnalystAnnotations from "./AnalystAnnotations";
+import SourceInspector from "./SourceInspector";
+import RubricPanel from "./RubricPanel";
+import LowConfidenceGate from "./LowConfidenceGate";
+import { scoreRubric } from "@/lib/rubric";
 
 interface AnalysisResultsProps {
   state: AnalysisState;
@@ -85,6 +89,13 @@ export default function AnalysisResults({ state, inputText, usage }: AnalysisRes
   // Corrections state: key = "section:index"
   const [corrections, setCorrections] = useState<Map<string, Correction>>(new Map());
 
+  // Source inspector
+  const [inspectQuote, setInspectQuote] = useState<string | null>(null);
+
+  // Low-confidence gate
+  const [gateAcknowledged, setGateAcknowledged] = useState(false);
+  const prevStatusRef = useRef<string>("");
+
   // Load existing corrections when a saved analysis is loaded
   useEffect(() => {
     if (!state.savedId || state.status !== "complete") return;
@@ -104,9 +115,13 @@ export default function AnalysisResults({ state, inputText, usage }: AnalysisRes
       .catch(() => {});
   }, [state.savedId, state.status]);
 
-  // Reset corrections when a new analysis starts
+  // Reset corrections + gate when a new analysis starts
   useEffect(() => {
-    if (state.status === "streaming") setCorrections(new Map());
+    if (state.status === "streaming" && prevStatusRef.current !== "streaming") {
+      setCorrections(new Map());
+      setGateAcknowledged(false);
+    }
+    prevStatusRef.current = state.status;
   }, [state.status]);
 
   const handleCorrect = useCallback(
@@ -167,10 +182,43 @@ export default function AnalysisResults({ state, inputText, usage }: AnalysisRes
     [analysis.intervention_opportunities]
   );
 
+  // Rubric score
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const rubricResult = useMemo(() => {
+    if (!groundingReport) return null;
+    const avgValidity = validityScores.length > 0
+      ? validityScores.reduce((s, r) => s + r.score, 0) / validityScores.length
+      : null;
+    return scoreRubric(analysis, groundingReport.score, avgValidity);
+  }, [analysis, groundingReport, validityScores]);
+
   const hasCorrections = !!state.savedId;
+
+  // Low-confidence gate check
+  const needsGate =
+    analysis.confidence?.overall === "low" || (analysis.text_units_analysed ?? 0) < 5;
+
+  if (needsGate && !gateAcknowledged) {
+    return (
+      <LowConfidenceGate
+        confidence={analysis.confidence}
+        textUnits={analysis.text_units_analysed ?? 0}
+        onAcknowledge={() => setGateAcknowledged(true)}
+        onBack={() => {/* stay on gate — user dismisses by re-running */}}
+      />
+    );
+  }
 
   return (
     <div className="p-6 space-y-8 animate-fade-in">
+      {/* Source inspector modal */}
+      {inspectQuote && (
+        <SourceInspector
+          quote={inspectQuote}
+          inputText={inputText}
+          onClose={() => setInspectQuote(null)}
+        />
+      )}
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
@@ -190,10 +238,13 @@ export default function AnalysisResults({ state, inputText, usage }: AnalysisRes
       {/* Trust banner */}
       <TrustBanner />
 
-      {/* Evidence Grounding report — shown immediately after header */}
+      {/* Evidence Grounding report */}
       {groundingReport && groundingReport.total > 0 && (
         <GroundingPanel report={groundingReport} />
       )}
+
+      {/* Evaluation rubric score */}
+      {rubricResult && <RubricPanel result={rubricResult} />}
 
       {/* Behavioural context */}
       <BehaviouralContextPanel context={analysis.behavioural_context} />
@@ -212,6 +263,7 @@ export default function AnalysisResults({ state, inputText, usage }: AnalysisRes
         groundingMap={groundingMap}
         corrections={corrections}
         onCorrect={hasCorrections ? handleCorrect : undefined}
+        onInspect={inputText ? setInspectQuote : undefined}
       />
 
       {/* Barriers & Motivators */}
@@ -220,6 +272,7 @@ export default function AnalysisResults({ state, inputText, usage }: AnalysisRes
         groundingMap={groundingMap}
         corrections={corrections}
         onCorrect={hasCorrections ? handleCorrect : undefined}
+        onInspect={inputText ? setInspectQuote : undefined}
       />
       <AnalystAnnotations sectionKey="barriers" analysisId={state.savedId} />
       <MotivatorsList
@@ -227,6 +280,7 @@ export default function AnalysisResults({ state, inputText, usage }: AnalysisRes
         groundingMap={groundingMap}
         corrections={corrections}
         onCorrect={hasCorrections ? handleCorrect : undefined}
+        onInspect={inputText ? setInspectQuote : undefined}
       />
       <AnalystAnnotations sectionKey="motivators" analysisId={state.savedId} />
 

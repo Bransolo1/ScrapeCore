@@ -36,6 +36,9 @@ model Analysis {
   // Eval log — grounding score, validity scores, computed at save time
   evalJson     String?  // JSON: { groundingScore, ungroundedCount, avgValidityScore, weakInterventions }
 
+  // Rubric auto-score — 10-dimension evaluation_rubric.md scores, computed at save time
+  rubricJson   String?  // JSON: { dimensions: [{name, score, rationale}], total, grade }
+
   auditLogs    AuditLog[]
   corrections  AnalysisCorrection[]
 }
