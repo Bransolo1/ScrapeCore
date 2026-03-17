@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Header from "@/components/Header";
 import DataInput from "@/components/DataInput";
 import UrlScraper from "@/components/UrlScraper";
@@ -9,9 +9,12 @@ import CompanyFootprint from "@/components/CompanyFootprint";
 import SourcesPanel from "@/components/SourcesPanel";
 import AnalysisResults from "@/components/AnalysisResults";
 import AnalysisHistory from "@/components/AnalysisHistory";
+import PIIWarningModal from "@/components/PIIWarningModal";
 import type { AnalysisState, DataType, BehaviourAnalysis } from "@/lib/types";
 import type { Source } from "@/lib/scraper";
 import { formatSourcesAsText } from "@/lib/scraper";
+import { scanForPII, redactPII } from "@/lib/pii";
+import type { PIIScanResult } from "@/lib/pii";
 
 type InputMode = "paste" | "scrape" | "social" | "footprint";
 
@@ -62,6 +65,11 @@ const MODE_TABS: { id: InputMode; label: string; icon: React.ReactNode }[] = [
   },
 ];
 
+function getActor(): string {
+  if (typeof window === "undefined") return "system";
+  return localStorage.getItem("scrapecore-user") ?? "analyst";
+}
+
 export default function Home() {
   const [mode, setMode] = useState<InputMode>("paste");
 
@@ -81,14 +89,26 @@ export default function Home() {
   const [showHistory, setShowHistory] = useState(false);
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
 
+  // PII gate
+  const [piiResult, setPiiResult] = useState<PIIScanResult | null>(null);
+  const pendingRef = useRef<{ text: string; dt: DataType } | null>(null);
+
   const isLoading = analysisState.status === "streaming";
+
+  // Prompt for user name on first use (stored in localStorage for audit attribution)
+  useEffect(() => {
+    if (!localStorage.getItem("scrapecore-user")) {
+      const name = window.prompt("Enter your name (used for audit logs):", "Analyst");
+      if (name?.trim()) localStorage.setItem("scrapecore-user", name.trim());
+    }
+  }, []);
 
   // ── Analysis runner ─────────────────────────────────────────────────────
 
-  const runAnalysis = async (text: string, dt: DataType) => {
+  const runAnalysis = async (text: string, dt: DataType, piiDetected = false) => {
     if (!text.trim() || isLoading) return;
 
-    setAnalysisState({ status: "streaming", streamingText: "", analysis: null, error: null, durationMs: null });
+    setAnalysisState({ status: "streaming", streamingText: "", analysis: null, error: null, durationMs: null, savedId: null });
     setUsage(undefined);
     startTimeRef.current = Date.now();
 
@@ -96,7 +116,7 @@ export default function Home() {
       const res = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, dataType: dt }),
+        body: JSON.stringify({ text, dataType: dt, actor: getActor(), piiDetected }),
       });
 
       if (!res.ok || !res.body) {
@@ -123,14 +143,21 @@ export default function Home() {
           try {
             const event = JSON.parse(raw) as
               | { type: "chunk"; text: string }
-              | { type: "complete"; analysis: BehaviourAnalysis; usage: { inputTokens: number; outputTokens: number } }
+              | { type: "complete"; analysis: BehaviourAnalysis; savedId?: string; usage: { inputTokens: number; outputTokens: number } }
               | { type: "error"; error: string };
 
             if (event.type === "chunk") {
               setAnalysisState((prev) => ({ ...prev, streamingText: prev.streamingText + event.text }));
             } else if (event.type === "complete") {
               setUsage(event.usage);
-              setAnalysisState({ status: "complete", streamingText: "", analysis: event.analysis, error: null, durationMs: Date.now() - startTimeRef.current });
+              setAnalysisState({
+                status: "complete",
+                streamingText: "",
+                analysis: event.analysis,
+                error: null,
+                durationMs: Date.now() - startTimeRef.current,
+                savedId: event.savedId ?? null,
+              });
               setHistoryRefreshKey((k) => k + 1);
             } else if (event.type === "error") {
               setAnalysisState({ status: "error", streamingText: "", analysis: null, error: event.error, durationMs: null });
@@ -143,14 +170,44 @@ export default function Home() {
     }
   };
 
-  const handlePasteAnalyse = () => runAnalysis(pasteText, dataType);
+  // ── PII gate ─────────────────────────────────────────────────────────────
+
+  const scanAndRun = (text: string, dt: DataType) => {
+    if (!text.trim() || isLoading) return;
+    const scan = scanForPII(text);
+    if (scan.hasPII) {
+      pendingRef.current = { text, dt };
+      setPiiResult(scan);
+    } else {
+      runAnalysis(text, dt, false);
+    }
+  };
+
+  const handlePIIContinue = () => {
+    const pending = pendingRef.current;
+    setPiiResult(null);
+    if (pending) runAnalysis(pending.text, pending.dt, true);
+  };
+
+  const handlePIIRedactAndContinue = () => {
+    const pending = pendingRef.current;
+    setPiiResult(null);
+    if (pending) runAnalysis(redactPII(pending.text), pending.dt, false);
+  };
+
+  const handlePIICancel = () => {
+    setPiiResult(null);
+    pendingRef.current = null;
+  };
+
+  const handlePasteAnalyse = () => scanAndRun(pasteText, dataType);
 
   const handleSourcesAnalyse = () => {
     const text = formatSourcesAsText(sources);
     // Infer best data type from source types
     const hasSocial = sources.some((s) => s.source === "reddit" || s.source === "hackernews");
     const dt: DataType = hasSocial ? "social" : "free_text";
-    runAnalysis(text, dt);
+    scanAndRun(text, dt);
   };
 
   const handleNewSources = (newSources: Source[]) => {
@@ -166,9 +223,9 @@ export default function Home() {
 
   const clearSources = () => setSources([]);
 
-  const handleLoadFromHistory = (analysis: BehaviourAnalysis, dt: DataType) => {
+  const handleLoadFromHistory = (analysis: BehaviourAnalysis, dt: DataType, savedId?: string) => {
     setUsage(undefined);
-    setAnalysisState({ status: "complete", streamingText: "", analysis, error: null, durationMs: null });
+    setAnalysisState({ status: "complete", streamingText: "", analysis, error: null, durationMs: null, savedId: savedId ?? null });
     setShowHistory(false);
   };
 
@@ -178,6 +235,16 @@ export default function Home() {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Header />
+
+      {/* PII warning modal */}
+      {piiResult && (
+        <PIIWarningModal
+          result={piiResult}
+          onContinue={handlePIIContinue}
+          onRedactAndContinue={handlePIIRedactAndContinue}
+          onCancel={handlePIICancel}
+        />
+      )}
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-6 items-start">

@@ -3,6 +3,8 @@ import { SYSTEM_PROMPT, buildUserPrompt } from "@/lib/prompts";
 import type { BehaviourAnalysis, DataType } from "@/lib/types";
 import { prisma } from "@/lib/db";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
+import { logAudit } from "@/lib/audit";
+import { scanForPII } from "@/lib/pii";
 
 const client = new Anthropic();
 
@@ -47,11 +49,29 @@ async function saveAnalysis(params: {
   inputTokens: number;
   outputTokens: number;
   durationMs: number;
-}) {
+  piiDetected: boolean;
+  actor?: string;
+}): Promise<string | null> {
   try {
-    await prisma.analysis.create({ data: params });
+    const { actor, ...data } = params;
+    const record = await prisma.analysis.create({ data });
+    await logAudit({
+      event: "analysis.created",
+      actor: actor ?? "system",
+      analysisId: record.id,
+      entityId: record.id,
+      entityType: "analysis",
+      metadata: {
+        dataType: data.dataType,
+        inputTokens: data.inputTokens,
+        outputTokens: data.outputTokens,
+        durationMs: data.durationMs,
+        piiDetected: data.piiDetected,
+      },
+    });
+    return record.id;
   } catch {
-    // Saving should never crash the stream — log silently
+    return null;
   }
 }
 
@@ -79,9 +99,11 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { text, dataType } = (await req.json()) as {
+    const { text, dataType, actor, piiDetected: clientPiiFlag } = (await req.json()) as {
       text: string;
       dataType: DataType;
+      actor?: string;
+      piiDetected?: boolean;
     };
 
     if (!text?.trim()) {
@@ -126,8 +148,21 @@ export async function POST(req: Request) {
           const analysis = parseAnalysis(fullText);
 
           if (analysis) {
+            // PII check on the input text (server-side confirmation)
+            const piiScan = scanForPII(text);
+            const hasPII = clientPiiFlag || piiScan.hasPII;
+
+            if (hasPII) {
+              await logAudit({
+                event: "pii.detected",
+                actor: actor ?? "system",
+                entityType: "analysis",
+                metadata: { piiTypes: piiScan.matches.map((m) => m.type), total: piiScan.totalCount },
+              });
+            }
+
             // Persist to DB (fire-and-forget, non-blocking)
-            saveAnalysis({
+            const savedId = await saveAnalysis({
               title: deriveTitle(analysis),
               dataType,
               analysisJson: JSON.stringify(analysis),
@@ -135,12 +170,15 @@ export async function POST(req: Request) {
               inputTokens,
               outputTokens,
               durationMs,
+              piiDetected: hasPII,
+              actor,
             });
 
             controller.enqueue(
               encodeSSE({
                 type: "complete",
                 analysis,
+                savedId,
                 usage: { inputTokens, outputTokens },
               })
             );

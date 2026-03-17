@@ -19,4 +19,28 @@ model Analysis {
   durationMs   Int?
   project      String?
   tags         String   @default("[]")
+
+  // Human review workflow
+  reviewStatus String    @default("pending")  // pending | approved | disputed | archived
+  reviewNotes  String?
+  reviewedAt   DateTime?
+  reviewedBy   String?
+
+  // PII flag — set if PII was detected in input text at analysis time
+  piiDetected  Boolean  @default(false)
+
+  auditLogs    AuditLog[]
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+  event      String   // analysis.created | analysis.viewed | analysis.exported | review.updated | source.fetched | pii.detected
+  actor      String   @default("system")
+  entityId   String?
+  entityType String?
+  metadata   String   @default("{}")  // JSON blob
+
+  analysisId String?
+  analysis   Analysis? @relation(fields: [analysisId], references: [id], onDelete: SetNull)
 }

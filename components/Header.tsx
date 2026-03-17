@@ -24,6 +24,7 @@ const NAV = [
   { href: "/", label: "Analyse" },
   { href: "/dashboard", label: "Dashboard" },
   { href: "/compare", label: "Compare" },
+  { href: "/audit", label: "Audit" },
 ];
 
 export default function Header() {

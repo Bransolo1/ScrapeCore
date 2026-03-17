@@ -107,4 +107,5 @@ export interface AnalysisState {
   analysis: BehaviourAnalysis | null;
   error: string | null;
   durationMs: number | null;
+  savedId?: string | null;  // DB id once persisted — used for review panel
 }

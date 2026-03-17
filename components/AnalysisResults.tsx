@@ -11,6 +11,7 @@ import SubgroupInsights from "./SubgroupInsights";
 import PersonaCards from "./PersonaCards";
 import ConfidencePanel from "./ConfidencePanel";
 import ExportButton from "./ExportButton";
+import ReviewPanel from "./ReviewPanel";
 
 interface AnalysisResultsProps {
   state: AnalysisState;
@@ -142,6 +143,11 @@ export default function AnalysisResults({ state, inputText, usage }: AnalysisRes
         usage={usage}
         durationMs={state.durationMs}
       />
+
+      {/* Analyst Review */}
+      {state.savedId && (
+        <ReviewPanel analysisId={state.savedId} />
+      )}
     </div>
   );
 }

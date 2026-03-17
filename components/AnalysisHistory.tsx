@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { BehaviourAnalysis, DataType } from "@/lib/types";
 
+type ReviewStatus = "pending" | "approved" | "disputed" | "archived";
+
 interface AnalysisSummary {
   id: string;
   createdAt: string;
@@ -13,12 +15,21 @@ interface AnalysisSummary {
   durationMs: number | null;
   project?: string | null;
   tags?: string;
+  reviewStatus?: ReviewStatus;
+  piiDetected?: boolean;
 }
 
 interface AnalysisHistoryProps {
-  onLoad: (analysis: BehaviourAnalysis, dataType: DataType) => void;
+  onLoad: (analysis: BehaviourAnalysis, dataType: DataType, savedId?: string) => void;
   refreshKey: number;
 }
+
+const REVIEW_BADGE: Record<ReviewStatus, { label: string; classes: string }> = {
+  pending:  { label: "Pending",  classes: "bg-gray-100 text-gray-500 border-gray-200" },
+  approved: { label: "Approved", classes: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  disputed: { label: "Disputed", classes: "bg-amber-50 text-amber-700 border-amber-200" },
+  archived: { label: "Archived", classes: "bg-gray-100 text-gray-400 border-gray-200" },
+};
 
 const DATA_TYPE_LABELS: Record<string, string> = {
   survey: "Survey",
@@ -62,6 +73,7 @@ export default function AnalysisHistory({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [reviewFilter, setReviewFilter] = useState<ReviewStatus | "">("");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Debounce search input
@@ -74,11 +86,12 @@ export default function AnalysisHistory({
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [search]);
 
-  const fetchHistory = useCallback(async (p: number, q: string) => {
+  const fetchHistory = useCallback(async (p: number, q: string, rf: string) => {
     setLoading(true);
     try {
       const params = new URLSearchParams({ page: String(p) });
       if (q) params.set("search", q);
+      if (rf) params.set("reviewStatus", rf);
       const res = await fetch(`/api/analyses?${params}`);
       const data = await res.json();
       setAnalyses(data.analyses ?? []);
@@ -90,16 +103,22 @@ export default function AnalysisHistory({
   }, []);
 
   useEffect(() => {
-    fetchHistory(page, debouncedSearch);
-  }, [fetchHistory, page, debouncedSearch, refreshKey]);
+    fetchHistory(page, debouncedSearch, reviewFilter);
+  }, [fetchHistory, page, debouncedSearch, reviewFilter, refreshKey]);
+
+  const getActor = () => {
+    if (typeof window === "undefined") return "system";
+    return localStorage.getItem("scrapecore-user") ?? "analyst";
+  };
 
   const handleLoad = async (id: string) => {
     setLoadingId(id);
     try {
-      const res = await fetch(`/api/analyses/${id}`);
+      const actor = getActor();
+      const res = await fetch(`/api/analyses/${id}?actor=${encodeURIComponent(actor)}`);
       const data = await res.json();
       if (data.analysisJson) {
-        onLoad(data.analysisJson as BehaviourAnalysis, data.dataType as DataType);
+        onLoad(data.analysisJson as BehaviourAnalysis, data.dataType as DataType, data.id);
       }
     } finally {
       setLoadingId(null);
@@ -109,7 +128,8 @@ export default function AnalysisHistory({
   const handleDelete = async (id: string) => {
     setDeletingId(id);
     try {
-      await fetch(`/api/analyses/${id}`, { method: "DELETE" });
+      const actor = getActor();
+      await fetch(`/api/analyses/${id}?actor=${encodeURIComponent(actor)}`, { method: "DELETE" });
       setAnalyses((prev) => prev.filter((a) => a.id !== id));
       setTotal((t) => t - 1);
     } finally {
@@ -149,6 +169,25 @@ export default function AnalysisHistory({
               </svg>
             </button>
           )}
+        </div>
+      </div>
+
+      {/* Review status filter */}
+      <div className="px-5 pb-2">
+        <div className="flex gap-1 flex-wrap">
+          {(["", "pending", "approved", "disputed", "archived"] as const).map((s) => (
+            <button
+              key={s || "all"}
+              onClick={() => { setReviewFilter(s); setPage(1); }}
+              className={`text-xs px-2 py-0.5 rounded-full border transition-colors ${
+                reviewFilter === s
+                  ? "bg-gray-900 text-white border-gray-900"
+                  : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"
+              }`}
+            >
+              {s ? (REVIEW_BADGE[s as ReviewStatus]?.label ?? s) : "All"}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -213,6 +252,17 @@ export default function AnalysisHistory({
                     <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-brand-50 text-brand-600">
                       {DATA_TYPE_LABELS[a.dataType] ?? a.dataType}
                     </span>
+                    {a.reviewStatus && a.reviewStatus !== "pending" && (
+                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded border text-xs font-medium ${REVIEW_BADGE[a.reviewStatus]?.classes ?? ""}`}>
+                        {REVIEW_BADGE[a.reviewStatus]?.label}
+                      </span>
+                    )}
+                    {a.piiDetected && (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-xs font-medium bg-amber-50 text-amber-700 border-amber-200" title="PII detected in original input">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                        PII
+                      </span>
+                    )}
                     {a.project && (
                       <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
                         {a.project}
