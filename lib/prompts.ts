@@ -69,7 +69,20 @@ You are reverse-engineering a competitor's implied behaviour change strategy fro
 - What barriers they have deliberately designed around (and which they have ignored)
 - Where their strategy has gaps that represent opportunities
 
-Frame all findings as strategic intelligence. Acknowledge inference limitations — you are reading the strategy from external signals, not internal documents.`;
+Frame all findings as strategic intelligence. Acknowledge inference limitations — you are reading the strategy from external signals, not internal documents.
+
+ADDITIONAL FIELD REQUIRED: In addition to the standard JSON output, include a top-level "company_model" field with this exact structure:
+
+"company_model": {
+  "observed_signals": ["Directly observable facts from the input text"],
+  "high_confidence_inferences": ["Inferences strongly supported by multiple signals"],
+  "medium_confidence_inferences": ["Plausible inferences with partial support"],
+  "unknowns": ["Important questions the available signals cannot answer"],
+  "strategic_implications": ["What these findings mean for product/service strategy"],
+  "opportunities_to_beat_them": ["Specific gaps or weaknesses that represent competitive opportunity"]
+}
+
+Distinguish clearly: observed_signals = direct evidence from input; inferences = your interpretation; unknowns = gaps in the picture.`;
 
 // ─── User prompt ─────────────────────────────────────────────────────────────
 
@@ -164,7 +177,8 @@ Return ONLY a valid JSON object — no markdown, no preamble. Use this exact str
       "priority": "high|medium|low",
       "rationale": "Why this addresses the identified COM-B gap",
       "target_com_b": "Which COM-B component this primarily addresses",
-      "implementation_guidance": "1-2 sentences on how to operationalise this"
+      "implementation_guidance": "1-2 sentences on how to operationalise this",
+      "source_evidence": ["verbatim quote from input that directly motivated this intervention"]
     }
   ],
   "contradictions": [

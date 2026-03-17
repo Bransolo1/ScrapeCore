@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Header from "@/components/Header";
 import ComBChart from "@/components/ComBChart";
+import CompetitiveSummaryPanel from "@/components/CompetitiveSummaryPanel";
 import type { BehaviourAnalysis } from "@/lib/types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -165,6 +166,12 @@ export default function ComparePage() {
   const [slotA, setSlotA] = useState<Slot>({ meta: null, data: null, loading: false });
   const [slotB, setSlotB] = useState<Slot>({ meta: null, data: null, loading: false });
 
+  // Competitive summary
+  interface CompetitiveSummary { synthesis: string; opportunities: string[]; watchouts: string[]; }
+  const [competitiveSummary, setCompetitiveSummary] = useState<CompetitiveSummary | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const summaryFetchedForRef = useRef<string | null>(null);
+
   // Load analysis list
   useEffect(() => {
     fetch("/api/analyses?page=1")
@@ -189,6 +196,29 @@ export default function ComparePage() {
   };
 
   const bothLoaded = slotA.data && slotB.data;
+
+  // Fetch competitive summary whenever both slots are freshly loaded
+  useEffect(() => {
+    if (!slotA.data || !slotB.data || !slotA.meta || !slotB.meta) return;
+    const key = `${slotA.meta.id}:${slotB.meta.id}`;
+    if (summaryFetchedForRef.current === key) return;
+    summaryFetchedForRef.current = key;
+    setCompetitiveSummary(null);
+    setSummaryLoading(true);
+    fetch("/api/compare-summary", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        analysisA: slotA.data,
+        analysisB: slotB.data,
+        labelA: slotA.meta.title.split(" ").slice(0, 3).join(" "),
+        labelB: slotB.meta.title.split(" ").slice(0, 3).join(" "),
+      }),
+    })
+      .then((r) => r.json())
+      .then((d) => { if (!d.error) setCompetitiveSummary(d); })
+      .finally(() => setSummaryLoading(false));
+  }, [slotA.data, slotB.data, slotA.meta, slotB.meta]);
 
   // Build diffs when both are loaded
   const barriers = bothLoaded
@@ -378,6 +408,21 @@ export default function ComparePage() {
                 />
               )}
             </div>
+
+            {/* Strategic opportunity summary */}
+            {summaryLoading && (
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 flex items-center gap-3">
+                <div className="w-4 h-4 border-2 border-brand-200 border-t-brand-600 rounded-full animate-spin shrink-0" />
+                <p className="text-sm text-gray-500">Generating strategic opportunity analysis…</p>
+              </div>
+            )}
+            {competitiveSummary && !summaryLoading && (
+              <CompetitiveSummaryPanel
+                summary={competitiveSummary}
+                labelA={labelA}
+                labelB={labelB}
+              />
+            )}
           </div>
         )}
       </main>

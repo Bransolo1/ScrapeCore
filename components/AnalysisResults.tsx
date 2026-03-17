@@ -24,6 +24,7 @@ import AnalystAnnotations from "./AnalystAnnotations";
 import SourceInspector from "./SourceInspector";
 import RubricPanel from "./RubricPanel";
 import LowConfidenceGate from "./LowConfidenceGate";
+import CompetitorProfilePanel from "./CompetitorProfilePanel";
 import { scoreRubric } from "@/lib/rubric";
 
 interface AnalysisResultsProps {
@@ -237,6 +238,11 @@ export default function AnalysisResults({ state, inputText, usage }: AnalysisRes
 
       {/* Trust banner */}
       <TrustBanner />
+
+      {/* Competitor profile — only shown when company_model is present */}
+      {analysis.company_model && (
+        <CompetitorProfilePanel model={analysis.company_model} />
+      )}
 
       {/* Evidence Grounding report */}
       {groundingReport && groundingReport.total > 0 && (

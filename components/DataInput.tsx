@@ -1,9 +1,10 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useMemo } from "react";
 import type { DataType } from "@/lib/types";
 import { EXAMPLE_DATA } from "@/lib/prompts";
 import ProjectContextInput from "./ProjectContextInput";
+import { checkInputDiversity } from "@/lib/diversity";
 
 interface DataInputProps {
   text: string;
@@ -56,6 +57,11 @@ export default function DataInput({
   const wordCount = text.trim() ? text.trim().split(/\s+/).length : 0;
   const lineCount = text.trim() ? text.trim().split(/\n+/).filter(Boolean).length : 0;
   const canSubmit = text.trim().length > 50 && !isLoading;
+
+  const diversity = useMemo(
+    () => (text.trim().length > 50 ? checkInputDiversity(text) : null),
+    [text],
+  );
 
   return (
     <div className="flex flex-col gap-5">
@@ -133,6 +139,14 @@ One response per line works best for the analysis."
             <p className="text-xs text-amber-500">Add more text for a reliable analysis</p>
           )}
         </div>
+        {diversity?.warning && (
+          <div className="flex items-start gap-2 mt-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+            <svg className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <p className="text-xs text-amber-700 leading-snug">{diversity.warning}</p>
+          </div>
+        )}
       </div>
 
       {/* Analyse button */}

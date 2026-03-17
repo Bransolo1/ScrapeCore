@@ -84,6 +84,16 @@ export interface InterventionOpportunity {
   rationale: string;
   target_com_b: string;
   implementation_guidance: string;
+  source_evidence?: string[]; // verbatim quotes from input that motivated this intervention
+}
+
+export interface CompanyModel {
+  observed_signals: string[];
+  high_confidence_inferences: string[];
+  medium_confidence_inferences: string[];
+  unknowns: string[];
+  strategic_implications: string[];
+  opportunities_to_beat_them: string[];
 }
 
 export interface ContradictoryFinding {
@@ -118,6 +128,7 @@ export interface BehaviourAnalysis {
   motivators: Motivator[];
   facilitators?: Facilitator[];            // new — environmental/structural enablers
   behavioural_context?: BehaviouralContext; // new — setting, triggers, temporality
+  company_model?: CompanyModel;            // competitor mode — structured strategic profile
   intervention_opportunities: InterventionOpportunity[];
   contradictions: ContradictoryFinding[];
   subgroup_insights: SubgroupInsight[];
