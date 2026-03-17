@@ -15,6 +15,7 @@ interface InterventionsSectionProps {
   validityScores?: ValidityResult[];
   corrections?: Map<string, Correction>;
   onCorrect?: (section: string, index: number, status: string, note?: string) => Promise<void>;
+  onInspect?: (quote: string) => void;
   isPlainMode?: boolean;
 }
 
@@ -32,7 +33,7 @@ const BCW_COLORS: Record<string, { pill: string; dot: string }> = {
 
 const FALLBACK_COLOR = { pill: "bg-gray-100 text-gray-600 border border-gray-200", dot: "bg-gray-400" };
 
-function ReasoningPanel({ item }: { item: InterventionOpportunity }) {
+function ReasoningPanel({ item, onInspect }: { item: InterventionOpportunity; onInspect?: (quote: string) => void }) {
   const hasBCTs     = (item.bct_specifics?.length ?? 0) > 0;
   const hasEvidence = (item.source_evidence?.length ?? 0) > 0;
 
@@ -68,11 +69,22 @@ function ReasoningPanel({ item }: { item: InterventionOpportunity }) {
         <div>
           <p className="text-xs font-medium text-gray-500 mb-2">Evidence from input that motivated this</p>
           <div className="space-y-1.5">
-            {item.source_evidence!.map((quote, i) => (
-              <blockquote key={i} className="pl-3 border-l-2 border-brand-300">
-                <p className="text-xs text-gray-600 italic leading-relaxed">&ldquo;{quote}&rdquo;</p>
-              </blockquote>
-            ))}
+            {item.source_evidence!.map((quote, i) =>
+              onInspect ? (
+                <button
+                  key={i}
+                  onClick={() => onInspect(quote)}
+                  className="w-full text-left pl-3 border-l-2 border-brand-300 hover:border-brand-500 group transition-colors"
+                  title="Click to locate in source text"
+                >
+                  <p className="text-xs text-gray-600 italic leading-relaxed group-hover:text-brand-700 transition-colors">&ldquo;{quote}&rdquo;</p>
+                </button>
+              ) : (
+                <blockquote key={i} className="pl-3 border-l-2 border-brand-300">
+                  <p className="text-xs text-gray-600 italic leading-relaxed">&ldquo;{quote}&rdquo;</p>
+                </blockquote>
+              )
+            )}
           </div>
         </div>
       )}
@@ -84,7 +96,7 @@ function ReasoningPanel({ item }: { item: InterventionOpportunity }) {
   );
 }
 
-export default function InterventionsSection({ interventions, validityScores, corrections, onCorrect, isPlainMode }: InterventionsSectionProps) {
+export default function InterventionsSection({ interventions, validityScores, corrections, onCorrect, onInspect, isPlainMode }: InterventionsSectionProps) {
   const [expandedReasoning, setExpandedReasoning] = useState<Set<number>>(new Set());
 
   if (!interventions.length) return null;
@@ -199,7 +211,7 @@ export default function InterventionsSection({ interventions, validityScores, co
                   </div>
 
                   {/* Expandable reasoning panel */}
-                  {reasoningOpen && <ReasoningPanel item={item} />}
+                  {reasoningOpen && <ReasoningPanel item={item} onInspect={onInspect} />}
                 </>
               )}
 

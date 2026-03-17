@@ -310,6 +310,7 @@ export default function AnalysisResults({ state, inputText, usage }: AnalysisRes
         validityScores={validityScores}
         corrections={corrections}
         onCorrect={hasCorrections ? handleCorrect : undefined}
+        onInspect={inputText ? setInspectQuote : undefined}
         isPlainMode={isPlainMode}
       />
 

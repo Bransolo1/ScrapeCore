@@ -75,7 +75,7 @@ export default function KeyBehaviours({ behaviours, groundingMap, corrections, o
                 )}
                 {b.evidence.length > 0 && !removed && (
                   <div className="space-y-1.5 mb-2">
-                    {b.evidence.slice(0, 1).map((q, qi) => <EvidenceChip key={qi} quote={q} />)}
+                    {b.evidence.slice(0, 1).map((q, qi) => <EvidenceChip key={qi} quote={q} onInspect={onInspect} />)}
                   </div>
                 )}
                 {onCorrect && (

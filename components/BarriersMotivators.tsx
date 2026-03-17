@@ -96,7 +96,7 @@ function BarrierCard({
         )}
         {barrier.evidence.length > 0 && !removed && (
           <div className="space-y-1.5 mb-2">
-            {barrier.evidence.slice(0, 2).map((q, i) => <EvidenceChip key={i} quote={q} />)}
+            {barrier.evidence.slice(0, 2).map((q, i) => <EvidenceChip key={i} quote={q} onInspect={onInspect} />)}
           </div>
         )}
         {onCorrect && (
@@ -161,7 +161,7 @@ function MotivatorCard({
         )}
         {motivator.evidence.length > 0 && !removed && (
           <div className="space-y-1.5 mb-2">
-            {motivator.evidence.slice(0, 2).map((q, i) => <EvidenceChip key={i} quote={q} />)}
+            {motivator.evidence.slice(0, 2).map((q, i) => <EvidenceChip key={i} quote={q} onInspect={onInspect} />)}
           </div>
         )}
         {onCorrect && (
