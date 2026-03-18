@@ -110,7 +110,8 @@
     },
     "nsis": {
       "oneClick": true,
-      "perMachine": false
+      "perMachine": false,
+      "artifactName": "${productName}-Setup-${version}.${ext}"
     }
   }
 }
