@@ -180,19 +180,19 @@ function LoginForm() {
               )}
             </button>
           </form>
-        </div>
 
-        {/* Sign up link */}
-        {!isFirstUser && (
-          <div className="text-center mt-5">
-            <p className="text-xs text-gray-400">
-              Don&apos;t have an account?{" "}
-              <Link href="/signup" className="text-brand-600 hover:text-brand-700 font-medium">
-                Sign up
-              </Link>
-            </p>
-          </div>
-        )}
+          {/* Sign up link */}
+          {!isFirstUser && (
+            <div className="mt-5 pt-4 border-t border-gray-100 text-center">
+              <p className="text-xs text-gray-400">
+                Don&apos;t have an account?{" "}
+                <Link href="/signup" className="text-brand-600 hover:text-brand-700 font-medium">
+                  Sign up
+                </Link>
+              </p>
+            </div>
+          )}
+        </div>
 
         {/* Footer hint */}
         <p className="text-center text-[11px] text-gray-300 mt-6">
