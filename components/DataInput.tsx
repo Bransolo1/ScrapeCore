@@ -128,7 +128,7 @@ export default function DataInput({
           placeholder="Paste your qualitative text here — survey responses, interview excerpts, reviews, or social listening exports. Separate individual responses with line breaks.
 
 One response per line works best for the analysis."
-          className="w-full h-64 px-3.5 py-3 text-sm text-gray-800 placeholder-gray-300 bg-surface-50 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-brand-400/50 focus:border-brand-400 focus:bg-white font-mono leading-relaxed"
+          className="w-full h-64 px-3.5 py-3 text-sm text-gray-800 placeholder-gray-400 bg-surface-50 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-brand-400/50 focus:border-brand-400 focus:bg-white font-mono leading-relaxed"
           disabled={isLoading}
         />
         <div className="flex items-center justify-between mt-1.5">
@@ -156,7 +156,7 @@ One response per line works best for the analysis."
         className={`w-full py-3 px-4 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
           canSubmit
             ? "bg-brand-500 hover:bg-brand-600 text-white shadow-md shadow-brand-500/25 hover:shadow-lg hover:shadow-brand-500/30"
-            : "bg-gray-100 text-gray-300 cursor-not-allowed"
+            : "bg-gray-100 text-gray-400 cursor-not-allowed"
         }`}
       >
         {isLoading ? (

@@ -124,7 +124,7 @@ export default function UrlScraper({ onSourcesReady }: UrlScraperProps) {
           value={urlInput}
           onChange={(e) => setUrlInput(e.target.value)}
           placeholder={`Paste one URL per line:\nhttps://www.g2.com/products/salesforce-crm/reviews\nhttps://techcrunch.com/2025/...\nhttps://competitor.com/pricing`}
-          className="w-full h-36 px-3.5 py-2.5 text-sm text-gray-800 placeholder-gray-300 bg-surface-50 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-brand-400/50 focus:border-brand-400 focus:bg-white font-mono"
+          className="w-full h-36 px-3.5 py-2.5 text-sm text-gray-800 placeholder-gray-400 bg-surface-50 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-brand-400/50 focus:border-brand-400 focus:bg-white font-mono"
           disabled={isFetching}
         />
         <p className="text-xs text-gray-400 mt-1">

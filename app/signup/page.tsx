@@ -70,7 +70,7 @@ function SignupForm() {
   }
 
   const inputCls =
-    "w-full px-3.5 py-2.5 text-sm bg-surface-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 focus:border-brand-400 focus:bg-white placeholder:text-gray-300";
+    "w-full px-3.5 py-2.5 text-sm bg-surface-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 focus:border-brand-400 focus:bg-white placeholder:text-gray-400";
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-surface-50 px-4">
@@ -107,7 +107,7 @@ function SignupForm() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                Full name <span className="text-gray-300 font-normal">(optional)</span>
+                Full name <span className="text-gray-400 font-normal">(optional)</span>
               </label>
               <input
                 type="text"
@@ -190,7 +190,7 @@ function SignupForm() {
         </div>
 
         {/* Footer hint */}
-        <p className="text-center text-[11px] text-gray-300 mt-6">
+        <p className="text-center text-[11px] text-gray-400 mt-6">
           Powered by Claude Opus 4.6 · COM-B Framework
         </p>
       </div>

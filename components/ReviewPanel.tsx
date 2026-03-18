@@ -177,7 +177,7 @@ export default function ReviewPanel({ analysisId, initialStatus = "pending", ini
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Add notes about this analysis — what was confirmed, questioned, or requires follow-up…"
               rows={3}
-              className="w-full text-xs text-gray-700 placeholder-gray-300 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent leading-relaxed"
+              className="w-full text-xs text-gray-700 placeholder-gray-400 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent leading-relaxed"
             />
           </div>
 

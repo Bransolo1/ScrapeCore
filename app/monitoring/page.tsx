@@ -116,8 +116,8 @@ export default function MonitoringPage() {
               </svg>
             </Link>
             <div>
-              <h1 className="text-sm font-bold text-gray-900">Competitor Monitoring</h1>
-              <p className="text-xs text-gray-400">Scheduled Perplexity scans — auto-analysed on each run</p>
+              <h1 className="text-2xl font-bold text-gray-900">Competitor Monitoring</h1>
+              <p className="text-sm text-gray-500 mt-1">Scheduled Perplexity scans — auto-analysed on each run</p>
             </div>
           </div>
           <button

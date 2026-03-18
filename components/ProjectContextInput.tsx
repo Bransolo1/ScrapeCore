@@ -46,7 +46,7 @@ export default function ProjectContextInput({ value, onChange, disabled }: Props
             placeholder="e.g. We are a diabetes prevention team targeting adults aged 40–65 in low-income urban areas. Focus on dietary behaviour change."
             rows={3}
             disabled={disabled}
-            className="w-full text-xs text-gray-800 placeholder-gray-300 bg-surface-50 border border-gray-200 rounded-xl px-2.5 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-brand-400/50 focus:border-brand-400 focus:bg-white leading-relaxed"
+            className="w-full text-xs text-gray-800 placeholder-gray-400 bg-surface-50 border border-gray-200 rounded-xl px-2.5 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-brand-400/50 focus:border-brand-400 focus:bg-white leading-relaxed"
           />
         </div>
       )}

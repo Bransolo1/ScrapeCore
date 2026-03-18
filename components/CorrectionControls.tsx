@@ -68,7 +68,7 @@ export default function CorrectionControls({ correction, onSave, compact = false
             placeholder="Why is this finding disputed? (optional)"
             rows={2}
             autoFocus
-            className="w-full text-xs text-gray-700 placeholder-gray-300 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-amber-400"
+            className="w-full text-xs text-gray-700 placeholder-gray-400 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-amber-400"
           />
           <div className="flex gap-2 mt-2">
             <button

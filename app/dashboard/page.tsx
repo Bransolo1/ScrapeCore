@@ -210,7 +210,7 @@ export default function DashboardPage() {
         {!loading && !error && stats && stats.total > 0 && (
           <div className="space-y-6">
             {/* KPI Row */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <KPICard
                 label="Total Analyses"
                 value={stats.total}
@@ -558,10 +558,10 @@ export default function DashboardPage() {
 
       <footer className="border-t border-gray-100 py-4 mt-auto">
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-          <p className="text-xs text-gray-300">
+          <p className="text-xs text-gray-400">
             ScrapeCore · COM-B · Behaviour Change Wheel · Claude Opus 4.6
           </p>
-          <p className="text-xs text-gray-300">AI-assisted — expert review required</p>
+          <p className="text-xs text-gray-400">AI-assisted — expert review required</p>
         </div>
       </footer>
     </div>

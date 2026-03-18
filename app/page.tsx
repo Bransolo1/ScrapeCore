@@ -32,10 +32,11 @@ const INITIAL_STATE: AnalysisState = {
   durationMs: null,
 };
 
-const MODE_TABS: { id: InputMode; label: string; icon: React.ReactNode }[] = [
+const MODE_TABS: { id: InputMode; label: string; shortLabel: string; icon: React.ReactNode }[] = [
   {
     id: "scrape",
     label: "Scrape URLs",
+    shortLabel: "Scrape",
     icon: (
       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
@@ -45,6 +46,7 @@ const MODE_TABS: { id: InputMode; label: string; icon: React.ReactNode }[] = [
   {
     id: "social",
     label: "Social listening",
+    shortLabel: "Social",
     icon: (
       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
@@ -54,6 +56,7 @@ const MODE_TABS: { id: InputMode; label: string; icon: React.ReactNode }[] = [
   {
     id: "footprint",
     label: "Digital footprint",
+    shortLabel: "Footprint",
     icon: (
       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
@@ -63,6 +66,7 @@ const MODE_TABS: { id: InputMode; label: string; icon: React.ReactNode }[] = [
   {
     id: "paste",
     label: "Paste text",
+    shortLabel: "Paste",
     icon: (
       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
@@ -72,6 +76,7 @@ const MODE_TABS: { id: InputMode; label: string; icon: React.ReactNode }[] = [
   {
     id: "batch",
     label: "Batch",
+    shortLabel: "Batch",
     icon: (
       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
@@ -355,22 +360,28 @@ export default function Home() {
           {/* ── Input panel ── */}
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm shadow-gray-200/50 overflow-hidden sticky top-20">
             {/* Mode tabs */}
-            <div className="flex border-b border-gray-100">
-              {MODE_TABS.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setMode(tab.id)}
-                  disabled={isLoading}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-medium transition-all ${
-                    mode === tab.id
-                      ? "text-brand-600 border-b-2 border-brand-500 bg-brand-50/50"
-                      : "text-gray-400 hover:text-gray-700 hover:bg-gray-50"
-                  }`}
-                >
-                  {tab.icon}
-                  <span className="hidden sm:inline">{tab.label}</span>
-                </button>
-              ))}
+            <div className="relative flex border-b border-gray-100">
+              {MODE_TABS.map((tab) => {
+                const active = mode === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setMode(tab.id)}
+                    disabled={isLoading}
+                    className={`relative flex-1 flex flex-col items-center justify-center gap-1 px-1 py-2.5 text-[11px] font-medium transition-colors ${
+                      active
+                        ? "text-brand-600"
+                        : "text-gray-400 hover:text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    {tab.icon}
+                    <span className="leading-tight text-center">{tab.shortLabel}</span>
+                    {active && (
+                      <span className="absolute bottom-0 inset-x-2 h-0.5 bg-brand-500 rounded-full" />
+                    )}
+                  </button>
+                );
+              })}
             </div>
 
             <div className="p-5">
@@ -439,7 +450,7 @@ export default function Home() {
                       </button>
                       <div className="flex items-center gap-2 mt-3 mb-1">
                         <div className="flex-1 h-px bg-gray-100" />
-                        <span className="text-[11px] text-gray-300 font-medium uppercase tracking-wide">or paste directly</span>
+                        <span className="text-[11px] text-gray-400 font-medium uppercase tracking-wide">or paste directly</span>
                         <div className="flex-1 h-px bg-gray-100" />
                       </div>
                     </div>
@@ -539,10 +550,10 @@ export default function Home() {
 
       <footer className="border-t border-gray-100 py-4 mt-auto">
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-          <p className="text-xs text-gray-300">
+          <p className="text-xs text-gray-400">
             Powered by Claude Opus 4.6 · COM-B · Behaviour Change Wheel
           </p>
-          <p className="text-xs text-gray-300">
+          <p className="text-xs text-gray-400">
             AI-assisted — expert review required before operational use
           </p>
         </div>
