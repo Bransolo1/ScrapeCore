@@ -157,7 +157,7 @@ export default function AnalysisHistory({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search analyses…"
-            className="w-full pl-8 pr-8 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent text-gray-700 placeholder-gray-400"
+            className="w-full pl-8 pr-8 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 focus:border-transparent text-gray-700 placeholder-gray-400"
           />
           {search && (
             <button

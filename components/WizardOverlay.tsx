@@ -49,7 +49,7 @@ export default function WizardOverlay({ onDone }: Props) {
             <span
               key={i}
               className={`w-2 h-2 rounded-full transition-all ${
-                i === step ? "bg-brand-600 w-4" : i < step ? "bg-brand-300" : "bg-gray-200"
+                i === step ? "bg-brand-500 w-4" : i < step ? "bg-brand-300" : "bg-gray-200"
               }`}
             />
           ))}
@@ -74,7 +74,7 @@ export default function WizardOverlay({ onDone }: Props) {
             {step > 0 && (
               <button
                 onClick={() => setStep((s) => s - 1)}
-                className="px-4 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 text-sm border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition-colors"
               >
                 Back
               </button>
@@ -82,14 +82,14 @@ export default function WizardOverlay({ onDone }: Props) {
             {step < STEPS.length - 1 ? (
               <button
                 onClick={() => setStep((s) => s + 1)}
-                className="px-5 py-2 text-sm bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-medium transition-colors"
+                className="px-5 py-2 text-sm bg-brand-500 hover:bg-brand-600 text-white rounded-lg font-medium transition-colors"
               >
                 Next
               </button>
             ) : (
               <button
                 onClick={onDone}
-                className="px-5 py-2 text-sm bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-medium transition-colors"
+                className="px-5 py-2 text-sm bg-brand-500 hover:bg-brand-600 text-white rounded-lg font-medium transition-colors"
               >
                 Get started
               </button>

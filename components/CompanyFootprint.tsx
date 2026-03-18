@@ -291,7 +291,7 @@ export default function CompanyFootprint({ onSourcesReady }: CompanyFootprintPro
   };
 
   const inputCls =
-    "w-full px-3 py-2.5 text-sm text-gray-800 placeholder-gray-400 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent disabled:opacity-50";
+    "w-full px-3 py-2.5 text-sm text-gray-800 placeholder-gray-400 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 focus:border-transparent disabled:opacity-50";
 
   const anyRunning = isRunning;
   const doneCount = Object.values(tasks).filter((t) => t.status === "done" || t.status === "error").length;
@@ -359,7 +359,7 @@ export default function CompanyFootprint({ onSourcesReady }: CompanyFootprintPro
           <select
             value={country}
             onChange={(e) => setCountry(e.target.value)}
-            className="w-full px-2.5 py-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50"
+            className="w-full px-2.5 py-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 disabled:opacity-50"
             disabled={anyRunning}
           >
             <option value="gb">🇬🇧 United Kingdom</option>
@@ -409,7 +409,7 @@ export default function CompanyFootprint({ onSourcesReady }: CompanyFootprintPro
         disabled={!canRun}
         className={`w-full py-2.5 px-4 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
           canRun
-            ? "bg-brand-600 hover:bg-brand-700 text-white shadow-sm"
+            ? "bg-brand-500 hover:bg-brand-600 text-white shadow-sm"
             : "bg-gray-100 text-gray-400 cursor-not-allowed"
         }`}
       >

@@ -67,20 +67,20 @@ export default function DataInput({
     <div className="flex flex-col gap-5">
       {/* Data type */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Data type</label>
-        <div className="grid grid-cols-1 gap-2">
+        <label className="block text-sm font-medium text-gray-600 mb-2">Data type</label>
+        <div className="grid grid-cols-1 gap-1.5">
           {DATA_TYPES.map((dt) => (
             <button
               key={dt.value}
               onClick={() => onDataTypeChange(dt.value)}
-              className={`text-left px-3 py-2.5 rounded-lg border text-sm transition-all ${
+              className={`text-left px-3.5 py-2.5 rounded-xl border text-sm transition-all ${
                 dataType === dt.value
-                  ? "border-brand-500 bg-brand-50 text-brand-700"
-                  : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+                  ? "border-brand-400 bg-brand-50 text-brand-700 shadow-sm shadow-brand-100"
+                  : "border-gray-200 bg-surface-50 text-gray-600 hover:border-gray-300 hover:bg-white"
               }`}
             >
               <span className="font-medium">{dt.label}</span>
-              <span className="text-xs text-gray-500 ml-2">{dt.description}</span>
+              <span className="text-xs text-gray-400 ml-2">{dt.description}</span>
             </button>
           ))}
         </div>
@@ -96,7 +96,7 @@ export default function DataInput({
       {/* Text input */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="block text-sm font-medium text-gray-700">Input data</label>
+          <label className="block text-sm font-medium text-gray-600">Input data</label>
           <div className="flex items-center gap-2">
             <button
               onClick={loadExample}
@@ -105,7 +105,7 @@ export default function DataInput({
             >
               Load example
             </button>
-            <span className="text-gray-300">|</span>
+            <span className="text-gray-200">|</span>
             <button
               onClick={() => fileRef.current?.click()}
               className="text-xs text-brand-600 hover:text-brand-700 font-medium"
@@ -128,7 +128,7 @@ export default function DataInput({
           placeholder="Paste your qualitative text here — survey responses, interview excerpts, reviews, or social listening exports. Separate individual responses with line breaks.
 
 One response per line works best for the analysis."
-          className="w-full h-64 px-3 py-3 text-sm text-gray-800 placeholder-gray-400 bg-white border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent font-mono leading-relaxed"
+          className="w-full h-64 px-3.5 py-3 text-sm text-gray-800 placeholder-gray-300 bg-surface-50 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-brand-400/50 focus:border-brand-400 focus:bg-white font-mono leading-relaxed"
           disabled={isLoading}
         />
         <div className="flex items-center justify-between mt-1.5">
@@ -153,10 +153,10 @@ One response per line works best for the analysis."
       <button
         onClick={onSubmit}
         disabled={!canSubmit}
-        className={`w-full py-3 px-4 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+        className={`w-full py-3 px-4 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
           canSubmit
-            ? "bg-brand-600 hover:bg-brand-700 text-white shadow-sm"
-            : "bg-gray-100 text-gray-400 cursor-not-allowed"
+            ? "bg-brand-500 hover:bg-brand-600 text-white shadow-md shadow-brand-500/25 hover:shadow-lg hover:shadow-brand-500/30"
+            : "bg-gray-100 text-gray-300 cursor-not-allowed"
         }`}
       >
         {isLoading ? (
@@ -178,10 +178,10 @@ One response per line works best for the analysis."
       </button>
 
       {/* Framework note */}
-      <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+      <div className="bg-surface-50 rounded-xl p-3 border border-gray-100">
         <p className="text-xs text-gray-500 font-medium mb-1">What this analyses</p>
-        <p className="text-xs text-gray-500 leading-relaxed">
-          Applies the <strong>COM-B model</strong> (Capability, Opportunity, Motivation → Behaviour) and <strong>Behaviour Change Wheel</strong> to map behavioural signals, barriers, motivators, and intervention opportunities from your data.
+        <p className="text-xs text-gray-400 leading-relaxed">
+          Applies the <strong className="text-gray-500">COM-B model</strong> (Capability, Opportunity, Motivation → Behaviour) and <strong className="text-gray-500">Behaviour Change Wheel</strong> to map behavioural signals, barriers, motivators, and intervention opportunities from your data.
         </p>
       </div>
     </div>

@@ -96,7 +96,7 @@ function SlotSelector({
       <select
         onChange={(e) => e.target.value && onSelect(e.target.value)}
         value={slot.meta?.id ?? ""}
-        className="mt-3 w-full px-3 py-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
+        className="mt-3 w-full px-3 py-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50"
       >
         <option value="">— Choose analysis —</option>
         {analyses.map((a) => (
@@ -268,7 +268,7 @@ export default function ComparePage() {
         {/* Slot selectors */}
         {loadingList ? (
           <div className="flex items-center justify-center min-h-32">
-            <div className="w-6 h-6 border-2 border-brand-200 border-t-brand-600 rounded-full animate-spin" />
+            <div className="w-6 h-6 border-2 border-brand-200 border-t-brand-500 rounded-full animate-spin" />
           </div>
         ) : allAnalyses.length < 2 ? (
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
@@ -412,7 +412,7 @@ export default function ComparePage() {
             {/* Strategic opportunity summary */}
             {summaryLoading && (
               <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 flex items-center gap-3">
-                <div className="w-4 h-4 border-2 border-brand-200 border-t-brand-600 rounded-full animate-spin shrink-0" />
+                <div className="w-4 h-4 border-2 border-brand-200 border-t-brand-500 rounded-full animate-spin shrink-0" />
                 <p className="text-sm text-gray-500">Generating strategic opportunity analysis…</p>
               </div>
             )}

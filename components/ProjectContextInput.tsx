@@ -12,7 +12,7 @@ export default function ProjectContextInput({ value, onChange, disabled }: Props
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="border border-gray-200 rounded-lg overflow-hidden">
+    <div className="border border-gray-200 rounded-xl overflow-hidden">
       <button
         onClick={() => setOpen((v) => !v)}
         className="w-full flex items-center justify-between px-3 py-2.5 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
@@ -46,7 +46,7 @@ export default function ProjectContextInput({ value, onChange, disabled }: Props
             placeholder="e.g. We are a diabetes prevention team targeting adults aged 40–65 in low-income urban areas. Focus on dietary behaviour change."
             rows={3}
             disabled={disabled}
-            className="w-full text-xs text-gray-800 placeholder-gray-400 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent leading-relaxed"
+            className="w-full text-xs text-gray-800 placeholder-gray-400 bg-gray-50 border border-gray-200 rounded-xl px-2.5 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-brand-400/50 focus:border-transparent leading-relaxed"
           />
         </div>
       )}

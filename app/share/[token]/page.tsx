@@ -42,7 +42,7 @@ export default function SharePage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-brand-200 border-t-brand-600 rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-brand-200 border-t-brand-500 rounded-full animate-spin" />
           <p className="text-sm text-gray-500">Loading shared analysis…</p>
         </div>
       </div>
@@ -60,7 +60,7 @@ export default function SharePage() {
           </div>
           <h2 className="text-base font-semibold text-gray-900 mb-2">Link not found</h2>
           <p className="text-sm text-gray-500 mb-6">{error ?? "This analysis link is invalid or has been revoked."}</p>
-          <Link href="/" className="inline-flex items-center gap-2 px-4 py-2 bg-brand-600 text-white text-sm font-medium rounded-lg hover:bg-brand-700 transition-colors">
+          <Link href="/" className="inline-flex items-center gap-2 px-4 py-2 bg-brand-500 text-white text-sm font-medium rounded-lg hover:bg-brand-600 transition-colors">
             Go to ScrapeCore
           </Link>
         </div>
@@ -78,7 +78,7 @@ export default function SharePage() {
         <div className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-2 shrink-0">
-              <div className="w-7 h-7 bg-brand-600 rounded-lg flex items-center justify-center">
+              <div className="w-7 h-7 bg-brand-500 rounded-lg flex items-center justify-center">
                 <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>

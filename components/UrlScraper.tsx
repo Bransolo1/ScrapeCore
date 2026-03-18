@@ -124,7 +124,7 @@ export default function UrlScraper({ onSourcesReady }: UrlScraperProps) {
           value={urlInput}
           onChange={(e) => setUrlInput(e.target.value)}
           placeholder={`Paste one URL per line:\nhttps://www.g2.com/products/salesforce-crm/reviews\nhttps://techcrunch.com/2025/...\nhttps://competitor.com/pricing`}
-          className="w-full h-36 px-3 py-2.5 text-sm text-gray-800 placeholder-gray-400 bg-white border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent font-mono"
+          className="w-full h-36 px-3 py-2.5 text-sm text-gray-800 placeholder-gray-400 bg-white border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-brand-400/50 focus:border-transparent font-mono"
           disabled={isFetching}
         />
         <p className="text-xs text-gray-400 mt-1">
@@ -174,7 +174,7 @@ export default function UrlScraper({ onSourcesReady }: UrlScraperProps) {
           hasUrls && !isFetching
             ? useFirecrawl
               ? "bg-violet-600 hover:bg-violet-700 text-white shadow-sm"
-              : "bg-brand-600 hover:bg-brand-700 text-white shadow-sm"
+              : "bg-brand-500 hover:bg-brand-600 text-white shadow-sm"
             : "bg-gray-100 text-gray-400 cursor-not-allowed"
         }`}
       >

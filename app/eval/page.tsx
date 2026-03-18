@@ -223,7 +223,7 @@ export default function EvalPage() {
                   <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">Analysis {slot.toUpperCase()}</span>
                   <button
                     onClick={() => setPickingSlot(pickingSlot === slot ? null : slot)}
-                    className={`text-xs font-medium px-2.5 py-1 rounded-lg border transition-colors ${pickingSlot === slot ? "bg-brand-600 text-white border-brand-600" : "text-brand-600 border-brand-200 hover:bg-brand-50"}`}
+                    className={`text-xs font-medium px-2.5 py-1 rounded-lg border transition-colors ${pickingSlot === slot ? "bg-brand-500 text-white border-brand-600" : "text-brand-600 border-brand-200 hover:bg-brand-50"}`}
                   >
                     {pickingSlot === slot ? "Selecting…" : item ? "Change" : "Pick analysis"}
                   </button>
@@ -313,7 +313,7 @@ export default function EvalPage() {
               placeholder="Filter by title or prompt version…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl mb-3 focus:outline-none focus:ring-2 focus:ring-brand-400/50"
             />
             {loading ? (
               <p className="text-sm text-gray-400 text-center py-4">Loading analyses…</p>

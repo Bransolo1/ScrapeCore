@@ -313,7 +313,7 @@ export default function Home() {
     mode === "paste" ? pasteText : formatSourcesAsText(sources);
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-surface-50">
       <Header />
       {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
 
@@ -353,14 +353,14 @@ export default function Home() {
       <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-6 items-start">
           {/* ── Input panel ── */}
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden sticky top-8">
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm shadow-gray-200/50 overflow-hidden sticky top-8">
             {/* Guided setup prompt */}
             {!pasteText && mode === "paste" && (
               <div className="px-5 pt-4 pb-0">
                 <button
                   onClick={() => setShowGuidedWizard(true)}
                   disabled={isLoading}
-                  className="w-full flex items-center gap-2.5 px-4 py-3 bg-brand-50 hover:bg-brand-100 border border-brand-200 rounded-xl text-sm font-medium text-brand-700 transition-all group"
+                  className="w-full flex items-center gap-2.5 px-4 py-3 bg-brand-50 hover:bg-brand-100 border border-brand-200 rounded-xl text-sm font-medium text-brand-700 transition-all shadow-sm group"
                 >
                   <svg className="w-4 h-4 shrink-0 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
@@ -386,8 +386,8 @@ export default function Home() {
                   disabled={isLoading}
                   className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-medium transition-all ${
                     mode === tab.id
-                      ? "text-brand-600 border-b-2 border-brand-600 bg-brand-50/50"
-                      : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                      ? "text-brand-600 border-b-2 border-brand-500 bg-brand-50/50"
+                      : "text-gray-400 hover:text-gray-700 hover:bg-gray-50"
                   }`}
                 >
                   {tab.icon}
@@ -462,7 +462,7 @@ export default function Home() {
           </div>
 
           {/* ── Results panel ── */}
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm min-h-96 overflow-hidden flex flex-col">
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm shadow-gray-200/50 min-h-96 overflow-hidden flex flex-col">
             {/* Panel header with history toggle */}
             <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 shrink-0">
               <div className="flex items-center gap-2">
@@ -537,10 +537,10 @@ export default function Home() {
 
       <footer className="border-t border-gray-100 py-4 mt-auto">
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-gray-300">
             Powered by Claude Opus 4.6 · COM-B · Behaviour Change Wheel
           </p>
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-gray-300">
             AI-assisted — expert review required before operational use
           </p>
         </div>

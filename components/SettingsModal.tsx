@@ -48,7 +48,7 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-fade-in">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-fade-in border border-gray-200">
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100">
           <div className="flex items-center gap-2.5">
@@ -60,7 +60,7 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
             </div>
             <h2 className="text-base font-semibold text-gray-900">Settings</h2>
           </div>
-          <button onClick={onClose} className="w-7 h-7 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors">
+          <button onClick={onClose} className="w-7 h-7 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-300 hover:text-gray-600 transition-colors">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -83,7 +83,7 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
                   placeholder="sk-ant-api03-…"
                   autoComplete="off"
                   spellCheck={false}
-                  className="w-full px-3 py-2 text-sm font-mono border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-300 focus:border-transparent"
+                  className="w-full px-3.5 py-2.5 text-sm font-mono bg-surface-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 focus:border-brand-400 focus:bg-white"
                 />
                 <p className="mt-1.5 text-xs text-gray-400">
                   Get your key at{" "}
@@ -106,7 +106,7 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
                 )}
               </>
             ) : (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
                 <p className="text-xs text-amber-800 font-medium mb-1">Running in web / Docker mode</p>
                 <p className="text-xs text-amber-700 leading-relaxed">
                   Set <code className="bg-amber-100 px-1 rounded font-mono">ANTHROPIC_API_KEY</code> in your{" "}
@@ -122,13 +122,13 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
 
           {/* Optional keys (display-only for now) */}
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Optional integrations</p>
+            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Optional integrations</p>
             <div className="space-y-2">
               {[
                 { label: "Perplexity API Key", env: "PERPLEXITY_API_KEY", hint: "Enables live web research & social listening" },
                 { label: "Firecrawl API Key", env: "FIRECRAWL_API_KEY", hint: "Enables JS-rendered site scraping (G2, Capterra, SPAs)" },
               ].map(({ label, env, hint }) => (
-                <div key={env} className="bg-gray-50 rounded-lg p-3">
+                <div key={env} className="bg-surface-50 rounded-xl p-3 border border-gray-100">
                   <p className="text-xs font-medium text-gray-700">{label}</p>
                   <p className="text-xs text-gray-400 mt-0.5">{hint} — set <code className="font-mono">{env}</code> in your env file.</p>
                 </div>
@@ -140,12 +140,12 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
         {/* Footer */}
         {isElectron && (
           <div className="px-6 pb-6 flex justify-end gap-2">
-            <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 font-medium rounded-lg hover:bg-gray-100 transition-colors">
+            <button onClick={onClose} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-900 font-medium rounded-xl hover:bg-gray-100 transition-colors">
               Cancel
             </button>
             <button
               onClick={handleSave}
-              className="px-4 py-2 text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-lg transition-colors"
+              className="px-4 py-2 text-sm font-semibold text-white bg-brand-500 hover:bg-brand-600 rounded-xl transition-colors shadow-sm shadow-brand-500/25"
             >
               Save
             </button>

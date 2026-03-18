@@ -81,7 +81,7 @@ export default function GuidedWizard({ onComplete, onDismiss }: GuidedWizardProp
               <div key={i} className="flex items-center flex-1 last:flex-none">
                 <div className="flex items-center gap-1.5 shrink-0">
                   <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-all ${
-                    i < step ? "bg-brand-500 text-white" : i === step ? "bg-brand-600 text-white ring-4 ring-brand-100" : "bg-gray-100 text-gray-400"
+                    i < step ? "bg-brand-500 text-white" : i === step ? "bg-brand-500 text-white ring-4 ring-brand-100" : "bg-gray-100 text-gray-400"
                   }`}>
                     {i < step ? (
                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -118,7 +118,7 @@ export default function GuidedWizard({ onComplete, onDismiss }: GuidedWizardProp
                   onChange={(e) => setQuestion(e.target.value)}
                   placeholder="e.g. Why do users abandon checkout on our mobile app? What motivates people to start a gym routine? What stops small businesses from adopting cloud accounting?"
                   rows={3}
-                  className="w-full px-3 py-2.5 text-sm text-gray-800 placeholder-gray-400 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent resize-none"
+                  className="w-full px-3 py-2.5 text-sm text-gray-800 placeholder-gray-400 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 focus:border-transparent resize-none"
                   autoFocus
                 />
               </div>
@@ -131,7 +131,7 @@ export default function GuidedWizard({ onComplete, onDismiss }: GuidedWizardProp
                   value={population}
                   onChange={(e) => setPopulation(e.target.value)}
                   placeholder="e.g. UK small business owners aged 30-50, first-time gym members"
-                  className="w-full px-3 py-2 text-sm text-gray-800 placeholder-gray-400 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                  className="w-full px-3 py-2 text-sm text-gray-800 placeholder-gray-400 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 focus:border-transparent"
                 />
               </div>
             </div>
@@ -184,7 +184,7 @@ export default function GuidedWizard({ onComplete, onDismiss }: GuidedWizardProp
                   onChange={(e) => setText(e.target.value)}
                   placeholder="Paste your qualitative text here — survey responses, interview excerpts, reviews…"
                   rows={8}
-                  className="w-full px-3 py-3 text-sm text-gray-800 placeholder-gray-400 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent resize-none font-mono leading-relaxed"
+                  className="w-full px-3 py-3 text-sm text-gray-800 placeholder-gray-400 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 focus:border-transparent resize-none font-mono leading-relaxed"
                 />
                 <div className="flex items-center justify-between mt-1">
                   <p className="text-xs text-gray-400">
@@ -248,7 +248,7 @@ export default function GuidedWizard({ onComplete, onDismiss }: GuidedWizardProp
             {step > 0 && (
               <button
                 onClick={() => setStep((s) => s - 1)}
-                className="px-4 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 text-sm border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition-colors"
               >
                 Back
               </button>
@@ -257,7 +257,7 @@ export default function GuidedWizard({ onComplete, onDismiss }: GuidedWizardProp
               <button
                 onClick={() => setStep((s) => s + 1)}
                 disabled={!canAdvance}
-                className="px-5 py-2 text-sm bg-brand-600 hover:bg-brand-700 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-lg font-medium transition-colors"
+                className="px-5 py-2 text-sm bg-brand-500 hover:bg-brand-600 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-lg font-medium transition-colors"
               >
                 Next
               </button>
@@ -265,7 +265,7 @@ export default function GuidedWizard({ onComplete, onDismiss }: GuidedWizardProp
               <button
                 onClick={handleRun}
                 disabled={!text.trim() || wordCount < 10}
-                className="px-5 py-2 text-sm bg-brand-600 hover:bg-brand-700 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-lg font-semibold transition-colors flex items-center gap-1.5"
+                className="px-5 py-2 text-sm bg-brand-500 hover:bg-brand-600 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-lg font-semibold transition-colors flex items-center gap-1.5"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />

@@ -221,7 +221,7 @@ export default function BatchPanel({ onSelectResult }: BatchPanelProps) {
             <select
               value={activeDoc.dataType}
               onChange={(e) => updateDoc(activeDoc.id, { dataType: e.target.value as DataType })}
-              className="text-xs border border-gray-200 rounded-lg px-2 py-1 text-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-300 bg-white"
+              className="text-xs border border-gray-200 rounded-xl px-2 py-1 text-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-300 bg-white"
             >
               {(["free_text", "survey", "reviews", "social", "interviews", "competitor"] as DataType[]).map((dt) => (
                 <option key={dt} value={dt}>{dt}</option>
@@ -283,7 +283,7 @@ export default function BatchPanel({ onSelectResult }: BatchPanelProps) {
           <button
             onClick={runAll}
             disabled={running || pendingCount === 0}
-            className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 disabled:bg-gray-300 disabled:cursor-not-allowed rounded-xl transition-all"
+            className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-brand-500 hover:bg-brand-600 disabled:bg-gray-300 disabled:cursor-not-allowed rounded-xl transition-all"
           >
             {running ? (
               <>

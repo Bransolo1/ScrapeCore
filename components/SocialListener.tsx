@@ -640,7 +640,7 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
   // ─── Shared class helpers ────────────────────────────────────────────────────
 
   const inputCls =
-    "w-full px-3 py-2.5 text-sm text-gray-800 placeholder-gray-400 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent disabled:opacity-50";
+    "w-full px-3 py-2.5 text-sm text-gray-800 placeholder-gray-400 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 focus:border-transparent disabled:opacity-50";
   const labelCls = "block text-sm font-medium text-gray-700 mb-1.5";
   const smallLabelCls = "block text-xs font-medium text-gray-500 mb-1";
 
@@ -723,7 +723,7 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
           <label className={labelCls}>
             Ticker symbol <span className="font-normal text-gray-400">(StockTwits)</span>
           </label>
-          <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-brand-500">
+          <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-brand-500">
             <span className="px-3 py-2.5 text-sm text-gray-400 bg-gray-50 border-r border-gray-200">$</span>
             <input
               type="text"
@@ -746,7 +746,7 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
           <label className={labelCls}>
             Subreddit <span className="font-normal text-gray-400">(optional)</span>
           </label>
-          <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-brand-500">
+          <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-brand-500">
             <span className="px-3 py-2.5 text-sm text-gray-400 bg-gray-50 border-r border-gray-200">r/</span>
             <input
               type="text"
@@ -770,7 +770,7 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
                 <select
                   value={timeframe}
                   onChange={(e) => setTimeframe(e.target.value)}
-                  className="w-full px-2.5 py-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50"
+                  className="w-full px-2.5 py-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 disabled:opacity-50"
                   disabled={isFetching}
                 >
                   {TIMEFRAMES.map((t) => (
@@ -785,7 +785,7 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
                 <select
                   value={sort}
                   onChange={(e) => setSort(e.target.value)}
-                  className="w-full px-2.5 py-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50"
+                  className="w-full px-2.5 py-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 disabled:opacity-50"
                   disabled={isFetching}
                 >
                   {SORT_OPTIONS.map((s) => (
@@ -805,7 +805,7 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
                 onChange={(e) =>
                   setLimit(Math.min(100, Math.max(5, parseInt(e.target.value) || 25)))
                 }
-                className="w-16 px-2 py-1.5 text-sm text-gray-700 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 text-center disabled:opacity-50"
+                className="w-16 px-2 py-1.5 text-sm text-gray-700 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 text-center disabled:opacity-50"
                 min={5}
                 max={100}
                 disabled={isFetching}
@@ -816,7 +816,7 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
                 <div
                   onClick={() => setIncludeComments(!includeComments)}
                   className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer ${
-                    includeComments ? "bg-brand-600" : "bg-gray-200"
+                    includeComments ? "bg-brand-500" : "bg-gray-200"
                   }`}
                 >
                   <span
@@ -858,7 +858,7 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
               onChange={(e) =>
                 setTpPages(Math.min(5, Math.max(1, parseInt(e.target.value) || 1)))
               }
-              className="w-16 px-2 py-1.5 text-sm text-gray-700 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 text-center disabled:opacity-50"
+              className="w-16 px-2 py-1.5 text-sm text-gray-700 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 text-center disabled:opacity-50"
               min={1}
               max={5}
               disabled={isFetching}
@@ -892,7 +892,7 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
               <select
                 value={appCountry}
                 onChange={(e) => setAppCountry(e.target.value)}
-                className="w-full px-2.5 py-2.5 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50"
+                className="w-full px-2.5 py-2.5 text-sm text-gray-700 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 disabled:opacity-50"
                 disabled={isFetching}
               >
                 {COUNTRY_OPTIONS.map((c) => (
@@ -909,7 +909,7 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
               onChange={(e) =>
                 setAppPages(Math.min(10, Math.max(1, parseInt(e.target.value) || 1)))
               }
-              className="w-16 px-2 py-1.5 text-sm text-gray-700 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 text-center disabled:opacity-50"
+              className="w-16 px-2 py-1.5 text-sm text-gray-700 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 text-center disabled:opacity-50"
               min={1}
               max={10}
               disabled={isFetching}
@@ -966,7 +966,7 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
           <GroupLabel label="G2 Reviews" />
           <div>
             <label className={labelCls}>Product slug</label>
-            <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-brand-500">
+            <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-brand-500">
               <span className="px-3 py-2.5 text-xs text-gray-400 bg-gray-50 border-r border-gray-200 whitespace-nowrap">g2.com/products/</span>
               <input
                 type="text"
@@ -986,7 +986,7 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
               type="number"
               value={g2Pages}
               onChange={(e) => setG2Pages(Math.min(5, Math.max(1, parseInt(e.target.value) || 2)))}
-              className="w-16 px-2 py-1.5 text-sm text-gray-700 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 text-center disabled:opacity-50"
+              className="w-16 px-2 py-1.5 text-sm text-gray-700 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 text-center disabled:opacity-50"
               min={1} max={5}
               disabled={isFetching}
             />
@@ -1017,7 +1017,7 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
               type="number"
               value={capterraPages}
               onChange={(e) => setCapterraPages(Math.min(5, Math.max(1, parseInt(e.target.value) || 2)))}
-              className="w-16 px-2 py-1.5 text-sm text-gray-700 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 text-center disabled:opacity-50"
+              className="w-16 px-2 py-1.5 text-sm text-gray-700 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 text-center disabled:opacity-50"
               min={1} max={5}
               disabled={isFetching}
             />
@@ -1030,7 +1030,7 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
       {active.has("twitter") && (
         <div className="space-y-3 pt-3 border-t border-gray-100">
           <GroupLabel label="Twitter / X" />
-          <p className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 leading-relaxed">
+          <p className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 leading-relaxed">
             Searches Twitter/X via <strong>Perplexity AI</strong> — requires <code className="text-xs bg-gray-100 px-1 rounded">PERPLEXITY_API_KEY</code>
           </p>
           <div>
@@ -1049,7 +1049,7 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
             <select
               value={twitterRecency}
               onChange={(e) => setTwitterRecency(e.target.value)}
-              className="w-full px-2.5 py-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50"
+              className="w-full px-2.5 py-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 disabled:opacity-50"
               disabled={isFetching}
             >
               {RECENCY_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -1082,7 +1082,7 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
             <select
               value={perplexityRecency}
               onChange={(e) => setPerplexityRecency(e.target.value)}
-              className="w-full px-2.5 py-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50"
+              className="w-full px-2.5 py-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 disabled:opacity-50"
               disabled={isFetching}
             >
               {RECENCY_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -1115,7 +1115,7 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
               <select
                 value={gpCountry}
                 onChange={(e) => setGpCountry(e.target.value)}
-                className="w-full px-2.5 py-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50"
+                className="w-full px-2.5 py-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 disabled:opacity-50"
                 disabled={isFetching}
               >
                 {COUNTRY_OPTIONS_GP.map((c) => (
@@ -1129,7 +1129,7 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
                 type="number"
                 value={gpNum}
                 onChange={(e) => setGpNum(Math.min(200, Math.max(10, parseInt(e.target.value) || 100)))}
-                className="w-full px-2.5 py-2 text-sm text-gray-700 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 text-center disabled:opacity-50"
+                className="w-full px-2.5 py-2 text-sm text-gray-700 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 text-center disabled:opacity-50"
                 min={10}
                 max={200}
                 disabled={isFetching}
@@ -1146,7 +1146,7 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
         disabled={!canSubmit || isFetching}
         className={`w-full py-2.5 px-4 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
           canSubmit && !isFetching
-            ? "bg-brand-600 hover:bg-brand-700 text-white shadow-sm"
+            ? "bg-brand-500 hover:bg-brand-600 text-white shadow-sm"
             : "bg-gray-100 text-gray-400 cursor-not-allowed"
         }`}
       >
