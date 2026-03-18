@@ -10,10 +10,10 @@ interface PersonaCardsProps {
 
 const COM_B_COLORS = {
   capability: {
-    bg: "bg-violet-50",
-    border: "border-violet-200",
-    text: "text-violet-700",
-    dot: "bg-violet-500",
+    bg: "bg-teal-50",
+    border: "border-teal-200",
+    text: "text-teal-700",
+    dot: "bg-teal-500",
     icon: "🧠",
   },
   opportunity: {
@@ -43,7 +43,7 @@ function initials(name: string): string {
 }
 
 const AVATAR_COLORS = [
-  ["bg-violet-600", "text-violet-50"],
+  ["bg-teal-600", "text-teal-50"],
   ["bg-sky-600", "text-sky-50"],
   ["bg-amber-600", "text-amber-50"],
   ["bg-emerald-600", "text-emerald-50"],

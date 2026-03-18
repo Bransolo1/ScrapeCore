@@ -18,7 +18,7 @@ interface AuditEntry {
 const EVENT_COLORS: Record<string, string> = {
   "analysis.created":  "bg-emerald-50 text-emerald-700 border-emerald-200",
   "analysis.viewed":   "bg-blue-50 text-blue-700 border-blue-200",
-  "analysis.exported": "bg-violet-50 text-violet-700 border-violet-200",
+  "analysis.exported": "bg-blue-50 text-blue-700 border-blue-200",
   "analysis.deleted":  "bg-rose-50 text-rose-700 border-rose-200",
   "review.updated":    "bg-amber-50 text-amber-700 border-amber-200",
   "source.fetched":    "bg-sky-50 text-sky-700 border-sky-200",

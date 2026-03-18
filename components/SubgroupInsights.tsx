@@ -6,7 +6,7 @@ interface SubgroupInsightsProps {
 }
 
 const COM_B_COLORS: Record<string, string> = {
-  capability: "bg-violet-100 text-violet-700",
+  capability: "bg-teal-100 text-teal-700",
   opportunity: "bg-sky-100 text-sky-700",
   motivation: "bg-amber-100 text-amber-700",
 };

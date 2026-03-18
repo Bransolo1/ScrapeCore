@@ -41,8 +41,8 @@ interface Stats {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const COMB_LABELS: Record<string, { label: string; color: string; group: string }> = {
-  cap_physical:  { label: "Phys Cap",    color: "#7c3aed", group: "Capability" },
-  cap_psych:     { label: "Psych Cap",   color: "#8b5cf6", group: "Capability" },
+  cap_physical:  { label: "Phys Cap",    color: "#0d9488", group: "Capability" },
+  cap_psych:     { label: "Psych Cap",   color: "#14b8a6", group: "Capability" },
   opp_physical:  { label: "Phys Opp",   color: "#0284c7", group: "Opportunity" },
   opp_social:    { label: "Soc Opp",    color: "#0ea5e9", group: "Opportunity" },
   mot_reflective:{ label: "Refl Mot",   color: "#d97706", group: "Motivation" },
