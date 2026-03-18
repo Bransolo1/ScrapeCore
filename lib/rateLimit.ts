@@ -25,9 +25,9 @@ const fallback = new Map<string, { count: number; resetAt: number }>();
 /** Purge expired fallback entries to prevent unbounded memory growth. */
 function purgeFallback() {
   const now = Date.now();
-  for (const [key, entry] of fallback) {
+  fallback.forEach((entry, key) => {
     if (entry.resetAt <= now) fallback.delete(key);
-  }
+  });
 }
 
 // Run cleanup every 10 minutes
