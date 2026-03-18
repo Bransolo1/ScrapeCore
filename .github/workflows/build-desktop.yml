@@ -28,10 +28,7 @@ jobs:
       - name: Generate Prisma client
         run: npx prisma generate
 
-      - name: Build Next.js + copy standalone
-        run: npm run build:desktop
-
-      - name: Package Windows installer
+      - name: Build and package Windows installer
         run: npm run dist:win
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -69,10 +66,7 @@ jobs:
       - name: Generate Prisma client
         run: npx prisma generate
 
-      - name: Build Next.js + copy standalone
-        run: npm run build:desktop
-
-      - name: Package macOS dmg
+      - name: Build and package macOS dmg
         run: npm run dist:mac
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -110,10 +104,10 @@ jobs:
       - name: Generate Prisma client
         run: npx prisma generate
 
-      - name: Build Next.js + copy standalone
-        run: npm run build:desktop
+      - name: Install Linux packaging dependencies
+        run: sudo apt-get install -y fakeroot rpm
 
-      - name: Package Linux AppImage
+      - name: Build and package Linux AppImage
         run: npm run dist:linux
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
