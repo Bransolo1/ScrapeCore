@@ -102,3 +102,4 @@ A **behavioural market intelligence platform** that converts qualitative text (i
 | Date | Action |
 |---|---|
 | 2026-03-18 | Initial codebase analysis complete. Writing migration plan. |
+| 2026-03-18 | Implemented all code changes for Vercel + Turso hosting. 12/12 tests pass, typecheck clean. |
