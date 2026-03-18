@@ -16,14 +16,17 @@ export async function POST(req: Request) {
       return Response.json({ error: "Password must be at least 8 characters." }, { status: 400 });
     }
 
-    // Only allow registration if no users exist (first-user setup)
-    const userCount = await prisma.user.count();
-    if (userCount > 0) {
-      return Response.json(
-        { error: "Registration is closed. Contact your administrator." },
-        { status: 403 }
-      );
+    // Check for duplicate email before hashing
+    const existing = await prisma.user.findUnique({
+      where: { email: email.trim().toLowerCase() },
+    });
+    if (existing) {
+      return Response.json({ error: "Email already registered." }, { status: 409 });
     }
+
+    // First user becomes admin, subsequent users are analysts
+    const userCount = await prisma.user.count();
+    const role = userCount === 0 ? "admin" : "analyst";
 
     const passwordHash = await bcrypt.hash(password, 12);
     const user = await prisma.user.create({
@@ -31,7 +34,7 @@ export async function POST(req: Request) {
         email: email.trim().toLowerCase(),
         name: name?.trim() || null,
         passwordHash,
-        role: "admin", // First user is always admin
+        role,
       },
     });
 
