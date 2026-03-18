@@ -1,120 +1,151 @@
 # ScrapeCore — Behavioural Market Intelligence
 
-ScrapeCore converts raw qualitative text — interviews, reviews, social posts, survey responses — into structured behavioural insight using the **COM-B model** (Capability, Opportunity, Motivation → Behaviour), the Behaviour Change Wheel, and BCT taxonomy. Powered by Claude Opus 4.6.
+> Converts raw qualitative text into structured COM-B behavioural insight, powered by Claude Opus 4.6.
 
-Built for startup founders, product managers, behavioural scientists, and insight researchers who need actionable intelligence fast — not a chatbot summary, but a diagnosis.
-
----
-
-## Install (Desktop App — recommended for most users)
-
-### Step 1 — Download
-
-Go to **[Releases](../../releases)** and download the installer for your platform:
-
-| Platform | File | Notes |
-|---|---|---|
-| **Windows** | `ScrapeCore-Setup-{version}.exe` | Double-click to install via NSIS wizard |
-| **macOS** | `ScrapeCore-{version}.dmg` | Drag to Applications. Right-click → Open on first launch |
-| **Linux** | `ScrapeCore-{version}.AppImage` | `chmod +x *.AppImage` then double-click |
-
-No Node.js, no Docker, no terminal required. All dependencies are bundled.
-
-### Step 2 — Add your Anthropic API key
-
-1. Get a free API key at **[console.anthropic.com](https://console.anthropic.com/settings/keys)** → API Keys
-2. Open ScrapeCore → click the **⚙ Settings** gear (top-right)
-3. Paste your key → Save
-
-That's it. The key is stored securely in your user data folder and never leaves your machine.
+Built for startup founders, product managers, behavioural scientists, and insight researchers who need a diagnosis — not a chatbot summary.
 
 ---
 
-## Install (Docker — teams and self-hosted)
+## Install the desktop app
 
-```bash
-# 1. Copy env template
-cp .env.docker.example .env.docker
+No terminal. No Docker. No Node.js. Just download and run.
 
-# 2. Fill in two values:
-#    ANTHROPIC_API_KEY=sk-ant-...
-#    NEXTAUTH_SECRET=$(openssl rand -base64 32)
+### 1 — Download your installer
 
-# 3. Start
-docker compose --env-file .env.docker up -d
-```
+Go to the **[Releases page](../../releases/latest)** and grab the file for your OS:
 
-Open **http://localhost:3000** — the first person to register becomes the admin.
+| OS | File to download |
+|---|---|
+| **macOS** | `ScrapeCore-{version}.dmg` |
+| **Windows** | `ScrapeCore-Setup-{version}.exe` |
+| **Linux** | `ScrapeCore-{version}.AppImage` |
+
+**macOS note:** Right-click → Open on first launch (Gatekeeper prompt for unsigned apps).
+**Linux note:** `chmod +x ScrapeCore-*.AppImage` then double-click.
+
+### 2 — Add your Anthropic API key
+
+1. Get a key at **[console.anthropic.com](https://console.anthropic.com/settings/keys)** → API Keys (free to sign up)
+2. Open ScrapeCore → click **⚙** (gear icon, top-right) → paste your key → **Save**
+
+The key is stored in your user data folder on disk. It never leaves your machine.
+
+### 3 — Start analysing
+
+Paste any qualitative text — interviews, reviews, survey responses, social posts — hit **Run analysis** and get a full COM-B behavioural diagnosis in ~30–60 seconds.
 
 ---
 
-## Install (Local development)
+## What an analysis gives you
+
+| Output | Description |
+|---|---|
+| **COM-B mapping** | Capability / Opportunity / Motivation signals per sub-dimension with evidence quotes |
+| **Key behaviours** | Observed behaviours rated by frequency and importance |
+| **Barriers** | What stops the target behaviour — ranked by severity, with source text |
+| **Motivators & Facilitators** | What drives and enables the behaviour |
+| **Behavioural context** | Where, when, and with whom behaviours occur |
+| **Intervention opportunities** | BCW interventions ranked by priority, mapped to specific BCT techniques |
+| **Contradictions** | Where evidence conflicts and what it means |
+| **Confidence assessment** | Grounding score, high-trust flag, limitations summary |
+| **Evidence click-through** | Every quote links back to its exact location in your input |
+| **Export** | PDF (print dialog), Markdown report, JSON data |
+
+---
+
+## Input modes
+
+| Mode | How to use |
+|---|---|
+| **Paste text** | Paste interviews, survey open-ends, notes, transcripts directly |
+| **Scrape URLs** | Paste one or more URLs — the app fetches and extracts the text |
+| **Social listening** | Reddit, HackerNews, App Store / Play Store reviews |
+| **Digital footprint** | Competitor URL analysis |
+| **Batch** | Analyse multiple documents in one session, then compare them side-by-side |
+
+---
+
+## Pages
+
+| Page | Purpose |
+|---|---|
+| **Analyse** (`/`) | Main workspace |
+| **Dashboard** (`/dashboard`) | COM-B frequency trends and quality metrics across all your analyses |
+| **Compare** (`/compare`) | Side-by-side COM-B diff between any two analyses |
+| **Eval Lab** (`/eval`) | Rubric scoring, prompt version diff, A/B evaluation |
+| **Monitor** (`/monitoring`) | Scheduled competitor scans with change detection |
+| **Audit Log** (`/audit`) | Full record of every analysis run and PII events |
+
+---
+
+## Optional integrations
+
+Set these via **⚙ Settings** (Electron) or in your `.env.local` / `.env.docker` file:
+
+| Key | Enables |
+|---|---|
+| `PERPLEXITY_API_KEY` | Live web research + Twitter/X listening via Perplexity Sonar |
+| `FIRECRAWL_API_KEY` | JS-rendered site scraping (G2, Capterra, SPAs) |
+
+---
+
+## For developers
+
+### Local development
 
 ```bash
 git clone <repo-url>
 cd ScrapeCore
 npm install
 cp .env.local.example .env.local
-# Edit .env.local — set ANTHROPIC_API_KEY and NEXTAUTH_SECRET
+# Set ANTHROPIC_API_KEY and NEXTAUTH_SECRET in .env.local
 
 npx prisma db push
-npm run dev
+npm run dev          # → http://localhost:3000
+```
+
+### Docker (self-hosted team instance)
+
+```bash
+cp .env.docker.example .env.docker
+# Set ANTHROPIC_API_KEY and NEXTAUTH_SECRET in .env.docker
+
+docker compose --env-file .env.docker up -d
 # → http://localhost:3000
 ```
 
----
+### Build desktop installers
 
-## Environment variables
+```bash
+npm run dist:mac     # → dist-desktop/ScrapeCore-*.dmg
+npm run dist:win     # → dist-desktop/ScrapeCore-Setup-*.exe
+npm run dist:linux   # → dist-desktop/ScrapeCore-*.AppImage
+```
 
-| Variable | Required | Description |
+Installers are also built automatically by GitHub Actions on every `v*` tag and attached to the GitHub Release as a draft.
+
+### Key commands
+
+```bash
+npm run dev          # Next.js dev server
+npm run test         # Vitest unit tests (12 tests)
+npx tsc --noEmit     # TypeScript type check
+npx prisma db push   # Apply schema changes
+npx prisma studio    # Browse database in browser
+npm run electron:dev # Electron + Next.js dev mode
+```
+
+### Environment variables
+
+| Variable | Required | Notes |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | **Yes** | Claude Opus 4.6 — core analysis engine |
-| `NEXTAUTH_SECRET` | **Yes** (web) | Random session secret. Generate: `openssl rand -base64 32` |
-| `NEXTAUTH_URL` | In production | Your public URL e.g. `https://scrapecore.myorg.com` |
-| `PERPLEXITY_API_KEY` | Optional | Enables live web research and social listening |
-| `FIRECRAWL_API_KEY` | Optional | Enables JS-rendered site scraping (G2, Capterra, SPAs) |
-| `DATABASE_URL` | Optional | Defaults to `file:./dev.db`. Docker uses `file:/data/scrapecore.db` |
-| `SKIP_AUTH` | Optional | `true` disables login screen — local dev / Electron builds only |
-
----
-
-## Pages
-
-| Page | What it does |
-|---|---|
-| `/` — **Analyse** | Main workspace: paste text or scrape sources, run COM-B analysis |
-| `/dashboard` — **Dashboard** | Aggregate stats, quality trends, COM-B frequency across all analyses |
-| `/compare` — **Compare** | Side-by-side COM-B diff between two analyses — competitor benchmarking |
-| `/eval` — **Eval Lab** | Rubric scoring, prompt A/B comparison, quality tracking across versions |
-| `/monitoring` — **Monitor** | Scheduled competitor monitoring — recurring scans with change detection |
-| `/audit` — **Audit Log** | Full record of who ran what analysis, when, and any PII events |
-
----
-
-## What each analysis produces
-
-- **COM-B mapping** — signals per sub-dimension with evidence quotes
-- **Key behaviours** — observed behaviours, rated by frequency and importance
-- **Barriers** — what stops the target behaviour, ranked by severity, with source text
-- **Motivators & Facilitators** — what drives and enables the behaviour
-- **Behavioural context** — where, when, and with whom behaviours occur
-- **Intervention opportunities** — ranked BCW interventions with specific BCT techniques
-- **Contradictions** — where evidence conflicts and what it means
-- **Confidence assessment** — grounding score, high-trust suitability flag, limitations
-- **Evidence click-through** — every quote links back to the original input text
-- **Export** — PDF (print dialog), Markdown report, JSON data
-
----
-
-## Input modes
-
-| Mode | Description |
-|---|---|
-| **Paste text** | Direct text input — surveys, transcripts, notes |
-| **Scrape URLs** | Paste URLs and scrape page content |
-| **Social listening** | Reddit, HackerNews, App Store / Play Store reviews |
-| **Digital footprint** | Competitor URL analysis |
-| **Batch** | Analyse multiple documents in one session — run all in sequence |
+| `ANTHROPIC_API_KEY` | Yes | Claude Opus 4.6 |
+| `NEXTAUTH_SECRET` | Yes (web/Docker) | `openssl rand -base64 32` |
+| `NEXTAUTH_URL` | Production only | Your public URL |
+| `DATABASE_URL` | Optional | Defaults to `file:./dev.db` |
+| `SKIP_AUTH` | Optional | `true` disables login (Electron / local dev) |
+| `PERPLEXITY_API_KEY` | Optional | Live research features |
+| `FIRECRAWL_API_KEY` | Optional | JS-render scraping |
 
 ---
 
@@ -124,44 +155,13 @@ npm run dev
 |---|---|
 | Framework | Next.js 14 (App Router, SSE streaming) |
 | AI | Anthropic Claude Opus 4.6 |
-| Database | Prisma + SQLite (libsql adapter, Turso-compatible) |
-| Auth | NextAuth.js — credentials + JWT, org/user scoping |
+| Desktop | Electron 33 + electron-builder (bundles everything — no runtime deps) |
+| Database | Prisma 7 + SQLite via libsql adapter |
+| Auth | NextAuth.js credentials + JWT |
 | Styling | Tailwind CSS |
 | Charts | Recharts |
-| Deployment | Docker (single-service, SQLite volume) / Electron (desktop, no dependencies) |
-| Tests | Vitest — schema validation, grounding, PII, CSRF |
-
----
-
-## Development commands
-
-```bash
-npm run dev              # Dev server at :3000
-npm run test             # Run Vitest unit tests
-npm run build            # Production build
-npx prisma db push       # Apply schema changes
-npx prisma studio        # Browse database in browser
-
-# Desktop
-npm run electron:dev     # Dev mode (Next.js + Electron)
-npm run dist:mac         # Build macOS .dmg
-npm run dist:win         # Build Windows .exe installer
-npm run dist:linux       # Build Linux .AppImage
-```
-
-Set `SKIP_AUTH=true` in `.env.local` for Electron builds.
-
----
-
-## Building releases
-
-Desktop installers are built with [electron-builder](https://www.electron.build) and can be published to GitHub Releases:
-
-```bash
-npm run dist             # Build for all platforms
-```
-
-The resulting files in `dist/` can be attached to a GitHub Release. Users download and install them like any normal desktop app — no terminal or developer tools required.
+| Tests | Vitest (12 unit tests — schema validation, grounding, PII, CSRF) |
+| CI | GitHub Actions — typecheck + tests on every PR; release build on `v*` tags |
 
 ---
 
