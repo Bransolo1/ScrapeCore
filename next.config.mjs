@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Standalone output bundles server.js + deps for packaging in Electron
-  output: "standalone",
+  // Standalone output for Electron/Docker; Vercel manages its own output
+  ...(process.env.VERCEL ? {} : { output: "standalone" }),
 };
 export default nextConfig;
