@@ -25,7 +25,8 @@ function newDoc(index: number): BatchDoc {
 async function analyseDoc(
   doc: BatchDoc,
   actor: string,
-  onUpdate: (id: string, state: AnalysisState) => void
+  onUpdate: (id: string, state: AnalysisState) => void,
+  signal?: AbortSignal
 ): Promise<void> {
   onUpdate(doc.id, { ...EMPTY_STATE, status: "streaming", streamingText: "" });
 
@@ -37,6 +38,7 @@ async function analyseDoc(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text: doc.text, dataType: doc.dataType, actor }),
+      signal,
     });
 
     if (!res.ok || !res.body) {
@@ -85,6 +87,11 @@ async function analyseDoc(
       }
     }
   } catch (err) {
+    // AbortError means the batch was cancelled by the user — reset to idle
+    if (err instanceof DOMException && err.name === "AbortError") {
+      onUpdate(doc.id, EMPTY_STATE);
+      return;
+    }
     onUpdate(doc.id, { ...EMPTY_STATE, status: "error", error: err instanceof Error ? err.message : "Network error" });
   }
 }
@@ -95,6 +102,7 @@ export default function BatchPanel({ onSelectResult }: BatchPanelProps) {
   const [running, setRunning] = useState(false);
   const [showCompare, setShowCompare] = useState(false);
   const actorRef = useRef<string>("");
+  const batchAbortRef = useRef<AbortController | null>(null);
 
   if (typeof window !== "undefined" && !actorRef.current) {
     actorRef.current = localStorage.getItem("scrapecore-user") ?? "analyst";
@@ -126,13 +134,23 @@ export default function BatchPanel({ onSelectResult }: BatchPanelProps) {
     });
   };
 
+  const cancelBatch = () => {
+    batchAbortRef.current?.abort();
+    batchAbortRef.current = null;
+    setRunning(false);
+  };
+
   const runAll = async () => {
     const pending = docs.filter((d) => d.text.trim() && d.state.status !== "streaming");
     if (!pending.length) return;
+    const controller = new AbortController();
+    batchAbortRef.current = controller;
     setRunning(true);
     for (const doc of pending) {
-      await analyseDoc(doc, actorRef.current, updateState);
+      if (controller.signal.aborted) break;
+      await analyseDoc(doc, actorRef.current, updateState, controller.signal);
     }
+    batchAbortRef.current = null;
     setRunning(false);
   };
 
@@ -253,20 +271,30 @@ export default function BatchPanel({ onSelectResult }: BatchPanelProps) {
             </button>
           )}
         </div>
-        <button
-          onClick={runAll}
-          disabled={running || pendingCount === 0}
-          className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 disabled:bg-gray-300 disabled:cursor-not-allowed rounded-xl transition-all"
-        >
-          {running ? (
-            <>
-              <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              Running…
-            </>
-          ) : (
-            <>Run all ({pendingCount})</>
+        <div className="flex items-center gap-2">
+          {running && (
+            <button
+              onClick={cancelBatch}
+              className="px-3 py-2 text-sm font-medium text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-xl border border-gray-200 transition-colors"
+            >
+              Cancel
+            </button>
           )}
-        </button>
+          <button
+            onClick={runAll}
+            disabled={running || pendingCount === 0}
+            className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 disabled:bg-gray-300 disabled:cursor-not-allowed rounded-xl transition-all"
+          >
+            {running ? (
+              <>
+                <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Running…
+              </>
+            ) : (
+              <>Run all ({pendingCount})</>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );

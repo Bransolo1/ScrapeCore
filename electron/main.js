@@ -4,6 +4,19 @@ const fs = require("fs");
 const http = require("http");
 const { spawn } = require("child_process");
 
+// ─── Global error guards ───────────────────────────────────────────────────────
+
+process.on("uncaughtException", (err) => {
+  console.error("[uncaughtException]", err);
+  try {
+    dialog.showErrorBox("Unexpected error", err.message ?? String(err));
+  } catch (_) {}
+});
+
+process.on("unhandledRejection", (reason) => {
+  console.error("[unhandledRejection]", reason);
+});
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const PORT = 3579; // avoid clash with next dev default 3000
@@ -41,22 +54,38 @@ function writeStoredEnv(vars) {
 
 // ─── Poll until server is ready ───────────────────────────────────────────────
 
-function waitForServer(port, timeout = 60_000) {
+function waitForServer(port, timeout = 90_000) {
   return new Promise((resolve, reject) => {
     const start = Date.now();
+    let settled = false;
+    let activeReq = null;
+    let retryTimer = null;
+
+    function settle(fn, arg) {
+      if (settled) return;
+      settled = true;
+      if (retryTimer) clearTimeout(retryTimer);
+      if (activeReq) { try { activeReq.destroy(); } catch (_) {} }
+      fn(arg);
+    }
+
     const check = () => {
-      const req = http.get(`http://127.0.0.1:${port}`, (res) => {
+      activeReq = http.get(`http://127.0.0.1:${port}`, (res) => {
         res.resume();
-        resolve();
+        settle(resolve);
       });
-      req.on("error", () => {
+      activeReq.setTimeout(2000, () => {
+        if (activeReq) { try { activeReq.destroy(); } catch (_) {} }
+      });
+      activeReq.on("error", () => {
+        activeReq = null;
         if (Date.now() - start > timeout) {
-          reject(new Error("Server did not start within 60 s"));
+          settle(reject, new Error(`Server did not start within ${timeout / 1000} s`));
         } else {
-          setTimeout(check, 400);
+          retryTimer = setTimeout(check, 500);
         }
       });
-      req.end();
+      activeReq.end();
     };
     check();
   });
@@ -103,6 +132,10 @@ function startServer(env = {}) {
 
   serverProcess.stdout?.on("data", (d) => process.stdout.write(d));
   serverProcess.stderr?.on("data", (d) => process.stderr.write(d));
+
+  serverProcess.on("error", (err) => {
+    dialog.showErrorBox("Server failed to start", `Could not launch the Next.js server: ${err.message}`);
+  });
 
   serverProcess.on("exit", (code) => {
     if (code !== 0 && code !== null) {

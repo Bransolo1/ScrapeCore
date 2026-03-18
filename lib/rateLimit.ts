@@ -22,6 +22,17 @@ export interface RateLimitResult {
 // In-memory fallback — used if DB is unavailable
 const fallback = new Map<string, { count: number; resetAt: number }>();
 
+/** Purge expired fallback entries to prevent unbounded memory growth. */
+function purgeFallback() {
+  const now = Date.now();
+  for (const [key, entry] of fallback) {
+    if (entry.resetAt <= now) fallback.delete(key);
+  }
+}
+
+// Run cleanup every 10 minutes
+setInterval(purgeFallback, 10 * 60 * 1000).unref();
+
 export async function checkRateLimit(identifier: string): Promise<RateLimitResult> {
   const now = Date.now();
   const resetAt = new Date(now + WINDOW_MS);

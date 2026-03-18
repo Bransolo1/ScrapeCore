@@ -231,6 +231,8 @@ export default function Home() {
         }
       }
     } catch (err) {
+      // AbortError means the user cancelled — state already reset by cancelAnalysis()
+      if (err instanceof DOMException && err.name === "AbortError") return;
       setAnalysisState({ status: "error", streamingText: "", analysis: null, error: err instanceof Error ? err.message : "Network error", durationMs: null });
     }
   };
