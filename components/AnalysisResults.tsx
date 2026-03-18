@@ -46,17 +46,26 @@ function EmptyState() {
     <div className="flex flex-col items-center justify-center h-full min-h-96 text-center px-8">
       <div className="w-14 h-14 bg-surface-100 rounded-2xl flex items-center justify-center mb-4">
         <svg className="w-7 h-7 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
         </svg>
       </div>
-      <h3 className="text-base font-semibold text-gray-700 mb-2">Ready to analyse</h3>
+      <h3 className="text-base font-semibold text-gray-700 mb-2">Collect data to get started</h3>
       <p className="text-sm text-gray-400 max-w-sm leading-relaxed">
-        Paste qualitative text on the left and run the analysis. Results will include COM-B mapping, barriers, motivators, and intervention recommendations.
+        Scrape URLs, pull social signals, or run a digital footprint scan. Once you have sources, run the behavioural analysis to see COM-B mapping, barriers, and interventions.
       </p>
       <div className="mt-6 grid grid-cols-3 gap-3 w-full max-w-sm">
-        {["Capability", "Opportunity", "Motivation"].map((label, i) => (
-          <div key={label} className={`rounded-lg p-3 text-center ${["bg-violet-50", "bg-sky-50", "bg-amber-50"][i]}`}>
-            <p className={`text-xs font-semibold ${["text-violet-600", "text-sky-600", "text-amber-600"][i]}`}>{label}</p>
+        {[
+          { label: "Scrape", icon: "M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" },
+          { label: "Listen", icon: "M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" },
+          { label: "Analyse", icon: "M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" },
+        ].map((item, i) => (
+          <div key={item.label} className={`rounded-xl p-3 text-center border ${
+            i === 0 ? "bg-brand-50 border-brand-200" : "bg-surface-50 border-gray-100"
+          }`}>
+            <svg className={`w-4 h-4 mx-auto mb-1.5 ${i === 0 ? "text-brand-500" : "text-gray-400"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
+            </svg>
+            <p className={`text-xs font-semibold ${i === 0 ? "text-brand-600" : "text-gray-400"}`}>{item.label}</p>
           </div>
         ))}
       </div>

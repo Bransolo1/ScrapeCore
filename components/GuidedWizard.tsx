@@ -242,7 +242,7 @@ export default function GuidedWizard({ onComplete, onDismiss }: GuidedWizardProp
             onClick={onDismiss}
             className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
           >
-            Switch to expert mode
+            Skip wizard
           </button>
           <div className="flex gap-2">
             {step > 0 && (

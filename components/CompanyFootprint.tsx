@@ -291,7 +291,7 @@ export default function CompanyFootprint({ onSourcesReady }: CompanyFootprintPro
   };
 
   const inputCls =
-    "w-full px-3 py-2.5 text-sm text-gray-800 placeholder-gray-400 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 focus:border-transparent disabled:opacity-50";
+    "w-full px-3.5 py-2.5 text-sm text-gray-800 placeholder-gray-300 bg-surface-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 focus:border-brand-400 focus:bg-white disabled:opacity-50";
 
   const anyRunning = isRunning;
   const doneCount = Object.values(tasks).filter((t) => t.status === "done" || t.status === "error").length;
@@ -302,7 +302,7 @@ export default function CompanyFootprint({ onSourcesReady }: CompanyFootprintPro
       {/* Company name + domain */}
       <div className="space-y-3">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Company name</label>
+          <label className="block text-sm font-medium text-gray-600 mb-1.5">Company name</label>
           <input
             type="text"
             value={companyName}
@@ -313,7 +313,7 @@ export default function CompanyFootprint({ onSourcesReady }: CompanyFootprintPro
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Domain</label>
+          <label className="block text-sm font-medium text-gray-600 mb-1.5">Domain</label>
           <input
             type="text"
             value={domain}

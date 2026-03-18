@@ -196,7 +196,7 @@ export default function EvalPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-surface-50">
       <header className="border-b border-gray-200 bg-white/95 backdrop-blur-md shadow-sm sticky top-0 z-30">
         <div className="max-w-6xl mx-auto px-6 py-3 flex items-center gap-4">
           <Link href="/dashboard" className="text-gray-400 hover:text-gray-600 transition-colors">

@@ -119,12 +119,12 @@ export default function UrlScraper({ onSourcesReady }: UrlScraperProps) {
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1.5">URLs to scrape</label>
+        <label className="block text-sm font-medium text-gray-600 mb-1.5">URLs to scrape</label>
         <textarea
           value={urlInput}
           onChange={(e) => setUrlInput(e.target.value)}
           placeholder={`Paste one URL per line:\nhttps://www.g2.com/products/salesforce-crm/reviews\nhttps://techcrunch.com/2025/...\nhttps://competitor.com/pricing`}
-          className="w-full h-36 px-3 py-2.5 text-sm text-gray-800 placeholder-gray-400 bg-white border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-brand-400/50 focus:border-transparent font-mono"
+          className="w-full h-36 px-3.5 py-2.5 text-sm text-gray-800 placeholder-gray-300 bg-surface-50 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-brand-400/50 focus:border-brand-400 focus:bg-white font-mono"
           disabled={isFetching}
         />
         <p className="text-xs text-gray-400 mt-1">
@@ -135,7 +135,7 @@ export default function UrlScraper({ onSourcesReady }: UrlScraperProps) {
       </div>
 
       {/* Firecrawl toggle */}
-      <div className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 bg-gray-50">
+      <div className="flex items-start gap-3 p-3 rounded-xl border border-gray-200 bg-surface-50">
         <button
           type="button"
           role="switch"
@@ -225,7 +225,7 @@ export default function UrlScraper({ onSourcesReady }: UrlScraperProps) {
         </div>
       )}
 
-      <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+      <div className="bg-surface-50 rounded-xl p-3 border border-gray-100">
         <p className="text-xs text-gray-500 leading-relaxed">
           {useFirecrawl
             ? "Firecrawl renders full pages including JavaScript — ideal for G2, Capterra, SPAs, and paywalled content."
