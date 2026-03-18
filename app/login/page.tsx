@@ -8,7 +8,8 @@ import Link from "next/link";
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") ?? "/";
+  const rawCallback = searchParams.get("callbackUrl") ?? "/";
+  const callbackUrl = rawCallback.startsWith("/") && !rawCallback.startsWith("//") ? rawCallback : "/";
 
   const [isFirstUser, setIsFirstUser] = useState(false);
   const [checkingFirstUser, setCheckingFirstUser] = useState(true);

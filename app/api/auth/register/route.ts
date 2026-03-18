@@ -1,9 +1,13 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
+import { validateCSRF } from "@/lib/csrf";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(req: Request) {
+  const csrfError = validateCSRF(req);
+  if (csrfError) return csrfError;
+
   try {
     const { email, password, name } = (await req.json()) as {
       email?: string;
