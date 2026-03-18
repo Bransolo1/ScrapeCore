@@ -12,13 +12,17 @@ import AnalysisHistory from "@/components/AnalysisHistory";
 import PIIWarningModal from "@/components/PIIWarningModal";
 import WizardOverlay from "@/components/WizardOverlay";
 import GuidedWizard from "@/components/GuidedWizard";
+import BatchPanel from "@/components/BatchPanel";
+import type { BatchDoc } from "@/components/BatchPanel";
 import type { AnalysisState, DataType, BehaviourAnalysis } from "@/lib/types";
 import type { Source } from "@/lib/scraper";
 import { formatSourcesAsText } from "@/lib/scraper";
 import { scanForPII, redactPII } from "@/lib/pii";
 import type { PIIScanResult } from "@/lib/pii";
+import ErrorBoundary from "@/components/ErrorBoundary";
+import SettingsModal from "@/components/SettingsModal";
 
-type InputMode = "paste" | "scrape" | "social" | "footprint";
+type InputMode = "paste" | "scrape" | "social" | "footprint" | "batch";
 
 const INITIAL_STATE: AnalysisState = {
   status: "idle",
@@ -65,6 +69,15 @@ const MODE_TABS: { id: InputMode; label: string; icon: React.ReactNode }[] = [
       </svg>
     ),
   },
+  {
+    id: "batch",
+    label: "Batch",
+    icon: (
+      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+      </svg>
+    ),
+  },
 ];
 
 function getActor(): string {
@@ -105,6 +118,12 @@ export default function Home() {
   const [analysisState, setAnalysisState] = useState<AnalysisState>(INITIAL_STATE);
   const [usage, setUsage] = useState<{ inputTokens: number; outputTokens: number } | undefined>();
   const startTimeRef = useRef<number>(0);
+
+  // Rate limit remaining
+  const [rateLimitRemaining, setRateLimitRemaining] = useState<number | null>(null);
+
+  // Settings modal
+  const [showSettings, setShowSettings] = useState(false);
 
   // History panel
   const [showHistory, setShowHistory] = useState(false);
@@ -160,6 +179,11 @@ export default function Home() {
 
       if (!res.ok || !res.body) {
         const err = await res.json().catch(() => ({ error: "Request failed" }));
+        if (err.code === "no_api_key") {
+          setShowSettings(true);
+          setAnalysisState(INITIAL_STATE);
+          return;
+        }
         setAnalysisState({ status: "error", streamingText: "", analysis: null, error: err.error ?? "Unknown error", durationMs: null });
         return;
       }
@@ -182,13 +206,14 @@ export default function Home() {
           try {
             const event = JSON.parse(raw) as
               | { type: "chunk"; text: string }
-              | { type: "complete"; analysis: BehaviourAnalysis; savedId?: string; usage: { inputTokens: number; outputTokens: number }; truncated?: boolean }
+              | { type: "complete"; analysis: BehaviourAnalysis; savedId?: string; usage: { inputTokens: number; outputTokens: number }; truncated?: boolean; rateLimitRemaining?: number }
               | { type: "error"; error: string };
 
             if (event.type === "chunk") {
               setAnalysisState((prev) => ({ ...prev, streamingText: prev.streamingText + event.text }));
             } else if (event.type === "complete") {
               setUsage(event.usage);
+              if (event.rateLimitRemaining !== undefined) setRateLimitRemaining(event.rateLimitRemaining);
               setAnalysisState({
                 status: "complete",
                 streamingText: "",
@@ -269,12 +294,26 @@ export default function Home() {
     setShowHistory(false);
   };
 
+  const handleBatchResult = (doc: BatchDoc) => {
+    setUsage(undefined);
+    setAnalysisState({
+      status: "complete",
+      streamingText: "",
+      analysis: doc.state.analysis,
+      error: null,
+      durationMs: doc.state.durationMs,
+      savedId: doc.state.savedId ?? null,
+    });
+    setShowHistory(false);
+  };
+
   const activeInputText =
     mode === "paste" ? pasteText : formatSourcesAsText(sources);
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Header />
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
 
       {/* First-run onboarding overlay */}
       {showWizard && (
@@ -413,6 +452,10 @@ export default function Home() {
                   )}
                 </>
               )}
+
+              {mode === "batch" && (
+                <BatchPanel onSelectResult={handleBatchResult} />
+              )}
             </div>
           </div>
 
@@ -437,19 +480,35 @@ export default function Home() {
                   </>
                 )}
               </div>
-              <button
-                onClick={() => setShowHistory((v) => !v)}
-                className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg transition-all ${
-                  showHistory
-                    ? "bg-brand-50 text-brand-600 hover:bg-brand-100"
-                    : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-                }`}
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                {showHistory ? "Back to results" : "History"}
-              </button>
+              <div className="flex items-center gap-2">
+                {rateLimitRemaining !== null && (
+                  <span
+                    title={`${rateLimitRemaining} analyses remaining this hour`}
+                    className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                      rateLimitRemaining <= 2
+                        ? "bg-red-50 text-red-600 border border-red-100"
+                        : rateLimitRemaining <= 5
+                        ? "bg-amber-50 text-amber-700 border border-amber-100"
+                        : "bg-gray-100 text-gray-500"
+                    }`}
+                  >
+                    {rateLimitRemaining} left
+                  </span>
+                )}
+                <button
+                  onClick={() => setShowHistory((v) => !v)}
+                  className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg transition-all ${
+                    showHistory
+                      ? "bg-brand-50 text-brand-600 hover:bg-brand-100"
+                      : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                  }`}
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {showHistory ? "Back to results" : "History"}
+                </button>
+              </div>
             </div>
 
             {/* Panel body */}
@@ -460,12 +519,14 @@ export default function Home() {
                   refreshKey={historyRefreshKey}
                 />
               ) : (
-                <AnalysisResults
-                  state={analysisState}
-                  inputText={activeInputText}
-                  usage={usage}
-                  onCancel={cancelAnalysis}
-                />
+                <ErrorBoundary>
+                  <AnalysisResults
+                    state={analysisState}
+                    inputText={activeInputText}
+                    usage={usage}
+                    onCancel={cancelAnalysis}
+                  />
+                </ErrorBoundary>
               )}
             </div>
           </div>

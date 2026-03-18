@@ -66,7 +66,7 @@ function waitForServer(port, timeout = 60_000) {
 
 let serverProcess = null;
 
-function startServer(env) {
+function startServer(env = {}) {
   // In packaged app, run the standalone server.js bundle
   // In dev, run `next dev`
   let serverCmd, serverArgs, serverCwd;
@@ -89,6 +89,9 @@ function startServer(env) {
     PORT: String(PORT),
     HOSTNAME: "127.0.0.1",
     NODE_ENV: DEV ? "development" : "production",
+    // Pass env file path so the Next.js server can read updated API keys without restart
+    SCRAPECORE_ENV_FILE: ENV_FILE,
+    SKIP_AUTH: "true",
   };
 
   serverProcess = spawn(serverCmd, serverArgs, {
@@ -201,6 +204,14 @@ ipcMain.handle("launch-app", (_event, key) => {
   createMainWindow();
 });
 
+// Apply a new API key immediately — server reads from file on next request
+ipcMain.handle("apply-api-key", (_event, key) => {
+  const stored = readStoredEnv();
+  stored.ANTHROPIC_API_KEY = key.trim();
+  writeStoredEnv(stored);
+  return true;
+});
+
 ipcMain.handle("open-external", (_event, url) => {
   shell.openExternal(url);
 });
@@ -209,14 +220,11 @@ ipcMain.handle("open-external", (_event, url) => {
 
 app.whenReady().then(() => {
   const stored = readStoredEnv();
-  const hasKey = !!stored.ANTHROPIC_API_KEY;
-
-  if (hasKey) {
-    startServer({ ANTHROPIC_API_KEY: stored.ANTHROPIC_API_KEY });
-    createMainWindow();
-  } else {
-    createSetupWindow();
-  }
+  // Always start immediately — no blocking setup screen.
+  // If no API key is configured, the web UI will prompt for it inline.
+  const env = stored.ANTHROPIC_API_KEY ? { ANTHROPIC_API_KEY: stored.ANTHROPIC_API_KEY } : {};
+  startServer(env);
+  createMainWindow();
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createMainWindow();

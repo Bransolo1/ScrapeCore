@@ -40,8 +40,13 @@ import { scoreRubric } from "@/lib/rubric";
 import { appendEvalLog } from "@/lib/evalLog";
 import { buildProjectMemoryBlock } from "@/lib/projectMemory";
 import { validateCSRF } from "@/lib/csrf";
+import { getApiKey } from "@/lib/getApiKey";
 
-const client = new Anthropic();
+function createClient(): Anthropic {
+  const apiKey = getApiKey();
+  if (!apiKey) throw Object.assign(new Error("No Anthropic API key configured. Add your key in Settings."), { code: "no_api_key" });
+  return new Anthropic({ apiKey });
+}
 
 function parseAnalysis(text: string): BehaviourAnalysis | null {
   let raw: unknown;
@@ -150,6 +155,11 @@ export async function POST(req: Request) {
     );
   }
 
+  // Fail early if no API key is configured — before touching auth/DB
+  if (!getApiKey()) {
+    return Response.json({ error: "No Anthropic API key configured. Add your key in Settings.", code: "no_api_key" }, { status: 503 });
+  }
+
   try {
     // Enforce authentication
     const authResult = await requireAuth();
@@ -188,10 +198,12 @@ export async function POST(req: Request) {
         ? SYSTEM_PROMPT + COMPETITOR_PROMPT_SUFFIX
         : SYSTEM_PROMPT;
 
+    const claudeClient = createClient();
+
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          const anthropicStream = client.messages.stream({
+          const anthropicStream = claudeClient.messages.stream({
             model: "claude-opus-4-6",
             max_tokens: 8192,
             system: systemPrompt,
@@ -227,7 +239,7 @@ export async function POST(req: Request) {
           if (analysis) {
             // Fallback clarification note when confidence is low
             if (analysis.confidence?.overall === "low") {
-              const note = await fetchClarificationNote(analysis, text, client);
+              const note = await fetchClarificationNote(analysis, text, claudeClient);
               if (note) analysis.clarification_note = note;
             }
 
@@ -304,6 +316,7 @@ export async function POST(req: Request) {
                 savedId,
                 usage: { inputTokens, outputTokens },
                 truncated: wasTruncated,
+                rateLimitRemaining: rateLimit.remaining,
               })
             );
           } else {
