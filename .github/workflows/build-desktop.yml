@@ -43,11 +43,12 @@ jobs:
           path: dist-desktop/ScrapeCore-Setup-*.exe
           retention-days: 30
 
-      # If triggered by a tag, also attach to the GitHub Release
       - name: Attach to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
+          draft: true
+          generate_release_notes: true
           files: dist-desktop/ScrapeCore-Setup-*.exe
 
   build-mac:
@@ -87,4 +88,47 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
+          draft: true
+          generate_release_notes: true
           files: dist-desktop/ScrapeCore-*.dmg
+
+  build-linux:
+    name: Linux AppImage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Build Next.js + copy standalone
+        run: npm run build:desktop
+
+      - name: Package Linux AppImage
+        run: npm run dist:linux
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload AppImage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ScrapeCore-Linux
+          path: dist-desktop/ScrapeCore-*.AppImage
+          retention-days: 30
+
+      - name: Attach to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          generate_release_notes: true
+          files: dist-desktop/ScrapeCore-*.AppImage

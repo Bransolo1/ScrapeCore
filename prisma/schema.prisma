@@ -5,7 +5,6 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -107,6 +106,13 @@ model AnalysisCorrection {
   correctedBy  String   @default("analyst")
 
   @@unique([analysisId, section, itemIndex])
+}
+
+model RateLimit {
+  id        String   @id           // identifier — IP address or userId
+  count     Int      @default(0)
+  resetAt   DateTime
+  updatedAt DateTime @updatedAt
 }
 
 model AuditLog {

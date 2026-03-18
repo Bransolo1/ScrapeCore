@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import type { DataType, BehaviourAnalysis, AnalysisState } from "@/lib/types";
-import { scanForPII } from "@/lib/pii";
+import BatchCompareView from "./BatchCompareView";
 
 export interface BatchDoc {
   id: string;
@@ -93,6 +93,7 @@ export default function BatchPanel({ onSelectResult }: BatchPanelProps) {
   const [docs, setDocs] = useState<BatchDoc[]>([newDoc(1), newDoc(2)]);
   const [activeId, setActiveId] = useState(docs[0].id);
   const [running, setRunning] = useState(false);
+  const [showCompare, setShowCompare] = useState(false);
   const actorRef = useRef<string>("");
 
   if (typeof window !== "undefined" && !actorRef.current) {
@@ -138,9 +139,11 @@ export default function BatchPanel({ onSelectResult }: BatchPanelProps) {
   const activeDoc = docs.find((d) => d.id === activeId) ?? docs[0];
   const pendingCount = docs.filter((d) => d.text.trim() && d.state.status === "idle").length;
   const doneCount = docs.filter((d) => d.state.status === "complete").length;
+  const canCompare = doneCount >= 2;
 
   return (
     <div className="space-y-4">
+      {showCompare && <BatchCompareView docs={docs} onClose={() => setShowCompare(false)} />}
       {/* Document tabs */}
       <div className="flex items-center gap-1 flex-wrap">
         {docs.map((doc) => (
@@ -234,9 +237,22 @@ export default function BatchPanel({ onSelectResult }: BatchPanelProps) {
 
       {/* Batch controls */}
       <div className="flex items-center justify-between pt-1 border-t border-gray-100">
-        <p className="text-xs text-gray-400">
-          {doneCount}/{docs.length} complete{pendingCount > 0 ? ` · ${pendingCount} pending` : ""}
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="text-xs text-gray-400">
+            {doneCount}/{docs.length} complete{pendingCount > 0 ? ` · ${pendingCount} pending` : ""}
+          </p>
+          {canCompare && (
+            <button
+              onClick={() => setShowCompare(true)}
+              className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700 hover:bg-brand-50 px-2.5 py-1 rounded-lg border border-brand-200 transition-colors"
+            >
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              Compare
+            </button>
+          )}
+        </div>
         <button
           onClick={runAll}
           disabled={running || pendingCount === 0}
