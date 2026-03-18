@@ -104,3 +104,4 @@ A **behavioural market intelligence platform** that converts qualitative text (i
 | 2026-03-18 | Initial codebase analysis complete. Writing migration plan. |
 | 2026-03-18 | Implemented all code changes for Vercel + Turso hosting. 12/12 tests pass, typecheck clean. |
 | 2026-03-18 | Added DEPLOY_GUIDE.md — plain English step-by-step deployment walkthrough. |
+| 2026-03-18 | Updated prisma.config.ts for Turso adapter support. Added /api/setup endpoint for terminal-free DB setup. Updated deploy guide to be fully terminal-free. |

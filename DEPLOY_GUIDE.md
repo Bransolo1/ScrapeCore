@@ -19,63 +19,33 @@ When we're done you'll have a URL like `https://scrapecore.vercel.app` that work
 
 ## Step 1: Get a Turso Account (the database)
 
-### 1a — Install the Turso command line tool
+### 1a — Sign up (no terminal needed!)
 
-Open your terminal (Terminal on Mac, PowerShell on Windows) and paste this:
+1. Go to **[turso.tech](https://turso.tech)**
+2. Click **Sign Up** → sign in with **GitHub** (free, no credit card)
 
-**Mac / Linux:**
-```bash
-curl -sSfL https://get.tur.so/install.sh | bash
-```
+### 1b — Create your database
 
-**Windows (PowerShell):**
-```powershell
-irm get.tur.so/install.ps1 | iex
-```
+1. Once logged in, click **Create Database**
+2. Name it `scrapecore`
+3. Pick the closest region to your users
+4. Click **Create**
 
-### 1b — Sign up
+### 1c — Get your connection details
 
-```bash
-turso auth signup
-```
+1. Click on your new `scrapecore` database
+2. You'll see a URL like `libsql://scrapecore-yourname.turso.io`
+   **Copy this. This is your DATABASE_URL.**
+3. Click **Generate Token** (or look for a "Create Token" / "..." menu)
+4. Create a **read-write** token
+5. Copy the long string it gives you (starts with `eyJ...`)
+   **Copy this. This is your TURSO_AUTH_TOKEN.**
 
-This opens your browser. Sign up with GitHub or email. Free. No credit card.
+Save both somewhere — you'll paste them into Vercel in Step 2.
 
-### 1c — Create your database
+### 1d — Database tables (automatic!)
 
-```bash
-turso db create scrapecore
-```
-
-Wait 5 seconds. Done.
-
-### 1d — Get your connection details
-
-Run these two commands and **save the output somewhere** (a text file, sticky note, whatever):
-
-```bash
-turso db show scrapecore --url
-```
-This gives you something like: `libsql://scrapecore-yourname.turso.io`
-**Save this. This is your DATABASE_URL.**
-
-```bash
-turso db tokens create scrapecore
-```
-This gives you a long string of random characters.
-**Save this. This is your TURSO_AUTH_TOKEN.**
-
-### 1e — Push the database tables
-
-Still in your terminal, `cd` into the ScrapeCore folder and run:
-
-```bash
-DATABASE_URL="libsql://scrapecore-yourname.turso.io" TURSO_AUTH_TOKEN="your-token-here" npx prisma db push
-```
-
-Replace the values with your actual ones from step 1d. You should see output ending with something like "Your database is now in sync with your Prisma schema."
-
-**That's it for the database. Never touch it again.**
+**You don't need a terminal for this.** After deploying to Vercel (Step 2), you'll hit a setup URL once and it creates all the tables automatically. Instructions in Step 3.
 
 ---
 
@@ -141,14 +111,41 @@ https://scrapecore.vercel.app
 
 ---
 
-## Step 3: Test It
+## Step 3: Set Up the Database Tables
 
-1. Log in with the account you just created
-2. Go to the main Analyse tab
-3. Paste some sample text (a product review, interview transcript, anything)
-4. Click **Run analysis**
-5. Wait 20-60 seconds
-6. You should see the full COM-B analysis results
+After Vercel deploys, you need to create the database tables once. No terminal needed — just visit a URL.
+
+1. Open your browser
+2. Go to: `https://YOUR-APP.vercel.app/api/setup`
+   - It will ask for authorization
+3. Add your `NEXTAUTH_SECRET` as a Bearer token. Easiest way:
+   - Open your browser's developer tools (F12) → Console tab
+   - Paste this (replace `YOUR-SECRET` with your actual NEXTAUTH_SECRET from Step 2c):
+   ```javascript
+   fetch('/api/setup', { headers: { 'Authorization': 'Bearer YOUR-SECRET' } }).then(r => r.json()).then(console.log)
+   ```
+4. You should see: `{ success: true, message: "All tables and indexes created..." }`
+
+**Or** use any API tool (Postman, curl on a friend's computer, etc.):
+```
+GET https://YOUR-APP.vercel.app/api/setup
+Authorization: Bearer YOUR-NEXTAUTH-SECRET
+```
+
+**This only needs to be done once. After that, never touch it again.**
+
+---
+
+## Step 4: Test It
+
+1. Go to `https://YOUR-APP.vercel.app`
+2. You should see the login/register page
+3. Register your first account — this becomes the admin
+4. Go to the main Analyse tab
+5. Paste some sample text (a product review, interview transcript, anything)
+6. Click **Run analysis**
+7. Wait 20-60 seconds
+8. You should see the full COM-B analysis results
 
 If that works, **you're live on the web**. Send the URL to anyone.
 
