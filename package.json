@@ -11,6 +11,7 @@
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
+    "postinstall": "prisma generate",
     "electron:dev": "concurrently \"next dev\" \"wait-on http://127.0.0.1:3000 && electron .\"",
     "build:next": "next build",
     "build:copy-standalone": "node scripts/copy-standalone.js",
