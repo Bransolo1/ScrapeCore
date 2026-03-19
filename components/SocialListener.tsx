@@ -12,6 +12,7 @@ import type {
   RssFeedItem,
   GooglePlayReview,
 } from "@/lib/scraper";
+import { smartExtract } from "@/lib/urlParsers";
 
 interface SocialListenerProps {
   onSourcesReady: (sources: Source[]) => void;
@@ -837,17 +838,25 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
         <div className="space-y-3 pt-3 border-t border-gray-100">
           <GroupLabel label="Trustpilot" />
           <div>
-            <label className={labelCls}>Company domain</label>
+            <label className={labelCls}>Company domain or Trustpilot URL</label>
             <input
               type="text"
               value={tpDomain}
-              onChange={(e) => setTpDomain(e.target.value)}
-              placeholder="bet365.com · williamhill.com · ig.com · etoro.com"
+              onChange={(e) => {
+                const { value } = smartExtract(e.target.value, "trustpilot");
+                setTpDomain(value);
+              }}
+              onPaste={(e) => {
+                const pasted = e.clipboardData.getData("text");
+                const { value, wasUrl } = smartExtract(pasted, "trustpilot");
+                if (wasUrl) { e.preventDefault(); setTpDomain(value); }
+              }}
+              placeholder="bet365.com or paste Trustpilot URL"
               className={inputCls}
               disabled={isFetching}
             />
             <p className="mt-1 text-xs text-gray-400">
-              Domain as shown in: trustpilot.com/review/<strong>bet365.com</strong>
+              Paste the full Trustpilot URL — domain is extracted automatically
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -874,17 +883,25 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
           <GroupLabel label="App Store (Apple)" />
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={labelCls}>App ID</label>
+              <label className={labelCls}>App ID or App Store URL</label>
               <input
                 type="text"
                 value={appId}
-                onChange={(e) => setAppId(e.target.value)}
-                placeholder="1234567890"
+                onChange={(e) => {
+                  const { value } = smartExtract(e.target.value, "appstore");
+                  setAppId(value);
+                }}
+                onPaste={(e) => {
+                  const pasted = e.clipboardData.getData("text");
+                  const { value, wasUrl } = smartExtract(pasted, "appstore");
+                  if (wasUrl) { e.preventDefault(); setAppId(value); }
+                }}
+                placeholder="1234567890 or paste App Store URL"
                 className={inputCls}
                 disabled={isFetching}
               />
               <p className="mt-1 text-xs text-gray-400">
-                From URL: apps.apple.com/.../id<strong>1234567890</strong>
+                Paste the full App Store URL — ID is extracted automatically
               </p>
             </div>
             <div>
@@ -965,20 +982,28 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
         <div className="space-y-3 pt-3 border-t border-gray-100">
           <GroupLabel label="G2 Reviews" />
           <div>
-            <label className={labelCls}>Product slug</label>
+            <label className={labelCls}>Product slug or G2 URL</label>
             <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-brand-500">
               <span className="px-3 py-2.5 text-xs text-gray-400 bg-gray-50 border-r border-gray-200 whitespace-nowrap">g2.com/products/</span>
               <input
                 type="text"
                 value={g2Slug}
-                onChange={(e) => setG2Slug(e.target.value)}
-                placeholder="salesforce-crm · hubspot · intercom"
+                onChange={(e) => {
+                  const { value } = smartExtract(e.target.value, "g2");
+                  setG2Slug(value);
+                }}
+                onPaste={(e) => {
+                  const pasted = e.clipboardData.getData("text");
+                  const { value, wasUrl } = smartExtract(pasted, "g2");
+                  if (wasUrl) { e.preventDefault(); setG2Slug(value); }
+                }}
+                placeholder="salesforce-crm or paste G2 URL"
                 className="flex-1 px-3 py-2.5 text-sm text-gray-800 placeholder-gray-400 bg-white focus:outline-none disabled:opacity-50"
                 disabled={isFetching}
               />
               <span className="px-3 py-2.5 text-xs text-gray-400 bg-gray-50 border-l border-gray-200">/reviews</span>
             </div>
-            <p className="mt-1 text-xs text-gray-400">From URL: g2.com/products/<strong>salesforce-crm</strong>/reviews</p>
+            <p className="mt-1 text-xs text-gray-400">Paste the full G2 URL — slug is extracted automatically</p>
           </div>
           <div className="flex items-center gap-3">
             <label className="text-xs font-medium text-gray-500 whitespace-nowrap">Pages</label>
@@ -1000,16 +1025,24 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
         <div className="space-y-3 pt-3 border-t border-gray-100">
           <GroupLabel label="Capterra Reviews" />
           <div>
-            <label className={labelCls}>Product slug or ID</label>
+            <label className={labelCls}>Product slug or Capterra URL</label>
             <input
               type="text"
               value={capterraSlug}
-              onChange={(e) => setCapterraSlug(e.target.value)}
-              placeholder="salesforce-crm · hubspot-crm · 12345"
+              onChange={(e) => {
+                const { value } = smartExtract(e.target.value, "capterra");
+                setCapterraSlug(value);
+              }}
+              onPaste={(e) => {
+                const pasted = e.clipboardData.getData("text");
+                const { value, wasUrl } = smartExtract(pasted, "capterra");
+                if (wasUrl) { e.preventDefault(); setCapterraSlug(value); }
+              }}
+              placeholder="salesforce-crm or paste Capterra URL"
               className={inputCls}
               disabled={isFetching}
             />
-            <p className="mt-1 text-xs text-gray-400">From URL: capterra.com/p/<strong>salesforce-crm</strong> or capterra.com/software/<strong>slug</strong></p>
+            <p className="mt-1 text-xs text-gray-400">Paste the full Capterra URL — slug is extracted automatically</p>
           </div>
           <div className="flex items-center gap-3">
             <label className="text-xs font-medium text-gray-500 whitespace-nowrap">Pages</label>
@@ -1096,17 +1129,25 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
         <div className="space-y-3 pt-3 border-t border-gray-100">
           <GroupLabel label="Google Play (Android)" />
           <div>
-            <label className={labelCls}>Package ID</label>
+            <label className={labelCls}>Package ID or Play Store URL</label>
             <input
               type="text"
               value={gpPackageId}
-              onChange={(e) => setGpPackageId(e.target.value)}
-              placeholder="com.bet365.android · com.williamhill.racing"
+              onChange={(e) => {
+                const { value } = smartExtract(e.target.value, "googleplay");
+                setGpPackageId(value);
+              }}
+              onPaste={(e) => {
+                const pasted = e.clipboardData.getData("text");
+                const { value, wasUrl } = smartExtract(pasted, "googleplay");
+                if (wasUrl) { e.preventDefault(); setGpPackageId(value); }
+              }}
+              placeholder="com.example.app or paste Play Store URL"
               className={inputCls}
               disabled={isFetching}
             />
             <p className="mt-1 text-xs text-gray-400">
-              Reverse-domain format — from Play Store URL <strong>id=com.example.app</strong>
+              Paste the full Play Store URL — package ID is extracted automatically
             </p>
           </div>
           <div className="grid grid-cols-2 gap-3">

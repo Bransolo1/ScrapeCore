@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { Source, TrustpilotReview, AppStoreReview, GooglePlayReview, WebSearchResult, RssFeedItem } from "@/lib/scraper";
+import { smartExtract } from "@/lib/urlParsers";
 
 interface CompanyFootprintProps {
   onSourcesReady: (sources: Source[]) => void;
@@ -330,28 +331,44 @@ export default function CompanyFootprint({ onSourcesReady }: CompanyFootprintPro
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">App store IDs (optional)</p>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">iOS App ID</label>
+            <label className="block text-xs font-medium text-gray-500 mb-1">iOS App ID or App Store URL</label>
             <input
               type="text"
               value={iosAppId}
-              onChange={(e) => setIosAppId(e.target.value)}
-              placeholder="1234567890"
+              onChange={(e) => {
+                const { value } = smartExtract(e.target.value, "appstore");
+                setIosAppId(value);
+              }}
+              onPaste={(e) => {
+                const pasted = e.clipboardData.getData("text");
+                const { value, wasUrl } = smartExtract(pasted, "appstore");
+                if (wasUrl) { e.preventDefault(); setIosAppId(value); }
+              }}
+              placeholder="1234567890 or paste App Store URL"
               className={inputCls}
               disabled={anyRunning}
             />
-            <p className="mt-1 text-xs text-gray-400">id<strong>…</strong> from App Store URL</p>
+            <p className="mt-1 text-xs text-gray-400">Paste the App Store URL — ID is extracted automatically</p>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Android package ID</label>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Android package or Play Store URL</label>
             <input
               type="text"
               value={androidPackage}
-              onChange={(e) => setAndroidPackage(e.target.value)}
-              placeholder="com.bet365.android"
+              onChange={(e) => {
+                const { value } = smartExtract(e.target.value, "googleplay");
+                setAndroidPackage(value);
+              }}
+              onPaste={(e) => {
+                const pasted = e.clipboardData.getData("text");
+                const { value, wasUrl } = smartExtract(pasted, "googleplay");
+                if (wasUrl) { e.preventDefault(); setAndroidPackage(value); }
+              }}
+              placeholder="com.example.app or paste Play Store URL"
               className={inputCls}
               disabled={anyRunning}
             />
-            <p className="mt-1 text-xs text-gray-400">reverse-domain format</p>
+            <p className="mt-1 text-xs text-gray-400">Paste the Play Store URL — package ID is extracted automatically</p>
           </div>
         </div>
         <div>

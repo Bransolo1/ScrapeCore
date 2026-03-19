@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import type { Source } from "@/lib/scraper";
 
 interface UrlScraperProps {
@@ -21,6 +21,8 @@ export default function UrlScraper({ onSourcesReady }: UrlScraperProps) {
   const [useFirecrawl, setUseFirecrawl] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
   const [statuses, setStatuses] = useState<FetchStatus[]>([]);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const parseUrls = (raw: string) =>
     raw
@@ -34,6 +36,68 @@ export default function UrlScraper({ onSourcesReady }: UrlScraperProps) {
           return false;
         }
       });
+
+  const appendUrls = useCallback((newText: string) => {
+    setUrlInput((prev) => {
+      const existing = prev.trim();
+      if (!existing) return newText;
+      return existing + "\n" + newText;
+    });
+  }, []);
+
+  const handleFilesRead = useCallback((files: FileList | File[]) => {
+    Array.from(files).forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const text = ev.target?.result;
+        if (typeof text === "string") {
+          // Extract URLs from text content (handles CSV, TXT, any text)
+          const urls = text
+            .split(/[\n,\r\t]+/)
+            .map((l) => l.trim().replace(/^["']|["']$/g, ""))
+            .filter((l) => {
+              try { return ["http:", "https:"].includes(new URL(l).protocol); } catch { return false; }
+            });
+          if (urls.length > 0) {
+            appendUrls(urls.join("\n"));
+          }
+        }
+      };
+      reader.readAsText(file);
+    });
+  }, [appendUrls]);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+
+    // Check for dropped files
+    if (e.dataTransfer.files.length > 0) {
+      handleFilesRead(e.dataTransfer.files);
+      return;
+    }
+
+    // Check for dropped text (e.g. dragged URL from browser)
+    const text = e.dataTransfer.getData("text/plain");
+    if (text) {
+      appendUrls(text);
+    }
+  }, [handleFilesRead, appendUrls]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  }, []);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) handleFilesRead(e.target.files);
+    e.target.value = "";
+  };
 
   const handleFetch = async () => {
     const urls = parseUrls(urlInput);
@@ -119,18 +183,56 @@ export default function UrlScraper({ onSourcesReady }: UrlScraperProps) {
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-gray-600 mb-1.5">URLs to scrape</label>
-        <textarea
-          value={urlInput}
-          onChange={(e) => setUrlInput(e.target.value)}
-          placeholder={`Paste one URL per line:\nhttps://www.g2.com/products/salesforce-crm/reviews\nhttps://techcrunch.com/2025/...\nhttps://competitor.com/pricing`}
-          className="w-full h-36 px-3.5 py-2.5 text-sm text-gray-800 placeholder-gray-400 bg-surface-50 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-brand-400/50 focus:border-brand-400 focus:bg-white font-mono"
-          disabled={isFetching}
-        />
+        <div className="flex items-center justify-between mb-1.5">
+          <label className="block text-sm font-medium text-gray-600">URLs to scrape</label>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => fileRef.current?.click()}
+              className="text-xs text-brand-600 hover:text-brand-700 font-medium flex items-center gap-1"
+              disabled={isFetching}
+            >
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              </svg>
+              Upload file
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".txt,.csv,.tsv,.md"
+              className="hidden"
+              onChange={handleFileUpload}
+              multiple
+            />
+          </div>
+        </div>
+        <div
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          className={`relative rounded-xl border-2 transition-colors ${
+            isDragOver
+              ? "border-brand-400 bg-brand-50/50 border-dashed"
+              : "border-transparent"
+          }`}
+        >
+          {isDragOver && (
+            <div className="absolute inset-0 flex items-center justify-center bg-brand-50/80 rounded-xl z-10 pointer-events-none">
+              <p className="text-sm font-medium text-brand-600">Drop URLs or files here</p>
+            </div>
+          )}
+          <textarea
+            value={urlInput}
+            onChange={(e) => setUrlInput(e.target.value)}
+            placeholder={`Paste URLs, drag a file, or drop links here\nhttps://www.g2.com/products/salesforce-crm/reviews\nhttps://techcrunch.com/2025/...\nhttps://competitor.com/pricing`}
+            className="w-full h-36 px-3.5 py-2.5 text-sm text-gray-800 placeholder-gray-400 bg-surface-50 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-brand-400/50 focus:border-brand-400 focus:bg-white font-mono"
+            disabled={isFetching}
+          />
+        </div>
         <p className="text-xs text-gray-400 mt-1">
           {hasUrls
             ? `${urls.length} URL${urls.length > 1 ? "s" : ""} detected · max 15`
-            : "Paste URLs — one per line"}
+            : "Paste, type, or drop a .txt/.csv file with URLs"}
         </p>
       </div>
 

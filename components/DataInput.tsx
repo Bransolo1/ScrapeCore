@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useMemo } from "react";
+import { useRef, useMemo, useState, useCallback } from "react";
 import type { DataType } from "@/lib/types";
 import { EXAMPLE_DATA } from "@/lib/prompts";
 import ProjectContextInput from "./ProjectContextInput";
@@ -26,6 +26,24 @@ const DATA_TYPES: { value: DataType; label: string; description: string }[] = [
   { value: "competitor", label: "Competitor intel", description: "Reviews, messaging, or UX signals from a competitor" },
 ];
 
+/** Try to auto-detect data type from file name or content */
+function inferDataType(filename: string, content: string): DataType | null {
+  const lower = filename.toLowerCase();
+  if (lower.includes("survey") || lower.includes("questionnaire")) return "survey";
+  if (lower.includes("interview") || lower.includes("transcript")) return "interviews";
+  if (lower.includes("review")) return "reviews";
+  if (lower.includes("social") || lower.includes("twitter") || lower.includes("reddit")) return "social";
+  if (lower.includes("competitor") || lower.includes("competitive")) return "competitor";
+
+  // Content-based detection
+  const sample = content.slice(0, 2000).toLowerCase();
+  if (sample.includes("q:") && sample.includes("a:")) return "interviews";
+  if (/\b(stars?|rating|★|☆)\b/.test(sample)) return "reviews";
+  if (/@\w|#\w|tweet|reddit|r\//.test(sample)) return "social";
+
+  return null;
+}
+
 export default function DataInput({
   text,
   dataType,
@@ -37,17 +55,69 @@ export default function DataInput({
   onSubmit,
 }: DataInputProps) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  const readFileAsText = useCallback((file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const result = ev.target?.result;
+        resolve(typeof result === "string" ? result : "");
+      };
+      reader.onerror = () => resolve("");
+      reader.readAsText(file);
+    });
+  }, []);
+
+  const handleFiles = useCallback(async (files: FileList | File[]) => {
+    const allText: string[] = [];
+    let detectedType: DataType | null = null;
+
+    for (const file of Array.from(files)) {
+      const content = await readFileAsText(file);
+      if (content.trim()) {
+        allText.push(content);
+        if (!detectedType) {
+          detectedType = inferDataType(file.name, content);
+        }
+      }
+    }
+
+    if (allText.length > 0) {
+      onTextChange(allText.join("\n\n---\n\n"));
+      if (detectedType) onDataTypeChange(detectedType);
+    }
+  }, [onTextChange, onDataTypeChange, readFileAsText]);
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const result = ev.target?.result;
-      if (typeof result === "string") onTextChange(result);
-    };
-    reader.readAsText(file);
+    if (e.target.files) handleFiles(e.target.files);
+    e.target.value = "";
   };
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+
+    if (e.dataTransfer.files.length > 0) {
+      handleFiles(e.dataTransfer.files);
+      return;
+    }
+
+    const droppedText = e.dataTransfer.getData("text/plain");
+    if (droppedText) {
+      onTextChange(text ? text + "\n\n" + droppedText : droppedText);
+    }
+  }, [handleFiles, onTextChange, text]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  }, []);
 
   const loadExample = () => {
     onTextChange(EXAMPLE_DATA.text);
@@ -108,32 +178,58 @@ export default function DataInput({
             <span className="text-gray-200">|</span>
             <button
               onClick={() => fileRef.current?.click()}
-              className="text-xs text-brand-600 hover:text-brand-700 font-medium"
+              className="text-xs text-brand-600 hover:text-brand-700 font-medium flex items-center gap-1"
               disabled={isLoading}
             >
-              Upload file
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              </svg>
+              Upload files
             </button>
             <input
               ref={fileRef}
               type="file"
-              accept=".txt,.csv,.md"
+              accept=".txt,.csv,.tsv,.md,.json,.xml,.log,.rtf"
               className="hidden"
               onChange={handleFile}
+              multiple
             />
           </div>
         </div>
-        <textarea
-          value={text}
-          onChange={(e) => onTextChange(e.target.value)}
-          placeholder="Paste your qualitative text here — survey responses, interview excerpts, reviews, or social listening exports. Separate individual responses with line breaks.
+        <div
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          className={`relative rounded-xl border-2 transition-colors ${
+            isDragOver
+              ? "border-brand-400 bg-brand-50/50 border-dashed"
+              : "border-transparent"
+          }`}
+        >
+          {isDragOver && (
+            <div className="absolute inset-0 flex items-center justify-center bg-brand-50/80 rounded-xl z-10 pointer-events-none">
+              <div className="text-center">
+                <svg className="w-8 h-8 text-brand-500 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                <p className="text-sm font-medium text-brand-600">Drop files or text here</p>
+                <p className="text-xs text-brand-400">.txt, .csv, .json, .md and more</p>
+              </div>
+            </div>
+          )}
+          <textarea
+            value={text}
+            onChange={(e) => onTextChange(e.target.value)}
+            placeholder="Paste text, drag files, or upload — survey responses, interview excerpts, reviews, or social exports.
 
 One response per line works best for the analysis."
-          className="w-full h-64 px-3.5 py-3 text-sm text-gray-800 placeholder-gray-400 bg-surface-50 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-brand-400/50 focus:border-brand-400 focus:bg-white font-mono leading-relaxed"
-          disabled={isLoading}
-        />
+            className="w-full h-64 px-3.5 py-3 text-sm text-gray-800 placeholder-gray-400 bg-surface-50 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-brand-400/50 focus:border-brand-400 focus:bg-white font-mono leading-relaxed"
+            disabled={isLoading}
+          />
+        </div>
         <div className="flex items-center justify-between mt-1.5">
           <p className="text-xs text-gray-400">
-            {wordCount > 0 ? `${wordCount.toLocaleString()} words · ${lineCount} text units` : "Paste or upload qualitative text to begin"}
+            {wordCount > 0 ? `${wordCount.toLocaleString()} words · ${lineCount} text units` : "Paste, drag, or upload files to begin"}
           </p>
           {wordCount > 0 && wordCount < 50 && (
             <p className="text-xs text-amber-500">Add more text for a reliable analysis</p>
