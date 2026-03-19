@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import type { Source, TrustpilotReview, AppStoreReview, GooglePlayReview, WebSearchResult, RssFeedItem } from "@/lib/scraper";
 import { smartExtract } from "@/lib/urlParsers";
+import CompanySearchBar from "./CompanySearchBar";
 import type { DiscoveryResult } from "./CompanySearchBar";
 
 interface CompanyFootprintProps {
@@ -137,6 +138,14 @@ export default function CompanyFootprint({ onSourcesReady, discovery }: CompanyF
     if (!iosAppId && discovery.appstore?.appId) setIosAppId(discovery.appstore.appId);
     if (!androidPackage && discovery.googleplay?.packageId) setAndroidPackage(discovery.googleplay.packageId);
   }, [discovery]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Prefill from inline CompanySearchBar discovery
+  const prefillFromDiscovery = useCallback((result: DiscoveryResult) => {
+    if (result.company) setCompanyName(result.company);
+    if (result.domain) setDomain(result.domain);
+    if (result.appstore?.appId) setIosAppId(result.appstore.appId);
+    if (result.googleplay?.packageId) setAndroidPackage(result.googleplay.packageId);
+  }, []);
 
   const [tasks, setTasks] = useState<Record<string, TaskState>>(INITIAL_TASKS);
   const [isRunning, setIsRunning] = useState(false);
@@ -311,6 +320,9 @@ export default function CompanyFootprint({ onSourcesReady, discovery }: CompanyF
 
   return (
     <div className="space-y-5">
+      {/* Company auto-discovery */}
+      <CompanySearchBar onDiscovery={prefillFromDiscovery} />
+
       {/* Company name + domain */}
       <div className="space-y-3">
         <div>

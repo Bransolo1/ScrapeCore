@@ -280,6 +280,15 @@ export default function SocialListener({ onSourcesReady, discovery, onDiscoveryC
   const [error, setError] = useState<string | null>(null);
   const [fetchedCount, setFetchedCount] = useState<number | null>(null);
 
+  // Per-source progress tracking
+  type TaskStatus = "idle" | "running" | "done" | "error";
+  interface TaskProgress { label: string; status: TaskStatus; count: number; error?: string }
+  const [taskProgress, setTaskProgress] = useState<Record<string, TaskProgress>>({});
+
+  const setTaskState = (key: string, update: Partial<TaskProgress>) => {
+    setTaskProgress((prev) => ({ ...prev, [key]: { ...prev[key], ...update } as TaskProgress }));
+  };
+
   const toggle = (id: SourceId) =>
     setActive((prev) => {
       const next = new Set(prev);
@@ -464,223 +473,206 @@ export default function SocialListener({ onSourcesReady, discovery, onDiscoveryC
     };
   }
 
-  // ─── Fetch handler ───────────────────────────────────────────────────────────
+  // ─── Fetch handler (parallel) ───────────────────────────────────────────────
 
   const handleFetch = async () => {
     if (!canSubmit) return;
     setIsFetching(true);
     setError(null);
     setFetchedCount(null);
+    setTaskProgress({});
 
     const allSources: Source[] = [];
     const allErrors: string[] = [];
+    const runners: Promise<void>[] = [];
 
-    try {
-      // 1. Social / news via /api/social
-      const socialSources = (["reddit", "hackernews", "gnews", "stocktwits"] as SourceId[]).filter(
-        (s) => active.has(s)
-      );
-      if (socialSources.length > 0) {
-        const res = await fetch("/api/social", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            query: query.trim() || undefined,
-            symbol: symbol.trim() || undefined,
-            subreddit: subreddit.trim() || undefined,
-            timeframe,
-            sort,
-            limit,
-            includeComments,
-            sources: socialSources,
-          }),
-        });
-        const data = (await res.json()) as {
-          items?: (RedditPost | HNItem | GNewsItem | StockTwitsMessage)[];
-          errors?: string[];
-          error?: string;
-        };
-        if (data.error) allErrors.push(data.error);
-        if (data.errors?.length) allErrors.push(...data.errors);
-        for (const item of data.items ?? []) allSources.push(socialItemToSource(item));
-      }
-
-      // 2. Trustpilot
-      if (active.has("trustpilot") && tpDomain.trim()) {
-        const res = await fetch("/api/sources/trustpilot", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ company: tpDomain.trim(), pages: tpPages }),
-        });
-        const data = (await res.json()) as {
-          reviews?: TrustpilotReview[];
-          errors?: string[];
-          error?: string;
-        };
-        if (data.error) allErrors.push(`Trustpilot: ${data.error}`);
-        if (data.errors?.length) allErrors.push(...data.errors.map((e) => `Trustpilot: ${e}`));
-        for (const r of data.reviews ?? []) allSources.push(trustpilotToSource(r, tpDomain.trim()));
-      }
-
-      // 3. App Store
-      if (active.has("appstore") && appId.trim()) {
-        const res = await fetch("/api/sources/appstore", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ appId: appId.trim(), country: appCountry, pages: appPages }),
-        });
-        const data = (await res.json()) as {
-          reviews?: AppStoreReview[];
-          errors?: string[];
-          error?: string;
-        };
-        if (data.error) allErrors.push(`App Store: ${data.error}`);
-        if (data.errors?.length) allErrors.push(...data.errors.map((e) => `App Store: ${e}`));
-        for (const r of data.reviews ?? []) allSources.push(appStoreToSource(r));
-      }
-
-      // 4. Google Play
-      if (active.has("googleplay") && gpPackageId.trim()) {
-        const res = await fetch("/api/sources/googleplay", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ packageId: gpPackageId.trim(), country: gpCountry, num: gpNum }),
-        });
-        const data = (await res.json()) as {
-          reviews?: GooglePlayReview[];
-          error?: string;
-        };
-        if (data.error) allErrors.push(`Google Play: ${data.error}`);
-        for (const r of data.reviews ?? []) allSources.push(googlePlayToSource(r));
-      }
-
-      // 5. RSS
-      if (active.has("rss") && rssUrls.trim()) {
-        const urls = rssUrls
-          .split(/[\n,]+/)
-          .map((u) => u.trim())
-          .filter(Boolean);
-        const res = await fetch("/api/sources/rss", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ urls }),
-        });
-        const data = (await res.json()) as {
-          items?: RssFeedItem[];
-          errors?: string[];
-          error?: string;
-        };
-        if (data.error) allErrors.push(`RSS: ${data.error}`);
-        if (data.errors?.length) allErrors.push(...data.errors.map((e) => `RSS: ${e}`));
-        for (const item of data.items ?? []) allSources.push(rssFeedItemToSource(item));
-      }
-
-      // 6. G2 Reviews
-      if (active.has("g2") && g2Slug.trim()) {
-        const res = await fetch("/api/sources/g2", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ slug: g2Slug.trim(), pages: g2Pages }),
-        });
-        const data = (await res.json()) as {
-          reviews?: Array<{ title: string; text: string; rating: number; author: string; date: string; url: string; pros?: string; cons?: string }>;
-          error?: string;
-          hint?: string;
-        };
-        if (data.error) allErrors.push(`G2: ${data.error}${data.hint ? " — " + data.hint : ""}`);
-        for (const r of data.reviews ?? []) {
-          const stars = "★".repeat(Math.round(r.rating)) + "☆".repeat(Math.max(0, 5 - Math.round(r.rating)));
-          const fullText = [r.pros ? `Pros: ${r.pros}` : "", r.cons ? `Cons: ${r.cons}` : "", r.text].filter(Boolean).join("\n");
-          allSources.push({
-            id: `g2-${r.date}-${r.title.slice(0, 10)}`,
-            title: r.title || `${r.rating}★ G2 review`,
-            text: fullText,
-            url: r.url,
-            wordCount: fullText.split(/\s+/).length,
-            source: "url",
-            meta: `G2 ${stars} · ${r.date.slice(0, 10)}`,
-            selected: true,
+    // 1. Social / news via /api/social (Reddit, HN, Google News, StockTwits)
+    const socialSources = (["reddit", "hackernews", "gnews", "stocktwits"] as SourceId[]).filter(
+      (s) => active.has(s)
+    );
+    if (socialSources.length > 0) {
+      const label = socialSources.map((s) => SOURCE_DEFS.find((d) => d.id === s)?.label).filter(Boolean).join(", ");
+      setTaskState("social", { label, status: "running", count: 0 });
+      runners.push((async () => {
+        try {
+          const res = await fetch("/api/social", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query: query.trim() || undefined, symbol: symbol.trim() || undefined, subreddit: subreddit.trim() || undefined, timeframe, sort, limit, includeComments, sources: socialSources }),
           });
+          const data = (await res.json()) as { items?: (RedditPost | HNItem | GNewsItem | StockTwitsMessage)[]; errors?: string[]; error?: string };
+          if (data.error) allErrors.push(data.error);
+          if (data.errors?.length) allErrors.push(...data.errors);
+          const items = (data.items ?? []).map(socialItemToSource);
+          allSources.push(...items);
+          setTaskState("social", { status: "done", count: items.length });
+        } catch (err) {
+          setTaskState("social", { status: "error", error: err instanceof Error ? err.message : "Failed" });
+          allErrors.push("Social sources: " + (err instanceof Error ? err.message : "Failed"));
         }
-      }
-
-      // 7. Capterra Reviews
-      if (active.has("capterra") && capterraSlug.trim()) {
-        const res = await fetch("/api/sources/capterra", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ slug: capterraSlug.trim(), pages: capterraPages }),
-        });
-        const data = (await res.json()) as {
-          reviews?: Array<{ title: string; text: string; pros: string; cons: string; rating: number; author: string; date: string; url: string }>;
-          error?: string;
-          hint?: string;
-        };
-        if (data.error) allErrors.push(`Capterra: ${data.error}${data.hint ? " — " + data.hint : ""}`);
-        for (const r of data.reviews ?? []) {
-          const stars = "★".repeat(Math.round(r.rating)) + "☆".repeat(Math.max(0, 5 - Math.round(r.rating)));
-          const fullText = [r.pros ? `Pros: ${r.pros}` : "", r.cons ? `Cons: ${r.cons}` : "", r.text].filter(Boolean).join("\n");
-          allSources.push({
-            id: `cap-${r.date}-${r.title.slice(0, 10)}`,
-            title: r.title || `${r.rating}★ Capterra review`,
-            text: fullText,
-            url: r.url,
-            wordCount: fullText.split(/\s+/).length,
-            source: "url",
-            meta: `Capterra ${stars} · ${r.date.slice(0, 10)}`,
-            selected: true,
-          });
-        }
-      }
-
-      // 8. Twitter/X via Perplexity
-      if (active.has("twitter") && twitterQuery.trim()) {
-        const res = await fetch("/api/sources/perplexity", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ query: twitterQuery.trim(), mode: "twitter", recency: twitterRecency }),
-        });
-        const data = (await res.json()) as { title?: string; text?: string; wordCount?: number; citations?: string[]; error?: string };
-        if (data.error) allErrors.push(`Twitter/X: ${data.error}`);
-        if (data.text) {
-          allSources.push({
-            id: `twitter-${Date.now()}`,
-            title: data.title ?? `Twitter/X — ${twitterQuery.trim()}`,
-            text: data.text,
-            url: data.citations?.[0] ?? "https://x.com",
-            wordCount: data.wordCount ?? 0,
-            source: "url",
-            meta: `Twitter/X · ${data.citations?.length ?? 0} citations`,
-            selected: true,
-          });
-        }
-      }
-
-      // 9. Perplexity Research
-      if (active.has("perplexity") && perplexityQuery.trim()) {
-        const res = await fetch("/api/sources/perplexity", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ query: perplexityQuery.trim(), mode: "research", recency: perplexityRecency }),
-        });
-        const data = (await res.json()) as { title?: string; text?: string; wordCount?: number; citations?: string[]; error?: string };
-        if (data.error) allErrors.push(`Perplexity: ${data.error}`);
-        if (data.text) {
-          allSources.push({
-            id: `perplexity-${Date.now()}`,
-            title: data.title ?? `Perplexity — ${perplexityQuery.trim()}`,
-            text: data.text,
-            url: data.citations?.[0] ?? "https://perplexity.ai",
-            wordCount: data.wordCount ?? 0,
-            source: "url",
-            meta: `Perplexity · ${data.citations?.length ?? 0} citations`,
-            selected: true,
-          });
-        }
-      }
-    } catch (err) {
-      allErrors.push(err instanceof Error ? err.message : "Network error");
+      })());
     }
+
+    // 2. Trustpilot
+    if (active.has("trustpilot") && tpDomain.trim()) {
+      setTaskState("trustpilot", { label: "Trustpilot", status: "running", count: 0 });
+      runners.push((async () => {
+        try {
+          const res = await fetch("/api/sources/trustpilot", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ company: tpDomain.trim(), pages: tpPages }) });
+          const data = (await res.json()) as { reviews?: TrustpilotReview[]; errors?: string[]; error?: string };
+          if (data.error) allErrors.push(`Trustpilot: ${data.error}`);
+          if (data.errors?.length) allErrors.push(...data.errors.map((e) => `Trustpilot: ${e}`));
+          const items = (data.reviews ?? []).map((r) => trustpilotToSource(r, tpDomain.trim()));
+          allSources.push(...items);
+          setTaskState("trustpilot", { status: "done", count: items.length });
+        } catch (err) {
+          setTaskState("trustpilot", { status: "error", error: err instanceof Error ? err.message : "Failed" });
+          allErrors.push("Trustpilot: " + (err instanceof Error ? err.message : "Failed"));
+        }
+      })());
+    }
+
+    // 3. App Store
+    if (active.has("appstore") && appId.trim()) {
+      setTaskState("appstore", { label: "App Store", status: "running", count: 0 });
+      runners.push((async () => {
+        try {
+          const res = await fetch("/api/sources/appstore", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ appId: appId.trim(), country: appCountry, pages: appPages }) });
+          const data = (await res.json()) as { reviews?: AppStoreReview[]; errors?: string[]; error?: string };
+          if (data.error) allErrors.push(`App Store: ${data.error}`);
+          if (data.errors?.length) allErrors.push(...data.errors.map((e) => `App Store: ${e}`));
+          const items = (data.reviews ?? []).map(appStoreToSource);
+          allSources.push(...items);
+          setTaskState("appstore", { status: "done", count: items.length });
+        } catch (err) {
+          setTaskState("appstore", { status: "error", error: err instanceof Error ? err.message : "Failed" });
+          allErrors.push("App Store: " + (err instanceof Error ? err.message : "Failed"));
+        }
+      })());
+    }
+
+    // 4. Google Play
+    if (active.has("googleplay") && gpPackageId.trim()) {
+      setTaskState("googleplay", { label: "Google Play", status: "running", count: 0 });
+      runners.push((async () => {
+        try {
+          const res = await fetch("/api/sources/googleplay", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ packageId: gpPackageId.trim(), country: gpCountry, num: gpNum }) });
+          const data = (await res.json()) as { reviews?: GooglePlayReview[]; error?: string };
+          if (data.error) allErrors.push(`Google Play: ${data.error}`);
+          const items = (data.reviews ?? []).map(googlePlayToSource);
+          allSources.push(...items);
+          setTaskState("googleplay", { status: "done", count: items.length });
+        } catch (err) {
+          setTaskState("googleplay", { status: "error", error: err instanceof Error ? err.message : "Failed" });
+          allErrors.push("Google Play: " + (err instanceof Error ? err.message : "Failed"));
+        }
+      })());
+    }
+
+    // 5. RSS
+    if (active.has("rss") && rssUrls.trim()) {
+      setTaskState("rss", { label: "RSS Feeds", status: "running", count: 0 });
+      runners.push((async () => {
+        try {
+          const urls = rssUrls.split(/[\n,]+/).map((u) => u.trim()).filter(Boolean);
+          const res = await fetch("/api/sources/rss", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ urls }) });
+          const data = (await res.json()) as { items?: RssFeedItem[]; errors?: string[]; error?: string };
+          if (data.error) allErrors.push(`RSS: ${data.error}`);
+          if (data.errors?.length) allErrors.push(...data.errors.map((e) => `RSS: ${e}`));
+          const items = (data.items ?? []).map(rssFeedItemToSource);
+          allSources.push(...items);
+          setTaskState("rss", { status: "done", count: items.length });
+        } catch (err) {
+          setTaskState("rss", { status: "error", error: err instanceof Error ? err.message : "Failed" });
+          allErrors.push("RSS: " + (err instanceof Error ? err.message : "Failed"));
+        }
+      })());
+    }
+
+    // 6. G2 Reviews
+    if (active.has("g2") && g2Slug.trim()) {
+      setTaskState("g2", { label: "G2 Reviews", status: "running", count: 0 });
+      runners.push((async () => {
+        try {
+          const res = await fetch("/api/sources/g2", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slug: g2Slug.trim(), pages: g2Pages }) });
+          const data = (await res.json()) as { reviews?: Array<{ title: string; text: string; rating: number; author: string; date: string; url: string; pros?: string; cons?: string }>; error?: string; hint?: string };
+          if (data.error) allErrors.push(`G2: ${data.error}${data.hint ? " — " + data.hint : ""}`);
+          const items: Source[] = (data.reviews ?? []).map((r) => {
+            const stars = "★".repeat(Math.round(r.rating)) + "☆".repeat(Math.max(0, 5 - Math.round(r.rating)));
+            const fullText = [r.pros ? `Pros: ${r.pros}` : "", r.cons ? `Cons: ${r.cons}` : "", r.text].filter(Boolean).join("\n");
+            return { id: `g2-${r.date}-${r.title.slice(0, 10)}`, title: r.title || `${r.rating}★ G2 review`, text: fullText, url: r.url, wordCount: fullText.split(/\s+/).length, source: "url" as const, meta: `G2 ${stars} · ${r.date.slice(0, 10)}`, selected: true };
+          });
+          allSources.push(...items);
+          setTaskState("g2", { status: "done", count: items.length });
+        } catch (err) {
+          setTaskState("g2", { status: "error", error: err instanceof Error ? err.message : "Failed" });
+          allErrors.push("G2: " + (err instanceof Error ? err.message : "Failed"));
+        }
+      })());
+    }
+
+    // 7. Capterra Reviews
+    if (active.has("capterra") && capterraSlug.trim()) {
+      setTaskState("capterra", { label: "Capterra", status: "running", count: 0 });
+      runners.push((async () => {
+        try {
+          const res = await fetch("/api/sources/capterra", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slug: capterraSlug.trim(), pages: capterraPages }) });
+          const data = (await res.json()) as { reviews?: Array<{ title: string; text: string; pros: string; cons: string; rating: number; author: string; date: string; url: string }>; error?: string; hint?: string };
+          if (data.error) allErrors.push(`Capterra: ${data.error}${data.hint ? " — " + data.hint : ""}`);
+          const items: Source[] = (data.reviews ?? []).map((r) => {
+            const stars = "★".repeat(Math.round(r.rating)) + "☆".repeat(Math.max(0, 5 - Math.round(r.rating)));
+            const fullText = [r.pros ? `Pros: ${r.pros}` : "", r.cons ? `Cons: ${r.cons}` : "", r.text].filter(Boolean).join("\n");
+            return { id: `cap-${r.date}-${r.title.slice(0, 10)}`, title: r.title || `${r.rating}★ Capterra review`, text: fullText, url: r.url, wordCount: fullText.split(/\s+/).length, source: "url" as const, meta: `Capterra ${stars} · ${r.date.slice(0, 10)}`, selected: true };
+          });
+          allSources.push(...items);
+          setTaskState("capterra", { status: "done", count: items.length });
+        } catch (err) {
+          setTaskState("capterra", { status: "error", error: err instanceof Error ? err.message : "Failed" });
+          allErrors.push("Capterra: " + (err instanceof Error ? err.message : "Failed"));
+        }
+      })());
+    }
+
+    // 8. Twitter/X via Perplexity
+    if (active.has("twitter") && twitterQuery.trim()) {
+      setTaskState("twitter", { label: "Twitter / X", status: "running", count: 0 });
+      runners.push((async () => {
+        try {
+          const res = await fetch("/api/sources/perplexity", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ query: twitterQuery.trim(), mode: "twitter", recency: twitterRecency }) });
+          const data = (await res.json()) as { title?: string; text?: string; wordCount?: number; citations?: string[]; error?: string };
+          if (data.error) allErrors.push(`Twitter/X: ${data.error}`);
+          if (data.text) {
+            allSources.push({ id: `twitter-${Date.now()}`, title: data.title ?? `Twitter/X — ${twitterQuery.trim()}`, text: data.text, url: data.citations?.[0] ?? "https://x.com", wordCount: data.wordCount ?? 0, source: "url", meta: `Twitter/X · ${data.citations?.length ?? 0} citations`, selected: true });
+          }
+          setTaskState("twitter", { status: "done", count: data.text ? 1 : 0 });
+        } catch (err) {
+          setTaskState("twitter", { status: "error", error: err instanceof Error ? err.message : "Failed" });
+          allErrors.push("Twitter/X: " + (err instanceof Error ? err.message : "Failed"));
+        }
+      })());
+    }
+
+    // 9. Perplexity Research
+    if (active.has("perplexity") && perplexityQuery.trim()) {
+      setTaskState("perplexity", { label: "Perplexity Research", status: "running", count: 0 });
+      runners.push((async () => {
+        try {
+          const res = await fetch("/api/sources/perplexity", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ query: perplexityQuery.trim(), mode: "research", recency: perplexityRecency }) });
+          const data = (await res.json()) as { title?: string; text?: string; wordCount?: number; citations?: string[]; error?: string };
+          if (data.error) allErrors.push(`Perplexity: ${data.error}`);
+          if (data.text) {
+            allSources.push({ id: `perplexity-${Date.now()}`, title: data.title ?? `Perplexity — ${perplexityQuery.trim()}`, text: data.text, url: data.citations?.[0] ?? "https://perplexity.ai", wordCount: data.wordCount ?? 0, source: "url", meta: `Perplexity · ${data.citations?.length ?? 0} citations`, selected: true });
+          }
+          setTaskState("perplexity", { status: "done", count: data.text ? 1 : 0 });
+        } catch (err) {
+          setTaskState("perplexity", { status: "error", error: err instanceof Error ? err.message : "Failed" });
+          allErrors.push("Perplexity: " + (err instanceof Error ? err.message : "Failed"));
+        }
+      })());
+    }
+
+    // Run all source fetches in parallel
+    await Promise.allSettled(runners);
 
     setFetchedCount(allSources.length);
     if (allErrors.length) setError(allErrors.join(" · "));
@@ -1262,6 +1254,41 @@ export default function SocialListener({ onSourcesReady, discovery, onDiscoveryC
         )}
       </button>
 
+      {/* Per-source progress */}
+      {Object.keys(taskProgress).length > 0 && (
+        <div className="space-y-1.5 pt-2">
+          {Object.entries(taskProgress).map(([key, task]) => (
+            <div key={key} className="flex items-center gap-2.5">
+              {task.status === "running" && (
+                <svg className="w-3.5 h-3.5 animate-spin text-brand-500 shrink-0" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              )}
+              {task.status === "done" && (
+                <svg className="w-3.5 h-3.5 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+              {task.status === "error" && (
+                <svg className="w-3.5 h-3.5 text-amber-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              )}
+              <span className={`text-xs flex-1 ${task.status === "error" ? "text-amber-600" : "text-gray-600"}`}>
+                {task.label}
+              </span>
+              {task.status === "done" && task.count > 0 && (
+                <span className="text-xs text-emerald-600 font-medium">{task.count}</span>
+              )}
+              {task.status === "error" && task.error && (
+                <span className="text-xs text-amber-500 truncate max-w-32">{task.error}</span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
       {error && (
         <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 leading-relaxed">
           {error}
@@ -1270,7 +1297,7 @@ export default function SocialListener({ onSourcesReady, discovery, onDiscoveryC
 
       {fetchedCount !== null && !isFetching && (
         <p className="text-xs text-emerald-600 font-medium">
-          ✓ {fetchedCount} items collected — scroll down to review and analyse
+          {fetchedCount} items collected — scroll down to review and analyse
         </p>
       )}
     </div>

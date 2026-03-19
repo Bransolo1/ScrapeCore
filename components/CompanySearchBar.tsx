@@ -59,9 +59,10 @@ export default function CompanySearchBar({ onDiscovery }: CompanySearchBarProps)
     if (result) onDiscovery(result);
   }, [result, onDiscovery]);
 
-  // Count what was found
+  // Count what was found, not found, or failed
   const found: string[] = [];
   const notFound: string[] = [];
+  const searchFailed: string[] = [];
   if (result) {
     if (result.reddit.subreddits.length > 0) found.push(`Reddit (${result.reddit.subreddits.length} subs)`);
     else notFound.push("Reddit subs");
@@ -70,8 +71,13 @@ export default function CompanySearchBar({ onDiscovery }: CompanySearchBarProps)
       if (key === "reddit") continue; // handled above
       const entry = result[key as keyof DiscoveryResult];
       if (entry && typeof entry === "object" && "found" in entry) {
-        if (entry.found) found.push(label);
-        else notFound.push(label);
+        if (entry.found) {
+          found.push(label);
+        } else if ("searchFailed" in entry && entry.searchFailed) {
+          searchFailed.push(label);
+        } else {
+          notFound.push(label);
+        }
       }
     }
   }
@@ -154,6 +160,21 @@ export default function CompanySearchBar({ onDiscovery }: CompanySearchBarProps)
             </div>
           )}
 
+          {/* Search failed (DDG blocked/timeout) */}
+          {searchFailed.length > 0 && (
+            <div className="flex items-start gap-2">
+              <svg className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div>
+                <p className="text-xs font-medium text-amber-600">Search unavailable</p>
+                <p className="text-xs text-amber-500 mt-0.5">
+                  {searchFailed.join(" · ")} — try entering manually
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Reddit subreddits detail */}
           {result.reddit.subreddits.length > 0 && (
             <div className="flex items-center gap-1.5 flex-wrap">
@@ -172,6 +193,11 @@ export default function CompanySearchBar({ onDiscovery }: CompanySearchBarProps)
               iOS: <span className="font-medium text-gray-700">{result.appstore.appName}</span>
               <span className="text-gray-300 ml-1">({result.appstore.appId})</span>
             </p>
+          )}
+
+          {/* Cached indicator */}
+          {result.cached && (
+            <p className="text-[10px] text-gray-400">Cached result — search again for fresh data</p>
           )}
 
           {/* Action button */}

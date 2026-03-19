@@ -23,6 +23,7 @@ async function fetchPerplexityIntel(
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
+      signal: AbortSignal.timeout(60_000),
       body: JSON.stringify({
         model: "sonar",
         messages: [
@@ -113,7 +114,11 @@ export async function GET(req: Request) {
         }
 
         // Call the analyze API internally
-        const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+        const baseUrl = process.env.NEXTAUTH_URL;
+        if (!baseUrl) {
+          results.push({ id: monitor.id, name: monitor.name, success: false, error: "NEXTAUTH_URL not configured" });
+          continue;
+        }
         const analyzeRes = await fetch(`${baseUrl}/api/analyze`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },

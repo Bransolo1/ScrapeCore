@@ -10,6 +10,30 @@
 
 import { requireAuth } from "@/lib/apiAuth";
 
+// ─── Discovery cache (24h TTL, max 500 entries) ─────────────────────────────
+
+const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+const CACHE_MAX = 500;
+const discoveryCache = new Map<string, { result: DiscoveryResult; expiresAt: number }>();
+
+function getCached(company: string): DiscoveryResult | null {
+  const key = company.toLowerCase().trim();
+  const entry = discoveryCache.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) { discoveryCache.delete(key); return null; }
+  return entry.result;
+}
+
+function setCache(company: string, result: DiscoveryResult) {
+  const key = company.toLowerCase().trim();
+  // Evict oldest if at capacity
+  if (discoveryCache.size >= CACHE_MAX) {
+    const oldest = discoveryCache.keys().next().value;
+    if (oldest !== undefined) discoveryCache.delete(oldest);
+  }
+  discoveryCache.set(key, { result, expiresAt: Date.now() + CACHE_TTL });
+}
+
 // ─── DuckDuckGo search helper ───────────────────────────────────────────────
 
 const DDG_HEADERS = {
@@ -19,28 +43,38 @@ const DDG_HEADERS = {
   "Accept-Language": "en-GB,en;q=0.9",
 };
 
-async function ddgSearch(query: string): Promise<string[]> {
-  try {
-    const res = await fetch(
-      `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`,
-      { headers: DDG_HEADERS, signal: AbortSignal.timeout(10_000) }
-    );
-    if (!res.ok) return [];
-    const html = await res.text();
+async function ddgSearch(query: string, retries = 1): Promise<{ urls: string[]; failed: boolean }> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(
+        `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`,
+        { headers: DDG_HEADERS, signal: AbortSignal.timeout(10_000) }
+      );
+      if (!res.ok) {
+        if (attempt < retries) { await new Promise((r) => setTimeout(r, 2000)); continue; }
+        return { urls: [], failed: true };
+      }
+      const html = await res.text();
 
-    // Extract URLs from DDG redirect links
-    const urls: string[] = [];
-    const re = /uddg=([^&"]+)/g;
-    let m: RegExpExecArray | null;
-    while ((m = re.exec(html)) !== null) {
-      try {
-        urls.push(decodeURIComponent(m[1]));
-      } catch { /* skip malformed */ }
+      const urls: string[] = [];
+      const re = /uddg=([^&"]+)/g;
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(html)) !== null) {
+        try { urls.push(decodeURIComponent(m[1])); } catch { /* skip malformed */ }
+      }
+      return { urls, failed: false };
+    } catch {
+      if (attempt < retries) { await new Promise((r) => setTimeout(r, 2000)); continue; }
+      return { urls: [], failed: true };
     }
-    return urls;
-  } catch {
-    return [];
   }
+  return { urls: [], failed: true };
+}
+
+// Legacy wrapper for existing callers
+async function ddgSearchUrls(query: string): Promise<string[]> {
+  const { urls } = await ddgSearch(query);
+  return urls;
 }
 
 // ─── Platform-specific discovery functions ───────────────────────────────────
@@ -70,13 +104,13 @@ async function discoverReddit(company: string): Promise<{ subreddits: string[]; 
   }
 }
 
-async function discoverTrustpilot(company: string): Promise<{ domain: string | null; found: boolean }> {
-  const urls = await ddgSearch(`"${company}" site:trustpilot.com/review`);
+async function discoverTrustpilot(company: string): Promise<{ domain: string | null; found: boolean; searchFailed?: boolean }> {
+  const { urls, failed } = await ddgSearch(`"${company}" site:trustpilot.com/review`);
   for (const url of urls) {
     const match = url.match(/trustpilot\.com\/review\/([a-zA-Z0-9.-]+)/i);
     if (match) return { domain: match[1], found: true };
   }
-  return { domain: null, found: false };
+  return { domain: null, found: false, searchFailed: failed };
 }
 
 async function discoverAppStore(company: string, country = "gb"): Promise<{
@@ -116,55 +150,50 @@ async function discoverGooglePlay(company: string): Promise<{
   packageId: string | null;
   appName: string | null;
   found: boolean;
+  searchFailed?: boolean;
 }> {
-  const urls = await ddgSearch(`"${company}" app site:play.google.com/store/apps/details`);
+  const { urls, failed } = await ddgSearch(`"${company}" app site:play.google.com/store/apps/details`);
   for (const url of urls) {
     const match = url.match(/play\.google\.com\/store\/apps\/details\?.*?id=([a-zA-Z0-9_.]+)/i);
-    if (match) {
-      // Extract app name from URL or return package ID as name
-      return { packageId: match[1], appName: null, found: true };
-    }
+    if (match) return { packageId: match[1], appName: null, found: true };
   }
-  return { packageId: null, appName: null, found: false };
+  return { packageId: null, appName: null, found: false, searchFailed: failed };
 }
 
-async function discoverG2(company: string): Promise<{ slug: string | null; found: boolean }> {
-  const urls = await ddgSearch(`"${company}" site:g2.com/products`);
+async function discoverG2(company: string): Promise<{ slug: string | null; found: boolean; searchFailed?: boolean }> {
+  const { urls, failed } = await ddgSearch(`"${company}" site:g2.com/products`);
   for (const url of urls) {
     const match = url.match(/g2\.com\/products\/([a-zA-Z0-9-]+)/i);
     if (match && match[1] !== "best") return { slug: match[1], found: true };
   }
-  return { slug: null, found: false };
+  return { slug: null, found: false, searchFailed: failed };
 }
 
-async function discoverCapterra(company: string): Promise<{ slug: string | null; found: boolean }> {
-  const urls = await ddgSearch(`"${company}" reviews site:capterra.com`);
+async function discoverCapterra(company: string): Promise<{ slug: string | null; found: boolean; searchFailed?: boolean }> {
+  const { urls, failed } = await ddgSearch(`"${company}" reviews site:capterra.com`);
   for (const url of urls) {
-    // Pattern: /p/123456/slug or /software/slug
     const match = url.match(/capterra\.com\/(?:p\/\d+\/|software\/)([a-zA-Z0-9-]+)/i);
     if (match) return { slug: match[1], found: true };
-    // Pattern: /reviews/12345/slug
     const match2 = url.match(/capterra\.com\/reviews\/\d+\/([a-zA-Z0-9-]+)/i);
     if (match2) return { slug: match2[1], found: true };
   }
-  return { slug: null, found: false };
+  return { slug: null, found: false, searchFailed: failed };
 }
 
-async function discoverStockTwits(company: string): Promise<{ symbol: string | null; found: boolean }> {
-  const urls = await ddgSearch(`"${company}" site:stocktwits.com/symbol`);
+async function discoverStockTwits(company: string): Promise<{ symbol: string | null; found: boolean; searchFailed?: boolean }> {
+  const { urls, failed } = await ddgSearch(`"${company}" site:stocktwits.com/symbol`);
   for (const url of urls) {
     const match = url.match(/stocktwits\.com\/symbol\/([A-Z0-9.]+)/i);
     if (match) return { symbol: match[1].toUpperCase(), found: true };
   }
-  return { symbol: null, found: false };
+  return { symbol: null, found: false, searchFailed: failed };
 }
 
 async function discoverDomain(company: string): Promise<string | null> {
-  const urls = await ddgSearch(`"${company}" official website`);
+  const { urls } = await ddgSearch(`"${company}" official website`);
   for (const url of urls) {
     try {
       const u = new URL(url);
-      // Skip social/review/search sites
       const skip = ["google.", "facebook.", "twitter.", "linkedin.", "wikipedia.", "youtube.",
         "trustpilot.", "g2.", "capterra.", "reddit.", "duckduckgo.", "bing."];
       if (skip.some((s) => u.hostname.includes(s))) continue;
@@ -180,18 +209,20 @@ export interface DiscoveryResult {
   company: string;
   domain: string | null;
   reddit: { subreddits: string[]; query: string };
-  trustpilot: { domain: string | null; found: boolean };
+  trustpilot: { domain: string | null; found: boolean; searchFailed?: boolean };
   appstore: { appId: string | null; appName: string | null; found: boolean };
-  googleplay: { packageId: string | null; appName: string | null; found: boolean };
-  g2: { slug: string | null; found: boolean };
-  capterra: { slug: string | null; found: boolean };
-  stocktwits: { symbol: string | null; found: boolean };
+  googleplay: { packageId: string | null; appName: string | null; found: boolean; searchFailed?: boolean };
+  g2: { slug: string | null; found: boolean; searchFailed?: boolean };
+  capterra: { slug: string | null; found: boolean; searchFailed?: boolean };
+  stocktwits: { symbol: string | null; found: boolean; searchFailed?: boolean };
   queries: {
     hackernews: string;
     googlenews: string;
     twitter: string;
     perplexity: string;
   };
+  searchErrors?: string[];
+  cached?: boolean;
 }
 
 // ─── Route handler ──────────────────────────────────────────────────────────
@@ -210,6 +241,14 @@ export async function POST(req: Request) {
   const company = typeof body.company === "string" ? body.company.trim() : "";
   if (!company) {
     return Response.json({ error: "Company name is required" }, { status: 400 });
+  }
+
+  // Check cache first
+  const cached = getCached(company);
+  if (cached) {
+    return Response.json({ ...cached, cached: true }, {
+      headers: { "Cache-Control": "private, max-age=86400" },
+    });
   }
 
   // Run all discoveries in parallel
@@ -235,6 +274,14 @@ export async function POST(req: Request) {
 
   const domain = typeof autoDetectedDomain === "string" ? autoDetectedDomain : null;
 
+  // Collect search errors for transparency
+  const searchErrors: string[] = [];
+  if (trustpilot.searchFailed) searchErrors.push("Trustpilot search failed");
+  if (googleplay.searchFailed) searchErrors.push("Google Play search failed");
+  if (g2.searchFailed) searchErrors.push("G2 search failed");
+  if (capterra.searchFailed) searchErrors.push("Capterra search failed");
+  if (stocktwits.searchFailed) searchErrors.push("StockTwits search failed");
+
   const result: DiscoveryResult = {
     company,
     domain,
@@ -251,7 +298,13 @@ export async function POST(req: Request) {
       twitter: `${company} review OR problem OR experience`,
       perplexity: `${company} user reviews customer feedback complaints praise`,
     },
+    searchErrors: searchErrors.length > 0 ? searchErrors : undefined,
   };
 
-  return Response.json(result);
+  // Cache the result
+  setCache(company, result);
+
+  return Response.json(result, {
+    headers: { "Cache-Control": "private, max-age=86400" },
+  });
 }
