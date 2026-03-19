@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import type {
   Source,
   RedditPost,
@@ -13,6 +13,8 @@ import type {
   GooglePlayReview,
 } from "@/lib/scraper";
 import { smartExtract } from "@/lib/urlParsers";
+import CompanySearchBar from "./CompanySearchBar";
+import type { DiscoveryResult } from "./CompanySearchBar";
 
 interface SocialListenerProps {
   onSourcesReady: (sources: Source[]) => void;
@@ -282,6 +284,39 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
+
+  // ─── Auto-discovery prefill ─────────────────────────────────────────────────
+
+  const prefillFromDiscovery = useCallback((result: DiscoveryResult) => {
+    const toActivate = new Set<SourceId>();
+
+    // Always activate query-based sources
+    toActivate.add("reddit");
+    toActivate.add("hackernews");
+    toActivate.add("gnews");
+
+    // Activate discovered review sources
+    if (result.trustpilot?.found) toActivate.add("trustpilot");
+    if (result.appstore?.found) toActivate.add("appstore");
+    if (result.googleplay?.found) toActivate.add("googleplay");
+    if (result.g2?.found) toActivate.add("g2");
+    if (result.capterra?.found) toActivate.add("capterra");
+    if (result.stocktwits?.found) toActivate.add("stocktwits");
+
+    setActive(toActivate);
+
+    // Prefill all fields
+    setQuery(result.reddit.query);
+    if (result.reddit.subreddits[0]) setSubreddit(result.reddit.subreddits[0]);
+    if (result.trustpilot.domain) setTpDomain(result.trustpilot.domain);
+    if (result.appstore.appId) setAppId(result.appstore.appId);
+    if (result.googleplay.packageId) setGpPackageId(result.googleplay.packageId);
+    if (result.g2.slug) setG2Slug(result.g2.slug);
+    if (result.capterra.slug) setCapterraSlug(result.capterra.slug);
+    if (result.stocktwits.symbol) setSymbol(result.stocktwits.symbol);
+    if (result.queries.twitter) setTwitterQuery(result.queries.twitter);
+    if (result.queries.perplexity) setPerplexityQuery(result.queries.perplexity);
+  }, []);
 
   const needsQuery = active.has("reddit") || active.has("hackernews") || active.has("gnews");
   const hasSocialSearch =
@@ -667,6 +702,9 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
 
   return (
     <div className="space-y-5">
+      {/* Company auto-discovery */}
+      <CompanySearchBar onDiscovery={prefillFromDiscovery} />
+
       {/* Source toggles */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
