@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { resolveApiKey } from "@/lib/resolveApiKey";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -7,10 +8,9 @@ const PERPLEXITY_API = "https://api.perplexity.ai/chat/completions";
 
 async function fetchPerplexityIntel(
   competitorName: string,
-  extraKeywords: string[]
+  extraKeywords: string[],
+  apiKey: string
 ): Promise<string | null> {
-  const apiKey = process.env.PERPLEXITY_API_KEY;
-  if (!apiKey) return null;
 
   const keywordsStr =
     extraKeywords.length > 0 ? ` ${extraKeywords.join(" ")}` : "";
@@ -88,9 +88,18 @@ export async function GET(req: Request) {
     for (const monitor of dueMonitors) {
       try {
         const keywords: string[] = JSON.parse(monitor.keywords ?? "[]");
+
+        // Resolve Perplexity key for the monitor's owner
+        const pplxKey = await resolveApiKey("perplexity", monitor.userId ?? undefined);
+        if (!pplxKey) {
+          results.push({ id: monitor.id, name: monitor.name, success: false, error: "No Perplexity API key" });
+          continue;
+        }
+
         const intel = await fetchPerplexityIntel(
           monitor.competitorName,
-          keywords
+          keywords,
+          pplxKey.key
         );
 
         if (!intel) {

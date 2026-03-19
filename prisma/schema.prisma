@@ -18,6 +18,22 @@ model User {
   organisation   Organisation? @relation(fields: [organisationId], references: [id])
   analyses       Analysis[]
   auditLogs      AuditLog[]
+  apiKeys        UserApiKey[]
+}
+
+model UserApiKey {
+  id        String   @id @default(cuid())
+  userId    String
+  provider  String   // anthropic | firecrawl | perplexity
+  cipher    String   // AES-256-GCM encrypted key
+  iv        String   // initialisation vector (hex)
+  tag       String   // GCM auth tag (hex)
+  hint      String   // last 4 chars for UI display
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
 }
 
 model Organisation {

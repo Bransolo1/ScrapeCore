@@ -49,15 +49,21 @@ function buildPrompt(query: string, mode: string): PerplexityMessage[] {
   ];
 }
 
-export async function POST(req: Request) {
-  const apiKey = process.env.PERPLEXITY_API_KEY;
+import { requireAuth } from "@/lib/apiAuth";
+import { resolveApiKey } from "@/lib/resolveApiKey";
 
-  if (!apiKey) {
+export async function POST(req: Request) {
+  const auth = await requireAuth();
+  if (auth instanceof Response) return auth;
+
+  const resolved = await resolveApiKey("perplexity", auth.userId);
+  if (!resolved) {
     return Response.json(
-      { error: "PERPLEXITY_API_KEY is not configured in environment variables." },
+      { error: "No Perplexity API key configured. Add your key in Settings.", code: "no_api_key" },
       { status: 503 }
     );
   }
+  const apiKey = resolved.key;
 
   let body: { query?: string; mode?: string; recency?: string };
   try {
