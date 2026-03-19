@@ -16,6 +16,7 @@ import BatchPanel from "@/components/BatchPanel";
 import type { BatchDoc } from "@/components/BatchPanel";
 import type { AnalysisState, DataType, BehaviourAnalysis } from "@/lib/types";
 import type { Source } from "@/lib/scraper";
+import type { DiscoveryResult } from "@/components/CompanySearchBar";
 import { formatSourcesAsText } from "@/lib/scraper";
 import { scanForPII, redactPII } from "@/lib/pii";
 import type { PIIScanResult } from "@/lib/pii";
@@ -118,6 +119,13 @@ export default function Home() {
 
   // Scrape / social sources
   const [sources, setSources] = useState<Source[]>([]);
+
+  // Cross-tab discovery result (shared between social + footprint)
+  const [discoveryResult, setDiscoveryResult] = useState<DiscoveryResult | null>(null);
+
+  // Quick Research bar state
+  const [quickCompany, setQuickCompany] = useState("");
+  const [quickSearching, setQuickSearching] = useState(false);
 
   // Analysis state
   const [analysisState, setAnalysisState] = useState<AnalysisState>(INITIAL_STATE);
@@ -295,6 +303,25 @@ export default function Home() {
 
   const clearSources = () => setSources([]);
 
+  const handleQuickResearch = async () => {
+    const trimmed = quickCompany.trim();
+    if (!trimmed || quickSearching) return;
+    setQuickSearching(true);
+    try {
+      const res = await fetch("/api/discover", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ company: trimmed }),
+      });
+      if (!res.ok) return;
+      const data = (await res.json()) as DiscoveryResult;
+      setDiscoveryResult(data);
+      setMode("social"); // Switch to social tab — useEffect in SocialListener will auto-prefill
+    } finally {
+      setQuickSearching(false);
+    }
+  };
+
   const handleLoadFromHistory = (analysis: BehaviourAnalysis, dt: DataType, savedId?: string) => {
     setUsage(undefined);
     setAnalysisState({ status: "complete", streamingText: "", analysis, error: null, durationMs: null, savedId: savedId ?? null });
@@ -356,6 +383,48 @@ export default function Home() {
       )}
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-8">
+        {/* Quick Research bar */}
+        <div className="mb-5 bg-white rounded-2xl border border-gray-200 shadow-sm shadow-gray-200/50 px-5 py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex-1">
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Quick start — research a company</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={quickCompany}
+                  onChange={(e) => setQuickCompany(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleQuickResearch(); }}
+                  placeholder="Type a company name — discovers Reddit, Trustpilot, App Store, G2 and more"
+                  className="flex-1 px-3.5 py-2.5 text-sm bg-surface-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 focus:border-brand-400 focus:bg-white placeholder-gray-400"
+                  disabled={quickSearching || isLoading}
+                />
+                <button
+                  onClick={handleQuickResearch}
+                  disabled={!quickCompany.trim() || quickSearching || isLoading}
+                  className="px-5 py-2.5 text-sm font-semibold text-white bg-brand-500 hover:bg-brand-600 disabled:bg-gray-200 disabled:text-gray-400 rounded-xl transition-colors shrink-0 flex items-center gap-2"
+                >
+                  {quickSearching ? (
+                    <>
+                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                      Discovering…
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      Research
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-6 items-start">
           {/* ── Input panel ── */}
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm shadow-gray-200/50 overflow-hidden sticky top-20">
@@ -402,7 +471,7 @@ export default function Home() {
 
               {mode === "social" && (
                 <>
-                  <SocialListener onSourcesReady={handleNewSources} />
+                  <SocialListener onSourcesReady={handleNewSources} discovery={discoveryResult} onDiscoveryChange={setDiscoveryResult} />
                   {sources.filter((s) => s.source !== "url").length > 0 && (
                     <SourcesPanel
                       sources={sources.filter((s) => s.source !== "url")}
@@ -417,7 +486,7 @@ export default function Home() {
 
               {mode === "footprint" && (
                 <>
-                  <CompanyFootprint onSourcesReady={handleNewSources} />
+                  <CompanyFootprint onSourcesReady={handleNewSources} discovery={discoveryResult} />
                   {sources.length > 0 && (
                     <SourcesPanel
                       sources={sources}

@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { Source, TrustpilotReview, AppStoreReview, GooglePlayReview, WebSearchResult, RssFeedItem } from "@/lib/scraper";
 import { smartExtract } from "@/lib/urlParsers";
+import type { DiscoveryResult } from "./CompanySearchBar";
 
 interface CompanyFootprintProps {
   onSourcesReady: (sources: Source[]) => void;
+  discovery?: DiscoveryResult | null;
 }
 
 type TaskStatus = "idle" | "running" | "done" | "error";
@@ -120,12 +122,21 @@ function rssFeedItemToSource(item: RssFeedItem): Source {
   };
 }
 
-export default function CompanyFootprint({ onSourcesReady }: CompanyFootprintProps) {
+export default function CompanyFootprint({ onSourcesReady, discovery }: CompanyFootprintProps) {
   const [companyName, setCompanyName] = useState("");
   const [domain, setDomain] = useState("");
   const [iosAppId, setIosAppId] = useState("");
   const [androidPackage, setAndroidPackage] = useState("");
   const [country, setCountry] = useState("gb");
+
+  // Auto-prefill from cross-tab discovery (e.g. from Social Listening tab)
+  useEffect(() => {
+    if (!discovery) return;
+    if (!companyName && discovery.company) setCompanyName(discovery.company);
+    if (!domain && discovery.domain) setDomain(discovery.domain);
+    if (!iosAppId && discovery.appstore?.appId) setIosAppId(discovery.appstore.appId);
+    if (!androidPackage && discovery.googleplay?.packageId) setAndroidPackage(discovery.googleplay.packageId);
+  }, [discovery]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [tasks, setTasks] = useState<Record<string, TaskState>>(INITIAL_TASKS);
   const [isRunning, setIsRunning] = useState(false);

@@ -41,6 +41,8 @@ export default function MonitoringPage() {
   const [keywords, setKeywords] = useState("");
   const [schedule, setSchedule] = useState<"daily" | "weekly" | "monthly">("weekly");
   const [creating, setCreating] = useState(false);
+  const [discovering, setDiscovering] = useState(false);
+  const [discoveredBadges, setDiscoveredBadges] = useState<string[]>([]);
 
   const load = () => {
     setLoading(true);
@@ -74,6 +76,48 @@ export default function MonitoringPage() {
       }
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleDiscover = async () => {
+    if (!competitorName.trim()) return;
+    setDiscovering(true);
+    setDiscoveredBadges([]);
+    try {
+      const res = await fetch("/api/discover", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ company: competitorName.trim() }),
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+
+      // Build keyword suggestions from discovered sources
+      const kws: string[] = [];
+      const badges: string[] = [];
+
+      if (data.reddit?.subreddits?.length) {
+        badges.push(`Reddit (${data.reddit.subreddits.length} subs)`);
+        kws.push(...data.reddit.subreddits.map((s: string) => `r/${s}`));
+      }
+      if (data.trustpilot?.found) { badges.push("Trustpilot"); kws.push("Trustpilot reviews"); }
+      if (data.appstore?.found) { badges.push("App Store"); kws.push("app reviews"); }
+      if (data.googleplay?.found) { badges.push("Google Play"); kws.push("Play Store reviews"); }
+      if (data.g2?.found) { badges.push("G2"); kws.push("G2 reviews"); }
+      if (data.capterra?.found) { badges.push("Capterra"); kws.push("Capterra reviews"); }
+      if (data.stocktwits?.found && data.stocktwits.symbol) { badges.push(`$${data.stocktwits.symbol}`); kws.push(data.stocktwits.symbol); }
+      if (data.domain) kws.push(data.domain);
+
+      // Merge with existing keywords
+      const existing = keywords.split(",").map((k) => k.trim()).filter(Boolean);
+      const merged = Array.from(new Set([...existing, ...kws]));
+      setKeywords(merged.join(", "));
+      setDiscoveredBadges(badges);
+
+      // Auto-set name if empty
+      if (!name.trim()) setName(`${competitorName.trim()} ${schedule} scan`);
+    } finally {
+      setDiscovering(false);
     }
   };
 
@@ -150,13 +194,36 @@ export default function MonitoringPage() {
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Competitor name <span className="text-rose-500">*</span></label>
-                <input
-                  type="text"
-                  value={competitorName}
-                  onChange={(e) => setCompetitorName(e.target.value)}
-                  placeholder="e.g. Monzo"
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={competitorName}
+                    onChange={(e) => { setCompetitorName(e.target.value); setDiscoveredBadges([]); }}
+                    onKeyDown={(e) => { if (e.key === "Enter") handleDiscover(); }}
+                    placeholder="e.g. Monzo"
+                    className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleDiscover}
+                    disabled={!competitorName.trim() || discovering}
+                    className="px-3 py-2 text-xs font-semibold text-brand-700 bg-brand-50 hover:bg-brand-100 border border-brand-200 rounded-xl transition-colors disabled:opacity-50 shrink-0 flex items-center gap-1"
+                  >
+                    {discovering ? (
+                      <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                    ) : (
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                    )}
+                    {discovering ? "Finding…" : "Discover"}
+                  </button>
+                </div>
+                {discoveredBadges.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {discoveredBadges.map((b) => (
+                      <span key={b} className="text-[10px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">{b}</span>
+                    ))}
+                  </div>
+                )}
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Extra keywords <span className="text-gray-400 font-normal">(comma-separated)</span></label>

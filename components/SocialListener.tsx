@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import type {
   Source,
   RedditPost,
@@ -18,6 +18,8 @@ import type { DiscoveryResult } from "./CompanySearchBar";
 
 interface SocialListenerProps {
   onSourcesReady: (sources: Source[]) => void;
+  discovery?: DiscoveryResult | null;
+  onDiscoveryChange?: (result: DiscoveryResult) => void;
 }
 
 // ─── Source definitions ───────────────────────────────────────────────────────
@@ -235,7 +237,7 @@ function GroupLabel({ label }: { label: string }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function SocialListener({ onSourcesReady }: SocialListenerProps) {
+export default function SocialListener({ onSourcesReady, discovery, onDiscoveryChange }: SocialListenerProps) {
   const [active, setActive] = useState<Set<SourceId>>(new Set<SourceId>(["reddit"]));
 
   // Shared search
@@ -316,7 +318,20 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
     if (result.stocktwits.symbol) setSymbol(result.stocktwits.symbol);
     if (result.queries.twitter) setTwitterQuery(result.queries.twitter);
     if (result.queries.perplexity) setPerplexityQuery(result.queries.perplexity);
-  }, []);
+
+    // Share discovery result with parent for cross-tab use
+    onDiscoveryChange?.(result);
+  }, [onDiscoveryChange]);
+
+  // Auto-prefill when discovery prop arrives from another tab (e.g. Quick Research)
+  const lastAppliedDiscovery = useRef<string | null>(null);
+  useEffect(() => {
+    if (!discovery) return;
+    const key = discovery.company + (discovery.domain ?? "");
+    if (key === lastAppliedDiscovery.current) return;
+    lastAppliedDiscovery.current = key;
+    prefillFromDiscovery(discovery);
+  }, [discovery, prefillFromDiscovery]);
 
   const needsQuery = active.has("reddit") || active.has("hackernews") || active.has("gnews");
   const hasSocialSearch =
