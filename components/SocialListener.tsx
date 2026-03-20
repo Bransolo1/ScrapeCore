@@ -112,6 +112,17 @@ const SOURCE_DEFS = [
       </svg>
     ),
   },
+  {
+    id: "glassdoor" as const,
+    label: "Glassdoor",
+    group: "b2b",
+    activeClass: "border-green-300 bg-green-50 text-green-800",
+    icon: (
+      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+      </svg>
+    ),
+  },
   // ─── The Eyes ────────────────────────────────────────────────────────────────
   {
     id: "g2" as const,
@@ -269,6 +280,9 @@ export default function SocialListener({ onSourcesReady, discovery, onDiscoveryC
   // Capterra
   const [capterraSlug, setCapterraSlug] = useState("");
   const [capterraPages, setCapterraPages] = useState(2);
+  // Glassdoor
+  const [glassdoorSlug, setGlassdoorSlug] = useState("");
+  const [glassdoorPages, setGlassdoorPages] = useState(2);
   // Twitter/X (via Perplexity)
   const [twitterQuery, setTwitterQuery] = useState("");
   const [twitterRecency, setTwitterRecency] = useState("week");
@@ -312,6 +326,7 @@ export default function SocialListener({ onSourcesReady, discovery, onDiscoveryC
     if (result.googleplay?.found) toActivate.add("googleplay");
     if (result.g2?.found) toActivate.add("g2");
     if (result.capterra?.found) toActivate.add("capterra");
+    if (result.glassdoor?.found) toActivate.add("glassdoor");
     if (result.stocktwits?.found) toActivate.add("stocktwits");
 
     setActive(toActivate);
@@ -324,6 +339,7 @@ export default function SocialListener({ onSourcesReady, discovery, onDiscoveryC
     if (result.googleplay.packageId) setGpPackageId(result.googleplay.packageId);
     if (result.g2.slug) setG2Slug(result.g2.slug);
     if (result.capterra.slug) setCapterraSlug(result.capterra.slug);
+    if (result.glassdoor?.slug) setGlassdoorSlug(result.glassdoor.slug);
     if (result.stocktwits.symbol) setSymbol(result.stocktwits.symbol);
     if (result.queries.twitter) setTwitterQuery(result.queries.twitter);
     if (result.queries.perplexity) setPerplexityQuery(result.queries.perplexity);
@@ -356,6 +372,7 @@ export default function SocialListener({ onSourcesReady, discovery, onDiscoveryC
     (!active.has("googleplay") || gpPackageId.trim()) &&
     (!active.has("g2") || g2Slug.trim()) &&
     (!active.has("capterra") || capterraSlug.trim()) &&
+    (!active.has("glassdoor") || glassdoorSlug.trim()) &&
     (!active.has("twitter") || twitterQuery.trim()) &&
     (!active.has("perplexity") || perplexityQuery.trim());
 
@@ -633,7 +650,29 @@ export default function SocialListener({ onSourcesReady, discovery, onDiscoveryC
       })());
     }
 
-    // 8. Twitter/X via Perplexity
+    // 8. Glassdoor Reviews
+    if (active.has("glassdoor") && glassdoorSlug.trim()) {
+      setTaskState("glassdoor", { label: "Glassdoor", status: "running", count: 0 });
+      runners.push((async () => {
+        try {
+          const res = await fetch("/api/sources/glassdoor", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slug: glassdoorSlug.trim(), pages: glassdoorPages }) });
+          const data = (await res.json()) as { reviews?: Array<{ title: string; text: string; rating: number; pros: string; cons: string; author: string; date: string; url: string }>; error?: string; hint?: string };
+          if (data.error) allErrors.push(`Glassdoor: ${data.error}${data.hint ? " — " + data.hint : ""}`);
+          const items: Source[] = (data.reviews ?? []).map((r) => {
+            const stars = "★".repeat(Math.round(r.rating)) + "☆".repeat(Math.max(0, 5 - Math.round(r.rating)));
+            const fullText = [r.pros ? `Pros: ${r.pros}` : "", r.cons ? `Cons: ${r.cons}` : "", r.text].filter(Boolean).join("\n");
+            return { id: `gd-${r.date}-${r.title.slice(0, 10)}`, title: r.title || `${r.rating}★ Glassdoor review`, text: fullText, url: r.url, wordCount: fullText.split(/\s+/).length, source: "url" as const, meta: `Glassdoor ${stars} · ${r.author}`, selected: true };
+          });
+          allSources.push(...items);
+          setTaskState("glassdoor", { status: "done", count: items.length });
+        } catch (err) {
+          setTaskState("glassdoor", { status: "error", error: err instanceof Error ? err.message : "Failed" });
+          allErrors.push("Glassdoor: " + (err instanceof Error ? err.message : "Failed"));
+        }
+      })());
+    }
+
+    // 9. Twitter/X via Perplexity
     if (active.has("twitter") && twitterQuery.trim()) {
       setTaskState("twitter", { label: "Twitter / X", status: "running", count: 0 });
       runners.push((async () => {
@@ -1100,6 +1139,47 @@ export default function SocialListener({ onSourcesReady, discovery, onDiscoveryC
               disabled={isFetching}
             />
             <span className="text-xs text-gray-400">max 5 · Firecrawl recommended</span>
+          </div>
+        </div>
+      )}
+
+      {/* ── Glassdoor settings ── */}
+      {active.has("glassdoor") && (
+        <div className="space-y-3 pt-3 border-t border-gray-100">
+          <GroupLabel label="Glassdoor Reviews" />
+          <div>
+            <label className={labelCls}>Review page slug</label>
+            <input
+              type="text"
+              value={glassdoorSlug}
+              onChange={(e) => {
+                // Extract slug from full Glassdoor URL if pasted
+                const val = e.target.value;
+                const match = val.match(/glassdoor\.com\/Reviews\/([a-zA-Z0-9-]+)/i);
+                setGlassdoorSlug(match ? match[1] : val);
+              }}
+              onPaste={(e) => {
+                const pasted = e.clipboardData.getData("text");
+                const match = pasted.match(/glassdoor\.com\/Reviews\/([a-zA-Z0-9-]+)/i);
+                if (match) { e.preventDefault(); setGlassdoorSlug(match[1]); }
+              }}
+              placeholder="Company-Name-Reviews-E12345 or paste URL"
+              className={inputCls}
+              disabled={isFetching}
+            />
+            <p className="mt-1 text-xs text-gray-400">Paste the full Glassdoor URL — slug is extracted automatically</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="text-xs font-medium text-gray-500 whitespace-nowrap">Pages</label>
+            <input
+              type="number"
+              value={glassdoorPages}
+              onChange={(e) => setGlassdoorPages(Math.min(3, Math.max(1, parseInt(e.target.value) || 2)))}
+              className="w-16 px-2 py-1.5 text-sm text-gray-700 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 text-center disabled:opacity-50"
+              min={1} max={3}
+              disabled={isFetching}
+            />
+            <span className="text-xs text-gray-400">max 3 · employee reviews</span>
           </div>
         </div>
       )}

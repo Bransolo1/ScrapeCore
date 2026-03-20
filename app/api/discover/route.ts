@@ -3,7 +3,8 @@
  *
  * Takes a company name (and optional domain) and auto-discovers identifiers
  * across all supported platforms: Reddit subreddits, Trustpilot domain,
- * App Store ID, Google Play package, G2 slug, Capterra slug, StockTwits symbol.
+ * App Store ID, Google Play package, G2 slug, Capterra slug, StockTwits symbol,
+ * LinkedIn company page, Glassdoor reviews, Product Hunt, BBB, YouTube channel.
  *
  * All searches run in parallel — typically completes in 2-4 seconds.
  */
@@ -203,6 +204,56 @@ async function discoverDomain(company: string): Promise<string | null> {
   return null;
 }
 
+async function discoverLinkedIn(company: string): Promise<{ slug: string | null; url: string | null; found: boolean; searchFailed?: boolean }> {
+  const { urls, failed } = await ddgSearch(`"${company}" site:linkedin.com/company`);
+  for (const url of urls) {
+    const match = url.match(/linkedin\.com\/company\/([a-zA-Z0-9_-]+)/i);
+    if (match && match[1] !== "company") return { slug: match[1], url, found: true };
+  }
+  return { slug: null, url: null, found: false, searchFailed: failed };
+}
+
+async function discoverGlassdoor(company: string): Promise<{ slug: string | null; url: string | null; found: boolean; searchFailed?: boolean }> {
+  const { urls, failed } = await ddgSearch(`"${company}" reviews site:glassdoor.com/Reviews`);
+  for (const url of urls) {
+    // Pattern: glassdoor.com/Reviews/Company-Reviews-E12345.htm or glassdoor.com/Reviews/Company-name-Reviews-...
+    const match = url.match(/glassdoor\.com\/Reviews\/([a-zA-Z0-9-]+-Reviews-E\d+)/i);
+    if (match) return { slug: match[1], url, found: true };
+    // Simpler pattern
+    const match2 = url.match(/glassdoor\.com\/Reviews\/([a-zA-Z0-9-]+)/i);
+    if (match2 && match2[1] !== "index") return { slug: match2[1], url, found: true };
+  }
+  return { slug: null, url: null, found: false, searchFailed: failed };
+}
+
+async function discoverProductHunt(company: string): Promise<{ slug: string | null; url: string | null; found: boolean; searchFailed?: boolean }> {
+  const { urls, failed } = await ddgSearch(`"${company}" site:producthunt.com/products`);
+  for (const url of urls) {
+    const match = url.match(/producthunt\.com\/products\/([a-zA-Z0-9-]+)/i);
+    if (match) return { slug: match[1], url, found: true };
+  }
+  return { slug: null, url: null, found: false, searchFailed: failed };
+}
+
+async function discoverBBB(company: string): Promise<{ url: string | null; found: boolean; searchFailed?: boolean }> {
+  const { urls, failed } = await ddgSearch(`"${company}" site:bbb.org`);
+  for (const url of urls) {
+    if (url.includes("bbb.org/us/") || url.includes("bbb.org/ca/")) {
+      return { url, found: true };
+    }
+  }
+  return { url: null, found: false, searchFailed: failed };
+}
+
+async function discoverYouTube(company: string): Promise<{ channelUrl: string | null; found: boolean; searchFailed?: boolean }> {
+  const { urls, failed } = await ddgSearch(`"${company}" official channel site:youtube.com`);
+  for (const url of urls) {
+    const match = url.match(/youtube\.com\/(?:@[\w-]+|channel\/[\w-]+|c\/[\w-]+|user\/[\w-]+)/i);
+    if (match) return { channelUrl: match[0].startsWith("http") ? match[0] : `https://www.${match[0]}`, found: true };
+  }
+  return { channelUrl: null, found: false, searchFailed: failed };
+}
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export interface DiscoveryResult {
@@ -215,6 +266,11 @@ export interface DiscoveryResult {
   g2: { slug: string | null; found: boolean; searchFailed?: boolean };
   capterra: { slug: string | null; found: boolean; searchFailed?: boolean };
   stocktwits: { symbol: string | null; found: boolean; searchFailed?: boolean };
+  linkedin: { slug: string | null; url: string | null; found: boolean; searchFailed?: boolean };
+  glassdoor: { slug: string | null; url: string | null; found: boolean; searchFailed?: boolean };
+  producthunt: { slug: string | null; url: string | null; found: boolean; searchFailed?: boolean };
+  bbb: { url: string | null; found: boolean; searchFailed?: boolean };
+  youtube: { channelUrl: string | null; found: boolean; searchFailed?: boolean };
   queries: {
     hackernews: string;
     googlenews: string;
@@ -260,6 +316,11 @@ export async function POST(req: Request) {
     g2,
     capterra,
     stocktwits,
+    linkedin,
+    glassdoor,
+    producthunt,
+    bbb,
+    youtube,
     autoDetectedDomain,
   ] = await Promise.all([
     discoverReddit(company),
@@ -269,6 +330,11 @@ export async function POST(req: Request) {
     discoverG2(company),
     discoverCapterra(company),
     discoverStockTwits(company),
+    discoverLinkedIn(company),
+    discoverGlassdoor(company),
+    discoverProductHunt(company),
+    discoverBBB(company),
+    discoverYouTube(company),
     body.domain ? Promise.resolve(body.domain) : discoverDomain(company),
   ]);
 
@@ -276,11 +342,14 @@ export async function POST(req: Request) {
 
   // Collect search errors for transparency
   const searchErrors: string[] = [];
-  if (trustpilot.searchFailed) searchErrors.push("Trustpilot search failed");
-  if (googleplay.searchFailed) searchErrors.push("Google Play search failed");
-  if (g2.searchFailed) searchErrors.push("G2 search failed");
-  if (capterra.searchFailed) searchErrors.push("Capterra search failed");
-  if (stocktwits.searchFailed) searchErrors.push("StockTwits search failed");
+  const failChecks: [{ searchFailed?: boolean }, string][] = [
+    [trustpilot, "Trustpilot"], [googleplay, "Google Play"], [g2, "G2"],
+    [capterra, "Capterra"], [stocktwits, "StockTwits"], [linkedin, "LinkedIn"],
+    [glassdoor, "Glassdoor"], [producthunt, "Product Hunt"], [bbb, "BBB"], [youtube, "YouTube"],
+  ];
+  for (const [src, label] of failChecks) {
+    if (src.searchFailed) searchErrors.push(`${label} search failed`);
+  }
 
   const result: DiscoveryResult = {
     company,
@@ -292,6 +361,11 @@ export async function POST(req: Request) {
     g2,
     capterra,
     stocktwits,
+    linkedin,
+    glassdoor,
+    producthunt,
+    bbb,
+    youtube,
     queries: {
       hackernews: company,
       googlenews: company,

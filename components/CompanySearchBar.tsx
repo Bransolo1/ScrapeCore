@@ -17,6 +17,11 @@ const FOUND_LABELS: Record<string, string> = {
   g2: "G2",
   capterra: "Capterra",
   stocktwits: "StockTwits",
+  linkedin: "LinkedIn",
+  glassdoor: "Glassdoor",
+  producthunt: "Product Hunt",
+  bbb: "BBB",
+  youtube: "YouTube",
 };
 
 export default function CompanySearchBar({ onDiscovery }: CompanySearchBarProps) {
@@ -194,6 +199,28 @@ export default function CompanySearchBar({ onDiscovery }: CompanySearchBarProps)
               <span className="text-gray-300 ml-1">({result.appstore.appId})</span>
             </p>
           )}
+
+          {/* External links for discovery-only sources */}
+          {(() => {
+            const links: { label: string; url: string }[] = [];
+            if (result.linkedin?.found && result.linkedin.url) links.push({ label: "LinkedIn", url: result.linkedin.url });
+            if (result.glassdoor?.found && result.glassdoor.url) links.push({ label: "Glassdoor", url: result.glassdoor.url });
+            if (result.producthunt?.found && result.producthunt.url) links.push({ label: "Product Hunt", url: result.producthunt.url });
+            if (result.bbb?.found && result.bbb.url) links.push({ label: "BBB", url: result.bbb.url });
+            if (result.youtube?.found && result.youtube.channelUrl) links.push({ label: "YouTube", url: result.youtube.channelUrl });
+            if (links.length === 0) return null;
+            return (
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-xs text-gray-500">Links:</span>
+                {links.map((l) => (
+                  <a key={l.label} href={l.url} target="_blank" rel="noopener noreferrer"
+                    className="text-[11px] font-medium text-brand-600 bg-brand-50 border border-brand-200 px-1.5 py-0.5 rounded hover:bg-brand-100 transition-colors">
+                    {l.label} ↗
+                  </a>
+                ))}
+              </div>
+            );
+          })()}
 
           {/* Cached indicator */}
           {result.cached && (

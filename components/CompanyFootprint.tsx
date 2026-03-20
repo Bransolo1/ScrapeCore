@@ -5,6 +5,7 @@ import type { Source, TrustpilotReview, AppStoreReview, GooglePlayReview, WebSea
 import { smartExtract } from "@/lib/urlParsers";
 import CompanySearchBar from "./CompanySearchBar";
 import type { DiscoveryResult } from "./CompanySearchBar";
+import { INDUSTRY_RSS, INDUSTRY_IDS, getIndustryFeeds } from "@/lib/rssPresets";
 
 interface CompanyFootprintProps {
   onSourcesReady: (sources: Source[]) => void;
@@ -29,11 +30,7 @@ const INITIAL_TASKS: Record<string, TaskState> = {
   rss: { label: "Industry RSS feeds", status: "idle", count: 0 },
 };
 
-const INDUSTRY_RSS = [
-  "https://www.gamblinginsider.com/feed",
-  "https://igamingbusiness.com/feed/",
-  "https://www.gamblingcommission.gov.uk/rss.xml",
-];
+const DEFAULT_INDUSTRY = "general";
 
 function statusIcon(s: TaskStatus) {
   if (s === "idle") return <span className="w-4 h-4 rounded-full border border-gray-200 inline-block" />;
@@ -129,6 +126,7 @@ export default function CompanyFootprint({ onSourcesReady, discovery }: CompanyF
   const [iosAppId, setIosAppId] = useState("");
   const [androidPackage, setAndroidPackage] = useState("");
   const [country, setCountry] = useState("gb");
+  const [industry, setIndustry] = useState(DEFAULT_INDUSTRY);
 
   // Auto-prefill from cross-tab discovery (e.g. from Social Listening tab)
   useEffect(() => {
@@ -288,7 +286,7 @@ export default function CompanyFootprint({ onSourcesReady, discovery }: CompanyF
         const res = await fetch("/api/sources/rss", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ urls: INDUSTRY_RSS, query: company }),
+          body: JSON.stringify({ urls: getIndustryFeeds(industry).map((f) => f.url), query: company }),
         });
         const data = await res.json() as { items?: RssFeedItem[]; error?: string };
         if (data.error) throw new Error(data.error);
@@ -408,6 +406,28 @@ export default function CompanyFootprint({ onSourcesReady, discovery }: CompanyF
             <option value="ie">🇮🇪 Ireland</option>
             <option value="ca">🇨🇦 Canada</option>
           </select>
+        </div>
+      </div>
+
+      {/* Industry RSS presets */}
+      <div className="space-y-2 pt-3 border-t border-gray-100">
+        <label className="block text-xs font-medium text-gray-500">Industry RSS feeds</label>
+        <select
+          value={industry}
+          onChange={(e) => setIndustry(e.target.value)}
+          className="w-full px-2.5 py-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 disabled:opacity-50"
+          disabled={anyRunning}
+        >
+          {INDUSTRY_IDS.map((id) => (
+            <option key={id} value={id}>{INDUSTRY_RSS[id].name}</option>
+          ))}
+        </select>
+        <div className="flex flex-wrap gap-1.5">
+          {getIndustryFeeds(industry).map((feed) => (
+            <span key={feed.url} className="text-[10px] text-gray-400 bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded">
+              {feed.label}
+            </span>
+          ))}
         </div>
       </div>
 
