@@ -390,6 +390,14 @@ export default function Home() {
         <TextPreviewModal
           text={previewText}
           dataType={previewDataType}
+          sources={sources.filter((s) => s.selected).map((s) => ({
+            id: s.id,
+            title: s.title,
+            text: s.text,
+            source: s.source,
+            wordCount: s.wordCount,
+            selected: s.selected,
+          }))}
           onConfirm={(text, dt) => {
             setPreviewText(null);
             scanAndRun(text, dt);
@@ -584,6 +592,13 @@ export default function Home() {
                     inputText={activeInputText}
                     usage={usage}
                     onCancel={cancelAnalysis}
+                    onReanalyse={(correctionContext) => {
+                      const ctx = projectContext.trim()
+                        ? `${projectContext.trim()}\n\nAnalyst corrections from previous run:\n${correctionContext}`
+                        : `Analyst corrections from previous run:\n${correctionContext}`;
+                      setProjectContext(ctx);
+                      scanAndRun(activeInputText, dataType);
+                    }}
                     initialReviewStatus={reviewData.status}
                     initialReviewNotes={reviewData.notes}
                   />

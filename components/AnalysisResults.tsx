@@ -36,6 +36,7 @@ interface AnalysisResultsProps {
   inputText: string;
   usage?: { inputTokens: number; outputTokens: number };
   onCancel?: () => void;
+  onReanalyse?: (correctionContext: string) => void;
   initialReviewStatus?: string;
   initialReviewNotes?: string | null;
 }
@@ -159,7 +160,7 @@ function StreamingState({ text, onCancel }: { text: string; onCancel?: () => voi
   );
 }
 
-export default function AnalysisResults({ state, inputText, usage, onCancel, initialReviewStatus, initialReviewNotes }: AnalysisResultsProps) {
+export default function AnalysisResults({ state, inputText, usage, onCancel, onReanalyse, initialReviewStatus, initialReviewNotes }: AnalysisResultsProps) {
   // Corrections state: key = "section:index"
   const [corrections, setCorrections] = useState<Map<string, Correction>>(new Map());
 
@@ -488,15 +489,64 @@ export default function AnalysisResults({ state, inputText, usage, onCancel, ini
         </div>
       )}
 
+      {/* Re-analyse with corrections */}
+      {onReanalyse && corrections.size > 0 && (
+        <div className="border-t border-gray-100 pt-6 mt-4">
+          <div className="bg-violet-50 border border-violet-200 rounded-xl p-4">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-violet-100 rounded-lg flex items-center justify-center shrink-0 mt-0.5">
+                <svg className="w-4 h-4 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-violet-900 mb-1">Refine this analysis</p>
+                <p className="text-xs text-violet-700 leading-relaxed mb-3">
+                  You&apos;ve made {corrections.size} correction{corrections.size !== 1 ? "s" : ""}. Re-run the analysis with your feedback incorporated — disputed findings will be reconsidered, removed items excluded, and confirmed findings reinforced.
+                </p>
+                <button
+                  onClick={() => {
+                    const lines: string[] = [];
+                    corrections.forEach((c, key) => {
+                      const [section, idx] = key.split(":");
+                      if (c.status === "disputed") {
+                        lines.push(`DISPUTED: ${section} #${Number(idx) + 1}${c.note ? ` — "${c.note}"` : ""}`);
+                      } else if (c.status === "removed") {
+                        lines.push(`REMOVE: ${section} #${Number(idx) + 1}`);
+                      } else if (c.status === "confirmed") {
+                        lines.push(`CONFIRMED: ${section} #${Number(idx) + 1}`);
+                      }
+                    });
+                    onReanalyse(lines.join("\n"));
+                  }}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-violet-600 hover:bg-violet-700 text-white rounded-lg transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  Re-analyse with corrections
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Quick-link footer to related pages */}
       <div className="border-t border-gray-100 pt-6 mt-4">
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Continue with this analysis</p>
         <div className="flex flex-wrap gap-2">
-          <a href="/dashboard" className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 transition-colors">
+          {state.savedId && (
+            <a href={`/analysis/${state.savedId}`} className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 transition-colors">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+              Open full page
+            </a>
+          )}
+          <a href={`/dashboard${state.savedId ? `?highlight=${state.savedId}` : ""}`} className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 transition-colors">
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
             View on Dashboard
           </a>
-          <a href="/compare" className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 transition-colors">
+          <a href={`/compare${state.savedId ? `?analysisId=${state.savedId}` : ""}`} className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 transition-colors">
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
             Compare with another
           </a>
