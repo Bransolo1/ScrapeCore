@@ -28,6 +28,8 @@ import CompetitorProfilePanel from "./CompetitorProfilePanel";
 import ShareButton from "./ShareButton";
 import { scoreRubric } from "@/lib/rubric";
 import { usePlainMode } from "./PlainModeToggle";
+import SectionNav, { useActiveSection } from "./SectionNav";
+import type { SectionDef } from "./SectionNav";
 
 interface AnalysisResultsProps {
   state: AnalysisState;
@@ -282,8 +284,23 @@ export default function AnalysisResults({ state, inputText, usage, onCancel }: A
     );
   }
 
+  // Build section navigator definitions
+  const sectionDefs: SectionDef[] = [
+    { id: "quality", label: "Quality", phase: "diagnosis", icon: <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> },
+    { id: "comb", label: "COM-B", phase: "diagnosis", icon: <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2z" /></svg> },
+    { id: "behaviours", label: "Behaviours", phase: "diagnosis", icon: <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg> },
+    { id: "barriers", label: "Barriers", phase: "diagnosis", icon: <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636" /></svg> },
+    { id: "motivators", label: "Motivators", phase: "diagnosis", icon: <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg> },
+    { id: "interventions", label: "Interventions", phase: "action", icon: <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg> },
+    ...(analysis.subgroup_insights?.length ? [{ id: "segments", label: "Segments", phase: "action" as const, icon: <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg> }] : []),
+    { id: "confidence", label: "Confidence", phase: "review", icon: <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg> },
+    ...(state.savedId ? [{ id: "review", label: "Review", phase: "review" as const, icon: <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg> }] : []),
+  ];
+
+  const sectionIds = sectionDefs.map((s) => s.id);
+
   return (
-    <div className="p-6 space-y-8 animate-fade-in">
+    <ResultsLayout sectionDefs={sectionDefs} sectionIds={sectionIds}>
       {/* Source inspector modal */}
       {inspectQuote && (
         <SourceInspector
@@ -292,7 +309,8 @@ export default function AnalysisResults({ state, inputText, usage, onCancel }: A
           onClose={() => setInspectQuote(null)}
         />
       )}
-      {/* Header */}
+
+      {/* Header + Review banner (promoted from bottom) */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2">
@@ -301,7 +319,7 @@ export default function AnalysisResults({ state, inputText, usage, onCancel }: A
               <span className="text-xs font-semibold text-emerald-700">Analysis complete</span>
             </div>
             <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full capitalize">{analysis.data_type_detected}</span>
-            <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{analysis.text_units_analysed} units</span>
+            <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{analysis.text_units_analysed} units analysed</span>
           </div>
           <p className="text-sm text-gray-600 leading-relaxed">{analysis.summary}</p>
         </div>
@@ -332,96 +350,162 @@ export default function AnalysisResults({ state, inputText, usage, onCancel }: A
         <CompetitorProfilePanel model={analysis.company_model} />
       )}
 
-      {/* Evidence Grounding report */}
-      {groundingReport && groundingReport.total > 0 && (
-        <GroundingPanel report={groundingReport} />
-      )}
+      {/* ─── PHASE: Diagnosis ─── */}
+      <div className="flex items-center gap-2 pt-2">
+        <span className="w-2 h-2 rounded-full bg-violet-500" />
+        <span className="text-xs font-bold uppercase tracking-wider text-violet-600">Diagnosis</span>
+        <div className="flex-1 h-px bg-violet-100" />
+      </div>
 
-      {/* Evaluation rubric score */}
-      {rubricResult && <RubricPanel result={rubricResult} />}
+      {/* Quality & Evidence */}
+      <div id="section-quality">
+        {groundingReport && groundingReport.total > 0 && (
+          <GroundingPanel report={groundingReport} />
+        )}
+        {rubricResult && <div className="mt-4"><RubricPanel result={rubricResult} /></div>}
+      </div>
 
       {/* Behavioural context */}
       <BehaviouralContextPanel context={analysis.behavioural_context} />
 
-      {/* COM-B Chart */}
-      <div className="bg-gray-50 rounded-xl border border-gray-100 px-5 py-4">
-        <ComBChart mapping={analysis.com_b_mapping} />
+      {/* COM-B */}
+      <div id="section-comb" className="space-y-4">
+        <div className="bg-gray-50 rounded-xl border border-gray-100 px-5 py-4">
+          <ComBChart mapping={analysis.com_b_mapping} />
+        </div>
+        <ComBSection mapping={analysis.com_b_mapping} isPlainMode={isPlainMode} />
       </div>
 
-      {/* COM-B Detail */}
-      <ComBSection mapping={analysis.com_b_mapping} isPlainMode={isPlainMode} />
-
       {/* Key Behaviours */}
-      <KeyBehaviours
-        behaviours={analysis.key_behaviours}
-        groundingMap={groundingMap}
-        corrections={corrections}
-        onCorrect={hasCorrections ? handleCorrect : undefined}
-        onInspect={inputText ? setInspectQuote : undefined}
-      />
+      <div id="section-behaviours">
+        <KeyBehaviours
+          behaviours={analysis.key_behaviours}
+          groundingMap={groundingMap}
+          corrections={corrections}
+          onCorrect={hasCorrections ? handleCorrect : undefined}
+          onInspect={inputText ? setInspectQuote : undefined}
+        />
+      </div>
 
-      {/* Barriers & Motivators */}
-      <BarriersList
-        barriers={analysis.barriers}
-        groundingMap={groundingMap}
-        corrections={corrections}
-        onCorrect={hasCorrections ? handleCorrect : undefined}
-        onInspect={inputText ? setInspectQuote : undefined}
-        isPlainMode={isPlainMode}
-      />
-      <AnalystAnnotations sectionKey="barriers" analysisId={state.savedId} />
-      <MotivatorsList
-        motivators={analysis.motivators}
-        groundingMap={groundingMap}
-        corrections={corrections}
-        onCorrect={hasCorrections ? handleCorrect : undefined}
-        onInspect={inputText ? setInspectQuote : undefined}
-        isPlainMode={isPlainMode}
-      />
-      <AnalystAnnotations sectionKey="motivators" analysisId={state.savedId} />
+      {/* Barriers */}
+      <div id="section-barriers">
+        <BarriersList
+          barriers={analysis.barriers}
+          groundingMap={groundingMap}
+          corrections={corrections}
+          onCorrect={hasCorrections ? handleCorrect : undefined}
+          onInspect={inputText ? setInspectQuote : undefined}
+          isPlainMode={isPlainMode}
+        />
+        <AnalystAnnotations sectionKey="barriers" analysisId={state.savedId} />
+      </div>
+
+      {/* Motivators */}
+      <div id="section-motivators">
+        <MotivatorsList
+          motivators={analysis.motivators}
+          groundingMap={groundingMap}
+          corrections={corrections}
+          onCorrect={hasCorrections ? handleCorrect : undefined}
+          onInspect={inputText ? setInspectQuote : undefined}
+          isPlainMode={isPlainMode}
+        />
+        <AnalystAnnotations sectionKey="motivators" analysisId={state.savedId} />
+      </div>
 
       {/* Facilitators */}
       <FacilitatorsSection facilitators={analysis.facilitators} />
       <AnalystAnnotations sectionKey="facilitators" analysisId={state.savedId} />
 
-      {/* Interventions */}
-      <InterventionsSection
-        interventions={analysis.intervention_opportunities}
-        validityScores={validityScores}
-        corrections={corrections}
-        onCorrect={hasCorrections ? handleCorrect : undefined}
-        onInspect={inputText ? setInspectQuote : undefined}
-        isPlainMode={isPlainMode}
-      />
-
       {/* Contradictions */}
       <ContradictionsSection contradictions={analysis.contradictions ?? []} />
 
-      {/* Subgroup Insights */}
-      <SubgroupInsights insights={analysis.subgroup_insights ?? []} />
+      {/* ─── PHASE: Action ─── */}
+      <div className="flex items-center gap-2 pt-4">
+        <span className="w-2 h-2 rounded-full bg-emerald-500" />
+        <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">Action</span>
+        <div className="flex-1 h-px bg-emerald-100" />
+      </div>
 
-      {/* Persona Cards */}
-      {(analysis.subgroup_insights?.length ?? 0) > 0 && (
-        <PersonaCards
-          insights={analysis.subgroup_insights}
-          barriers={analysis.barriers}
-          motivators={analysis.motivators}
+      {/* Interventions */}
+      <div id="section-interventions">
+        <InterventionsSection
+          interventions={analysis.intervention_opportunities}
+          validityScores={validityScores}
+          corrections={corrections}
+          onCorrect={hasCorrections ? handleCorrect : undefined}
+          onInspect={inputText ? setInspectQuote : undefined}
+          isPlainMode={isPlainMode}
         />
+      </div>
+
+      {/* Subgroup Insights & Personas */}
+      {(analysis.subgroup_insights?.length ?? 0) > 0 && (
+        <div id="section-segments" className="space-y-6">
+          <SubgroupInsights insights={analysis.subgroup_insights ?? []} />
+          <PersonaCards
+            insights={analysis.subgroup_insights}
+            barriers={analysis.barriers}
+            motivators={analysis.motivators}
+          />
+        </div>
       )}
 
+      {/* ─── PHASE: Review ─── */}
+      <div className="flex items-center gap-2 pt-4">
+        <span className="w-2 h-2 rounded-full bg-amber-500" />
+        <span className="text-xs font-bold uppercase tracking-wider text-amber-600">Review</span>
+        <div className="flex-1 h-px bg-amber-100" />
+      </div>
+
       {/* Confidence */}
-      <ConfidencePanel
-        confidence={analysis.confidence}
-        recommendedResearch={analysis.recommended_next_research}
-        usage={usage}
-        durationMs={state.durationMs}
-        clarificationNote={analysis.clarification_note}
-      />
+      <div id="section-confidence">
+        <ConfidencePanel
+          confidence={analysis.confidence}
+          recommendedResearch={analysis.recommended_next_research}
+          usage={usage}
+          durationMs={state.durationMs}
+          clarificationNote={analysis.clarification_note}
+        />
+      </div>
 
       {/* Analyst Review */}
       {state.savedId && (
-        <ReviewPanel analysisId={state.savedId} />
+        <div id="section-review">
+          <ReviewPanel analysisId={state.savedId} />
+        </div>
       )}
+
+      {/* Quick-link footer to related pages */}
+      <div className="border-t border-gray-100 pt-6 mt-4">
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Continue with this analysis</p>
+        <div className="flex flex-wrap gap-2">
+          <a href="/dashboard" className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 transition-colors">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+            View on Dashboard
+          </a>
+          <a href="/compare" className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 transition-colors">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
+            Compare with another
+          </a>
+          <a href="/eval" className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 transition-colors">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+            Evaluate quality
+          </a>
+        </div>
+      </div>
+    </ResultsLayout>
+  );
+}
+
+/** Wrapper that provides the section navigator and scroll tracking */
+function ResultsLayout({ sectionDefs, sectionIds, children }: { sectionDefs: SectionDef[]; sectionIds: string[]; children: React.ReactNode }) {
+  const activeId = useActiveSection(sectionIds);
+
+  return (
+    <div className="p-6 space-y-8 animate-fade-in">
+      <SectionNav sections={sectionDefs} activeId={activeId} />
+      {children}
     </div>
   );
 }

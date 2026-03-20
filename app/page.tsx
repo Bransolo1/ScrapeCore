@@ -11,7 +11,6 @@ import AnalysisResults from "@/components/AnalysisResults";
 import AnalysisHistory from "@/components/AnalysisHistory";
 import PIIWarningModal from "@/components/PIIWarningModal";
 import WizardOverlay from "@/components/WizardOverlay";
-import GuidedWizard from "@/components/GuidedWizard";
 import BatchPanel from "@/components/BatchPanel";
 import type { BatchDoc } from "@/components/BatchPanel";
 import type { AnalysisState, DataType, BehaviourAnalysis } from "@/lib/types";
@@ -32,10 +31,12 @@ const INITIAL_STATE: AnalysisState = {
   durationMs: null,
 };
 
-const MODE_TABS: { id: InputMode; label: string; icon: React.ReactNode }[] = [
+const MODE_TABS: { id: InputMode; label: string; hint: string; group: "manual" | "collect" | "advanced"; icon: React.ReactNode }[] = [
   {
     id: "paste",
     label: "Paste text",
+    hint: "Paste or upload qualitative data",
+    group: "manual",
     icon: (
       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
@@ -45,6 +46,8 @@ const MODE_TABS: { id: InputMode; label: string; icon: React.ReactNode }[] = [
   {
     id: "scrape",
     label: "Scrape URLs",
+    hint: "Extract text from web pages",
+    group: "collect",
     icon: (
       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
@@ -54,6 +57,8 @@ const MODE_TABS: { id: InputMode; label: string; icon: React.ReactNode }[] = [
   {
     id: "social",
     label: "Social listening",
+    hint: "Reddit, reviews, news, app stores",
+    group: "collect",
     icon: (
       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
@@ -63,6 +68,8 @@ const MODE_TABS: { id: InputMode; label: string; icon: React.ReactNode }[] = [
   {
     id: "footprint",
     label: "Digital footprint",
+    hint: "Full company research across sources",
+    group: "collect",
     icon: (
       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
@@ -72,12 +79,20 @@ const MODE_TABS: { id: InputMode; label: string; icon: React.ReactNode }[] = [
   {
     id: "batch",
     label: "Batch",
+    hint: "Analyse multiple documents at once",
+    group: "advanced",
     icon: (
       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
       </svg>
     ),
   },
+];
+
+const MODE_GROUPS: { key: string; label: string }[] = [
+  { key: "manual", label: "Your data" },
+  { key: "collect", label: "Collect" },
+  { key: "advanced", label: "Advanced" },
 ];
 
 function getActor(): string {
@@ -106,10 +121,9 @@ export default function Home() {
   useEffect(() => { localStorage.setItem("scrapecore-draft-datatype", dataType); }, [dataType]);
   useEffect(() => { localStorage.setItem("scrapecore-draft-context", projectContext); }, [projectContext]);
 
-  // First-run onboarding overlay
+  // Unified wizard (first-run with welcome, or guided setup without)
   const [showWizard, setShowWizard] = useState(false);
-  // Interactive guided input wizard
-  const [showGuidedWizard, setShowGuidedWizard] = useState(false);
+  const [wizardShowWelcome, setWizardShowWelcome] = useState(true);
 
   // Scrape / social sources
   const [sources, setSources] = useState<Source[]>([]);
@@ -317,24 +331,21 @@ export default function Home() {
       <Header />
       {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
 
-      {/* First-run onboarding overlay */}
+      {/* Unified onboarding / guided setup wizard */}
       {showWizard && (
-        <WizardOverlay onDone={() => {
-          setShowWizard(false);
-          localStorage.setItem("scrapecore-wizard-done", "1");
-        }} />
-      )}
-
-      {/* Guided analysis wizard */}
-      {showGuidedWizard && (
-        <GuidedWizard
-          onDismiss={() => setShowGuidedWizard(false)}
+        <WizardOverlay
+          showWelcome={wizardShowWelcome}
+          onDone={() => {
+            setShowWizard(false);
+            localStorage.setItem("scrapecore-wizard-done", "1");
+          }}
           onComplete={({ text, dataType: dt, projectContext: ctx }) => {
             setMode("paste");
             setPasteText(text);
             setDataType(dt);
             setProjectContext(ctx);
-            setShowGuidedWizard(false);
+            setShowWizard(false);
+            localStorage.setItem("scrapecore-wizard-done", "1");
             scanAndRun(text, dt);
           }}
         />
@@ -358,7 +369,7 @@ export default function Home() {
             {!pasteText && mode === "paste" && (
               <div className="px-5 pt-4 pb-0">
                 <button
-                  onClick={() => setShowGuidedWizard(true)}
+                  onClick={() => { setWizardShowWelcome(false); setShowWizard(true); }}
                   disabled={isLoading}
                   className="w-full flex items-center gap-2.5 px-4 py-3 bg-brand-50 hover:bg-brand-100 border border-brand-200 rounded-xl text-sm font-medium text-brand-700 transition-all group"
                 >
@@ -377,23 +388,36 @@ export default function Home() {
                 </div>
               </div>
             )}
-            {/* Mode tabs */}
-            <div className="flex border-b border-gray-100">
-              {MODE_TABS.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setMode(tab.id)}
-                  disabled={isLoading}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-medium transition-all ${
-                    mode === tab.id
-                      ? "text-brand-600 border-b-2 border-brand-600 bg-brand-50/50"
-                      : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-                  }`}
-                >
-                  {tab.icon}
-                  <span className="hidden sm:inline">{tab.label}</span>
-                </button>
-              ))}
+            {/* Mode tabs — grouped by type */}
+            <div className="border-b border-gray-100 px-3 pt-3 pb-0">
+              <div className="flex items-end gap-0.5">
+                {MODE_GROUPS.map((group) => {
+                  const tabs = MODE_TABS.filter((t) => t.group === group.key);
+                  return (
+                    <div key={group.key} className="flex flex-col">
+                      <span className="text-[9px] font-bold uppercase tracking-wider text-gray-300 px-1.5 mb-1">{group.label}</span>
+                      <div className="flex">
+                        {tabs.map((tab) => (
+                          <button
+                            key={tab.id}
+                            onClick={() => setMode(tab.id)}
+                            disabled={isLoading}
+                            title={tab.hint}
+                            className={`flex items-center gap-1.5 px-2.5 py-2 text-xs font-medium rounded-t-lg transition-all ${
+                              mode === tab.id
+                                ? "text-brand-600 bg-brand-50 border border-brand-200 border-b-white -mb-px relative z-10"
+                                : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                            }`}
+                          >
+                            {tab.icon}
+                            <span className="hidden sm:inline">{tab.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="p-5">
@@ -463,54 +487,50 @@ export default function Home() {
 
           {/* ── Results panel ── */}
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm min-h-96 overflow-hidden flex flex-col">
-            {/* Panel header with history toggle */}
-            <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 shrink-0">
-              <div className="flex items-center gap-2">
-                {showHistory ? (
-                  <>
-                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span className="text-sm font-medium text-gray-700">Analysis history</span>
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                    </svg>
-                    <span className="text-sm font-medium text-gray-700">Results</span>
-                  </>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                {rateLimitRemaining !== null && (
-                  <span
-                    title={`${rateLimitRemaining} analyses remaining this hour`}
-                    className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                      rateLimitRemaining <= 2
-                        ? "bg-red-50 text-red-600 border border-red-100"
-                        : rateLimitRemaining <= 5
-                        ? "bg-amber-50 text-amber-700 border border-amber-100"
-                        : "bg-gray-100 text-gray-500"
-                    }`}
-                  >
-                    {rateLimitRemaining} left
-                  </span>
-                )}
+            {/* Panel header — tab-style toggle between Results and History */}
+            <div className="flex items-center justify-between px-5 py-0 border-b border-gray-100 shrink-0">
+              <div className="flex items-center gap-0">
                 <button
-                  onClick={() => setShowHistory((v) => !v)}
-                  className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg transition-all ${
-                    showHistory
-                      ? "bg-brand-50 text-brand-600 hover:bg-brand-100"
-                      : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                  onClick={() => setShowHistory(false)}
+                  className={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium border-b-2 transition-all ${
+                    !showHistory
+                      ? "text-brand-700 border-brand-600"
+                      : "text-gray-400 border-transparent hover:text-gray-600"
                   }`}
                 >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
+                  Results
+                </button>
+                <button
+                  onClick={() => setShowHistory(true)}
+                  className={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium border-b-2 transition-all ${
+                    showHistory
+                      ? "text-brand-700 border-brand-600"
+                      : "text-gray-400 border-transparent hover:text-gray-600"
+                  }`}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  {showHistory ? "Back to results" : "History"}
+                  History
                 </button>
               </div>
+              {rateLimitRemaining !== null && (
+                <span
+                  title={`${rateLimitRemaining} analyses remaining this hour`}
+                  className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                    rateLimitRemaining <= 2
+                      ? "bg-red-50 text-red-600 border border-red-100"
+                      : rateLimitRemaining <= 5
+                      ? "bg-amber-50 text-amber-700 border border-amber-100"
+                      : "bg-gray-100 text-gray-500"
+                  }`}
+                >
+                  {rateLimitRemaining} left
+                </span>
+              )}
             </div>
 
             {/* Panel body */}
