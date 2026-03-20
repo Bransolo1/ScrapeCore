@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import type { DataType } from "@/lib/types";
 
 const DATA_TYPES: { value: DataType; label: string }[] = [
@@ -53,6 +53,16 @@ export default function TextPreviewModal({ text, dataType, sources, onConfirm, o
   });
   const [editedText, setEditedText] = useState(text);
 
+  // Escape key to close
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === "Escape") onCancel();
+  }, [onCancel]);
+
+  useEffect(() => {
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [handleKeyDown]);
+
   const toggleSource = (id: string) => {
     setSourceToggles((prev) => ({ ...prev, [id]: !prev[id] }));
   };
@@ -90,13 +100,13 @@ export default function TextPreviewModal({ text, dataType, sources, onConfirm, o
   const activeSourceCount = sources ? Object.values(sourceToggles).filter(Boolean).length : 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="preview-modal-title">
       <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full mx-4 overflow-hidden animate-fade-in flex flex-col max-h-[80vh]">
         {/* Header */}
         <div className="px-6 pt-6 pb-4 border-b border-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-base font-semibold text-gray-900">Review collected data</h2>
+              <h2 id="preview-modal-title" className="text-base font-semibold text-gray-900">Review collected data</h2>
               <p className="text-xs text-gray-500 mt-1">
                 {sources?.length
                   ? "Toggle sources on/off, choose data type, then run analysis."

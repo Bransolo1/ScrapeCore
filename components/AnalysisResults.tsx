@@ -354,6 +354,43 @@ export default function AnalysisResults({ state, inputText, usage, onCancel, onR
       {/* Trust banner */}
       <TrustBanner />
 
+      {/* Review progress indicator */}
+      {hasCorrections && (() => {
+        const totalItems =
+          (analysis.key_behaviours?.length ?? 0) +
+          (analysis.barriers?.length ?? 0) +
+          (analysis.motivators?.length ?? 0) +
+          (analysis.intervention_opportunities?.length ?? 0);
+        const reviewedItems = corrections.size;
+        if (totalItems === 0) return null;
+        const pct = Math.round((reviewedItems / totalItems) * 100);
+        return (
+          <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-medium text-gray-600">
+                  Validation progress
+                </span>
+                <span className="text-xs text-gray-400">
+                  {reviewedItems}/{totalItems} findings reviewed
+                </span>
+              </div>
+              <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    pct === 100 ? "bg-emerald-500" : pct > 50 ? "bg-brand-500" : "bg-amber-400"
+                  }`}
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+            </div>
+            {pct === 100 && (
+              <span className="text-xs font-semibold text-emerald-600 shrink-0">Complete</span>
+            )}
+          </div>
+        );
+      })()}
+
       {/* Competitor profile — only shown when company_model is present */}
       {analysis.company_model && (
         <CompetitorProfilePanel model={analysis.company_model} />
@@ -490,7 +527,7 @@ export default function AnalysisResults({ state, inputText, usage, onCancel, onR
       )}
 
       {/* Re-analyse with corrections */}
-      {onReanalyse && corrections.size > 0 && (
+      {onReanalyse && corrections.size > 0 && inputText.trim().length > 0 && (
         <div className="border-t border-gray-100 pt-6 mt-4">
           <div className="bg-violet-50 border border-violet-200 rounded-xl p-4">
             <div className="flex items-start gap-3">
