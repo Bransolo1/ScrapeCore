@@ -155,13 +155,47 @@ function EmptyDashboard() {
 
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 
+// ─── Filter options ──────────────────────────────────────────────────────────
+
+const RANGE_OPTIONS = [
+  { value: "7d", label: "Last 7 days" },
+  { value: "30d", label: "Last 30 days" },
+  { value: "90d", label: "Last 90 days" },
+  { value: "all", label: "All time" },
+];
+
+const DATA_TYPE_OPTIONS = [
+  { value: "", label: "All types" },
+  { value: "survey", label: "Survey" },
+  { value: "reviews", label: "Reviews" },
+  { value: "social", label: "Social" },
+  { value: "interviews", label: "Interviews" },
+  { value: "free_text", label: "Free text" },
+  { value: "competitor", label: "Competitor" },
+];
+
 export default function DashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Filters
+  const [range, setRange] = useState("all");
+  const [dataType, setDataType] = useState("");
+  const [project, setProject] = useState("");
+  const [projectInput, setProjectInput] = useState("");
+
   useEffect(() => {
-    fetch("/api/analyses/stats")
+    setLoading(true);
+    setError(null);
+
+    const params = new URLSearchParams();
+    if (range !== "all") params.set("range", range);
+    if (dataType) params.set("dataType", dataType);
+    if (project) params.set("project", project);
+    const qs = params.toString();
+
+    fetch(`/api/analyses/stats${qs ? `?${qs}` : ""}`)
       .then((r) => r.json())
       .then((d) => {
         if (d.error) throw new Error(d.error);
@@ -169,7 +203,7 @@ export default function DashboardPage() {
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [range, dataType, project]);
 
   const formatMs = (ms: number) =>
     ms >= 60_000 ? `${(ms / 60_000).toFixed(1)}m` : `${(ms / 1000).toFixed(1)}s`;
@@ -183,11 +217,69 @@ export default function DashboardPage() {
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-8">
         {/* Page heading */}
-        <div className="mb-8">
+        <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Intelligence Dashboard</h1>
           <p className="text-sm text-gray-500 mt-1">
             Patterns and trends across all your behavioural analyses
           </p>
+        </div>
+
+        {/* Filter bar */}
+        <div className="mb-6 flex flex-wrap items-end gap-3 bg-white border border-gray-200 rounded-2xl p-4 shadow-sm shadow-gray-200/50">
+          <div className="flex flex-col gap-1">
+            <label className="text-[11px] font-medium text-gray-400 uppercase tracking-wide">Time range</label>
+            <select
+              value={range}
+              onChange={(e) => setRange(e.target.value)}
+              className="px-3 py-2 text-sm text-gray-700 bg-surface-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50"
+            >
+              {RANGE_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-[11px] font-medium text-gray-400 uppercase tracking-wide">Data type</label>
+            <select
+              value={dataType}
+              onChange={(e) => setDataType(e.target.value)}
+              className="px-3 py-2 text-sm text-gray-700 bg-surface-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50"
+            >
+              {DATA_TYPE_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1 flex-1 min-w-48">
+            <label className="text-[11px] font-medium text-gray-400 uppercase tracking-wide">Project</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={projectInput}
+                onChange={(e) => setProjectInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") setProject(projectInput.trim()); }}
+                placeholder="Filter by project name…"
+                className="flex-1 px-3 py-2 text-sm text-gray-700 bg-surface-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 placeholder-gray-400"
+              />
+              {project && (
+                <button
+                  onClick={() => { setProject(""); setProjectInput(""); }}
+                  className="px-2.5 py-2 text-xs text-gray-500 hover:text-gray-700 bg-gray-100 rounded-xl transition-colors"
+                  title="Clear project filter"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          </div>
+          {(range !== "all" || dataType || project) && (
+            <button
+              onClick={() => { setRange("all"); setDataType(""); setProject(""); setProjectInput(""); }}
+              className="px-3 py-2 text-xs font-medium text-brand-600 hover:text-brand-700 bg-brand-50 border border-brand-200 rounded-xl transition-colors"
+            >
+              Reset filters
+            </button>
+          )}
         </div>
 
         {loading && (
@@ -214,7 +306,7 @@ export default function DashboardPage() {
               <KPICard
                 label="Total Analyses"
                 value={stats.total}
-                sub="All-time"
+                sub={range === "all" ? "All time" : RANGE_OPTIONS.find((o) => o.value === range)?.label ?? range}
                 color="#f97316"
                 icon={
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
