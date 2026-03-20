@@ -20,7 +20,7 @@ interface AnalysisSummary {
 }
 
 interface AnalysisHistoryProps {
-  onLoad: (analysis: BehaviourAnalysis, dataType: DataType, savedId?: string) => void;
+  onLoad: (analysis: BehaviourAnalysis, dataType: DataType, savedId?: string, reviewStatus?: string, reviewNotes?: string | null) => void;
   refreshKey: number;
 }
 
@@ -118,7 +118,7 @@ export default function AnalysisHistory({
       const res = await fetch(`/api/analyses/${id}?actor=${encodeURIComponent(actor)}`);
       const data = await res.json();
       if (data.analysisJson) {
-        onLoad(data.analysisJson as BehaviourAnalysis, data.dataType as DataType, data.id);
+        onLoad(data.analysisJson as BehaviourAnalysis, data.dataType as DataType, data.id, data.reviewStatus, data.reviewNotes);
       }
     } finally {
       setLoadingId(null);
@@ -272,9 +272,16 @@ export default function AnalysisHistory({
                     <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-brand-50 text-brand-600">
                       {DATA_TYPE_LABELS[a.dataType] ?? a.dataType}
                     </span>
-                    {a.reviewStatus && a.reviewStatus !== "pending" && (
+                    {a.reviewStatus && (
                       <span className={`inline-flex items-center px-1.5 py-0.5 rounded border text-xs font-medium ${REVIEW_BADGE[a.reviewStatus]?.classes ?? ""}`}>
-                        {REVIEW_BADGE[a.reviewStatus]?.label}
+                        {a.reviewStatus === "pending" ? (
+                          <span className="flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                            {REVIEW_BADGE[a.reviewStatus]?.label}
+                          </span>
+                        ) : (
+                          REVIEW_BADGE[a.reviewStatus]?.label
+                        )}
                       </span>
                     )}
                     {a.piiDetected && (

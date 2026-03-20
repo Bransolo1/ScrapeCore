@@ -1,13 +1,27 @@
 "use client";
 
 import type { BehaviourAnalysis } from "@/lib/types";
+import type { Correction } from "./CorrectionControls";
 
 interface ExportButtonProps {
   analysis: BehaviourAnalysis;
   inputText: string;
+  corrections?: Map<string, Correction>;
+  reviewStatus?: string;
+  reviewNotes?: string | null;
 }
 
-export default function ExportButton({ analysis, inputText }: ExportButtonProps) {
+function correctionAnnotation(corrections: Map<string, Correction> | undefined, section: string, index: number): string {
+  if (!corrections) return "";
+  const c = corrections.get(`${section}:${index}`);
+  if (!c) return "";
+  if (c.status === "disputed") return ` [DISPUTED${c.note ? `: ${c.note}` : ""}]`;
+  if (c.status === "removed") return " [REMOVED]";
+  if (c.status === "confirmed") return " [CONFIRMED]";
+  return "";
+}
+
+export default function ExportButton({ analysis, inputText, corrections, reviewStatus, reviewNotes }: ExportButtonProps) {
   const exportPDF = () => {
     const date = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
     const sections: string[] = [];
@@ -23,13 +37,15 @@ export default function ExportButton({ analysis, inputText }: ExportButtonProps)
         row("Data type", analysis.data_type_detected),
         row("Units analysed", String(analysis.text_units_analysed)),
         row("Overall confidence", analysis.confidence?.overall ?? "—"),
+        ...(reviewStatus ? [row("Review status", reviewStatus + (reviewNotes ? ` — ${reviewNotes}` : ""))] : []),
       ].join("")}</table>
     `);
 
     if (analysis.key_behaviours?.length) {
-      sections.push(`<h2>Key Behaviours</h2><ul>${analysis.key_behaviours.map((b) =>
-        `<li><strong>${b.behaviour}</strong> — frequency: ${b.frequency}, importance: ${b.importance}${b.source_text ? `<br><em>"${b.source_text}"</em>` : ""}</li>`
-      ).join("")}</ul>`);
+      sections.push(`<h2>Key Behaviours</h2><ul>${analysis.key_behaviours.map((b, i) => {
+        const ann = correctionAnnotation(corrections, "key_behaviours", i);
+        return `<li><strong>${b.behaviour}</strong> — frequency: ${b.frequency}, importance: ${b.importance}${ann ? ` ${badge(ann.replace(/[\[\]]/g, "").trim(), ann.includes("DISPUTED") ? "#fef3c7" : ann.includes("REMOVED") ? "#fee2e2" : "#d1fae5")}` : ""}${b.source_text ? `<br><em>"${b.source_text}"</em>` : ""}</li>`;
+      }).join("")}</ul>`);
     }
 
     const comB = analysis.com_b_mapping;
@@ -45,9 +61,10 @@ export default function ExportButton({ analysis, inputText }: ExportButtonProps)
       <p><strong>Automatic:</strong> ${comB.motivation.automatic.join("; ") || "None"}</p>`);
 
     if (analysis.barriers?.length) {
-      sections.push(`<h2>Barriers</h2><ul>${analysis.barriers.map((b) =>
-        `<li>${badge(b.severity.toUpperCase(), b.severity === "high" ? "#fee2e2" : b.severity === "medium" ? "#fef3c7" : "#f3f4f6")} <strong>${b.barrier}</strong> <em>(${b.com_b_type})</em>${b.source_text ? `<br><span style="color:#6b7280">"${b.source_text}"</span>` : ""}</li>`
-      ).join("")}</ul>`);
+      sections.push(`<h2>Barriers</h2><ul>${analysis.barriers.map((b, i) => {
+        const ann = correctionAnnotation(corrections, "barriers", i);
+        return `<li>${badge(b.severity.toUpperCase(), b.severity === "high" ? "#fee2e2" : b.severity === "medium" ? "#fef3c7" : "#f3f4f6")} <strong>${b.barrier}</strong> <em>(${b.com_b_type})</em>${ann ? ` ${badge(ann.replace(/[\[\]]/g, "").trim(), ann.includes("DISPUTED") ? "#fef3c7" : ann.includes("REMOVED") ? "#fee2e2" : "#d1fae5")}` : ""}${b.source_text ? `<br><span style="color:#6b7280">"${b.source_text}"</span>` : ""}</li>`;
+      }).join("")}</ul>`);
     }
 
     if (analysis.motivators?.length) {
@@ -91,8 +108,20 @@ export default function ExportButton({ analysis, inputText }: ExportButtonProps)
     if (w) { w.document.write(html); w.document.close(); }
   };
   const exportJSON = () => {
+    const correctionsObj: Record<string, { status: string; note?: string }> = {};
+    if (corrections) {
+      corrections.forEach((v, k) => { correctionsObj[k] = { status: v.status, ...(v.note ? { note: v.note } : {}) }; });
+    }
     const blob = new Blob(
-      [JSON.stringify({ analysis, metadata: { exportedAt: new Date().toISOString(), inputLength: inputText.length } }, null, 2)],
+      [JSON.stringify({
+        analysis,
+        metadata: {
+          exportedAt: new Date().toISOString(),
+          inputLength: inputText.length,
+          ...(reviewStatus ? { reviewStatus, reviewNotes: reviewNotes ?? undefined } : {}),
+        },
+        ...(Object.keys(correctionsObj).length > 0 ? { corrections: correctionsObj } : {}),
+      }, null, 2)],
       { type: "application/json" }
     );
     const url = URL.createObjectURL(blob);
@@ -115,9 +144,10 @@ export default function ExportButton({ analysis, inputText }: ExportButtonProps)
       `**Text units analysed:** ${analysis.text_units_analysed}  `,
       `**Overall confidence:** ${analysis.confidence.overall}`,
       ``,
+      ...(reviewStatus ? [`## Review Status`, `**Status:** ${reviewStatus}`, ...(reviewNotes ? [`**Notes:** ${reviewNotes}`] : []), ``] : []),
       `## Key Behaviours`,
-      ...analysis.key_behaviours.map((b) =>
-        `- **${b.behaviour}** (frequency: ${b.frequency}, importance: ${b.importance})\n${b.source_text ? `  > "${b.source_text}"\n` : ""}  ${b.evidence[0] ?? ""}`
+      ...analysis.key_behaviours.map((b, i) =>
+        `- **${b.behaviour}** (frequency: ${b.frequency}, importance: ${b.importance})${correctionAnnotation(corrections, "key_behaviours", i)}\n${b.source_text ? `  > "${b.source_text}"\n` : ""}  ${b.evidence[0] ?? ""}`
       ),
       ``,
       `## COM-B Mapping`,
@@ -132,19 +162,19 @@ export default function ExportButton({ analysis, inputText }: ExportButtonProps)
       `**Automatic:** ${analysis.com_b_mapping.motivation.automatic.join("; ") || "None identified"}`,
       ``,
       `## Barriers`,
-      ...analysis.barriers.map((b) =>
-        `- **[${b.severity.toUpperCase()}]** ${b.barrier} *(${b.com_b_type})*${b.source_text ? `\n  > "${b.source_text}"` : ""}`
+      ...analysis.barriers.map((b, i) =>
+        `- **[${b.severity.toUpperCase()}]** ${b.barrier} *(${b.com_b_type})*${correctionAnnotation(corrections, "barriers", i)}${b.source_text ? `\n  > "${b.source_text}"` : ""}`
       ),
       ``,
       `## Motivators`,
-      ...analysis.motivators.map((m) =>
-        `- **[${m.strength.toUpperCase()}]** ${m.motivator} *(${m.com_b_type})*${m.source_text ? `\n  > "${m.source_text}"` : ""}`
+      ...analysis.motivators.map((m, i) =>
+        `- **[${m.strength.toUpperCase()}]** ${m.motivator} *(${m.com_b_type})*${correctionAnnotation(corrections, "motivators", i)}${m.source_text ? `\n  > "${m.source_text}"` : ""}`
       ),
       ``,
       `## Intervention Opportunities`,
       ...analysis.intervention_opportunities.map((item, i) =>
         [
-          `${i + 1}. **${item.intervention}** — ${item.bcw_category} [${item.priority}]`,
+          `${i + 1}. **${item.intervention}** — ${item.bcw_category} [${item.priority}]${correctionAnnotation(corrections, "interventions", i)}`,
           `   ${item.rationale}`,
           item.bct_specifics?.length ? `   *BCTs: ${item.bct_specifics.join(", ")}*` : "",
           item.implementation_guidance ? `   ${item.implementation_guidance}` : "",

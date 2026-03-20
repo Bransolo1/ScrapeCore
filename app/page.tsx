@@ -11,6 +11,7 @@ import AnalysisResults from "@/components/AnalysisResults";
 import AnalysisHistory from "@/components/AnalysisHistory";
 import PIIWarningModal from "@/components/PIIWarningModal";
 import WizardOverlay from "@/components/WizardOverlay";
+import TextPreviewModal from "@/components/TextPreviewModal";
 import BatchPanel from "@/components/BatchPanel";
 import type { BatchDoc } from "@/components/BatchPanel";
 import type { AnalysisState, DataType, BehaviourAnalysis } from "@/lib/types";
@@ -136,12 +137,19 @@ export default function Home() {
   // Rate limit remaining
   const [rateLimitRemaining, setRateLimitRemaining] = useState<number | null>(null);
 
+  // Review data (loaded from history)
+  const [reviewData, setReviewData] = useState<{ status?: string; notes?: string | null }>({});
+
   // Settings modal
   const [showSettings, setShowSettings] = useState(false);
 
   // History panel
   const [showHistory, setShowHistory] = useState(false);
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
+
+  // Text preview (for scraped/social content before analysis)
+  const [previewText, setPreviewText] = useState<string | null>(null);
+  const [previewDataType, setPreviewDataType] = useState<DataType>("free_text");
 
   // PII gate
   const [piiResult, setPiiResult] = useState<PIIScanResult | null>(null);
@@ -288,7 +296,8 @@ export default function Home() {
     // Infer best data type from source types
     const hasSocial = sources.some((s) => s.source === "reddit" || s.source === "hackernews");
     const dt: DataType = hasSocial ? "social" : "free_text";
-    scanAndRun(text, dt);
+    setPreviewText(text);
+    setPreviewDataType(dt);
   };
 
   const handleNewSources = (newSources: Source[]) => {
@@ -304,9 +313,10 @@ export default function Home() {
 
   const clearSources = () => setSources([]);
 
-  const handleLoadFromHistory = (analysis: BehaviourAnalysis, dt: DataType, savedId?: string) => {
+  const handleLoadFromHistory = (analysis: BehaviourAnalysis, dt: DataType, savedId?: string, reviewStatus?: string, reviewNotes?: string | null) => {
     setUsage(undefined);
     setAnalysisState({ status: "complete", streamingText: "", analysis, error: null, durationMs: null, savedId: savedId ?? null });
+    setReviewData({ status: reviewStatus, notes: reviewNotes });
     setShowHistory(false);
   };
 
@@ -321,6 +331,20 @@ export default function Home() {
       savedId: doc.state.savedId ?? null,
     });
     setShowHistory(false);
+  };
+
+  const handleModeSwitch = (targetMode: InputMode) => {
+    if (targetMode === mode) return;
+    const hasContent =
+      (mode === "paste" && pasteText.trim().length > 0) ||
+      (mode !== "paste" && mode !== "batch" && sources.length > 0);
+    if (hasContent) {
+      const ok = window.confirm(
+        "You have data in the current mode. Switch anyway?\nYour data will be preserved if you switch back."
+      );
+      if (!ok) return;
+    }
+    setMode(targetMode);
   };
 
   const activeInputText =
@@ -339,14 +363,14 @@ export default function Home() {
             setShowWizard(false);
             localStorage.setItem("scrapecore-wizard-done", "1");
           }}
-          onComplete={({ text, dataType: dt, projectContext: ctx }) => {
+          onComplete={({ text, dataType: dt, projectContext: ctx, skipAnalysis }) => {
             setMode("paste");
             setPasteText(text);
             setDataType(dt);
             setProjectContext(ctx);
             setShowWizard(false);
             localStorage.setItem("scrapecore-wizard-done", "1");
-            scanAndRun(text, dt);
+            if (!skipAnalysis) scanAndRun(text, dt);
           }}
         />
       )}
@@ -358,6 +382,19 @@ export default function Home() {
           onContinue={handlePIIContinue}
           onRedactAndContinue={handlePIIRedactAndContinue}
           onCancel={handlePIICancel}
+        />
+      )}
+
+      {/* Text preview modal for scraped/social content */}
+      {previewText !== null && (
+        <TextPreviewModal
+          text={previewText}
+          dataType={previewDataType}
+          onConfirm={(text, dt) => {
+            setPreviewText(null);
+            scanAndRun(text, dt);
+          }}
+          onCancel={() => setPreviewText(null)}
         />
       )}
 
@@ -400,7 +437,7 @@ export default function Home() {
                         {tabs.map((tab) => (
                           <button
                             key={tab.id}
-                            onClick={() => setMode(tab.id)}
+                            onClick={() => handleModeSwitch(tab.id)}
                             disabled={isLoading}
                             title={tab.hint}
                             className={`flex items-center gap-1.5 px-2.5 py-2 text-xs font-medium rounded-t-lg transition-all ${
@@ -547,6 +584,8 @@ export default function Home() {
                     inputText={activeInputText}
                     usage={usage}
                     onCancel={cancelAnalysis}
+                    initialReviewStatus={reviewData.status}
+                    initialReviewNotes={reviewData.notes}
                   />
                 </ErrorBoundary>
               )}

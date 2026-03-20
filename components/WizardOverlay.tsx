@@ -31,7 +31,7 @@ interface WizardOverlayProps {
   /** If true, the wizard starts at step 0 (Welcome). If false, starts at step 1 (guided setup). */
   showWelcome?: boolean;
   onDone: () => void;
-  onComplete?: (params: { text: string; dataType: DataType; projectContext: string }) => void;
+  onComplete?: (params: { text: string; dataType: DataType; projectContext: string; skipAnalysis?: boolean }) => void;
 }
 
 export default function WizardOverlay({ showWelcome = true, onDone, onComplete }: WizardOverlayProps) {
@@ -73,9 +73,9 @@ export default function WizardOverlay({ showWelcome = true, onDone, onComplete }
     reader.readAsText(file);
   };
 
-  const handleRun = () => {
+  const handleRun = (skipAnalysis = false) => {
     if (onComplete) {
-      onComplete({ text, dataType, projectContext });
+      onComplete({ text, dataType, projectContext, skipAnalysis });
     }
     onDone();
   };
@@ -326,16 +326,29 @@ export default function WizardOverlay({ showWelcome = true, onDone, onComplete }
                 {step === 0 ? "Get started" : "Next"}
               </button>
             ) : (
-              <button
-                onClick={handleRun}
-                disabled={!text.trim() || wordCount < 10}
-                className="px-5 py-2 text-sm bg-brand-600 hover:bg-brand-700 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-lg font-semibold transition-colors flex items-center gap-1.5"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                Run analysis
-              </button>
+              <>
+                <button
+                  onClick={() => handleRun(true)}
+                  disabled={!text.trim() || wordCount < 10}
+                  className="px-4 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-40 transition-colors flex items-center gap-1.5"
+                  title="Load data into the editor so you can review and edit before running"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  Load into editor
+                </button>
+                <button
+                  onClick={() => handleRun(false)}
+                  disabled={!text.trim() || wordCount < 10}
+                  className="px-5 py-2 text-sm bg-brand-600 hover:bg-brand-700 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-lg font-semibold transition-colors flex items-center gap-1.5"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  Run analysis
+                </button>
+              </>
             )}
           </div>
         </div>

@@ -36,6 +36,8 @@ interface AnalysisResultsProps {
   inputText: string;
   usage?: { inputTokens: number; outputTokens: number };
   onCancel?: () => void;
+  initialReviewStatus?: string;
+  initialReviewNotes?: string | null;
 }
 
 function getActor() {
@@ -157,7 +159,7 @@ function StreamingState({ text, onCancel }: { text: string; onCancel?: () => voi
   );
 }
 
-export default function AnalysisResults({ state, inputText, usage, onCancel }: AnalysisResultsProps) {
+export default function AnalysisResults({ state, inputText, usage, onCancel, initialReviewStatus, initialReviewNotes }: AnalysisResultsProps) {
   // Corrections state: key = "section:index"
   const [corrections, setCorrections] = useState<Map<string, Correction>>(new Map());
 
@@ -325,7 +327,13 @@ export default function AnalysisResults({ state, inputText, usage, onCancel }: A
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {state.savedId && <ShareButton analysisId={state.savedId} />}
-          <ExportButton analysis={analysis} inputText={inputText} />
+          <ExportButton
+            analysis={analysis}
+            inputText={inputText}
+            corrections={corrections}
+            reviewStatus={initialReviewStatus}
+            reviewNotes={initialReviewNotes}
+          />
         </div>
       </div>
 
@@ -472,7 +480,11 @@ export default function AnalysisResults({ state, inputText, usage, onCancel }: A
       {/* Analyst Review */}
       {state.savedId && (
         <div id="section-review">
-          <ReviewPanel analysisId={state.savedId} />
+          <ReviewPanel
+            analysisId={state.savedId}
+            initialStatus={initialReviewStatus as "pending" | "approved" | "disputed" | "archived" | undefined}
+            initialNotes={initialReviewNotes}
+          />
         </div>
       )}
 
