@@ -214,12 +214,32 @@ export default function AnalysisHistory({
       )}
 
       {!loading && !hasContent && !debouncedSearch && (
-        <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
-          <svg className="w-10 h-10 text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <p className="text-sm text-gray-400">No saved analyses yet.</p>
-          <p className="text-xs text-gray-300">Completed analyses are saved automatically.</p>
+        <div className="flex flex-col items-center justify-center py-12 gap-4 text-center px-6">
+          <div className="w-12 h-12 bg-brand-50 rounded-2xl flex items-center justify-center">
+            <svg className="w-6 h-6 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-500 mb-1">No analyses yet</p>
+            <p className="text-xs text-gray-400 leading-relaxed max-w-xs">
+              Paste qualitative data in the input panel and run your first analysis. Results are saved here automatically.
+            </p>
+          </div>
+          <div className="flex items-center gap-3 text-xs text-gray-400 mt-1">
+            <span className="flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-violet-400" />
+              COM-B mapping
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              Interventions
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+              Evidence grounding
+            </span>
+          </div>
         </div>
       )}
 
@@ -295,7 +315,7 @@ export default function AnalysisHistory({
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-1 shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                   <button
                     onClick={() => handleLoad(a.id)}
                     disabled={loadingId === a.id}

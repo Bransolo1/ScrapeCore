@@ -50,6 +50,9 @@ export default function DataInput({
   };
 
   const loadExample = () => {
+    if (text.trim().length > 0 && !window.confirm("This will replace your current text with example data. Continue?")) {
+      return;
+    }
     onTextChange(EXAMPLE_DATA.text);
     onDataTypeChange(EXAMPLE_DATA.dataType);
   };
@@ -131,12 +134,23 @@ One response per line works best for the analysis."
           className="w-full h-64 px-3 py-3 text-sm text-gray-800 placeholder-gray-400 bg-white border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent font-mono leading-relaxed"
           disabled={isLoading}
         />
-        <div className="flex items-center justify-between mt-1.5">
-          <p className="text-xs text-gray-400">
-            {wordCount > 0 ? `${wordCount.toLocaleString()} words · ${lineCount} text units` : "Paste or upload qualitative text to begin"}
-          </p>
+        <div className="mt-1.5 space-y-1.5">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-gray-400">
+              {wordCount > 0 ? `${wordCount.toLocaleString()} words · ${lineCount} text units` : "Paste or upload qualitative text to begin"}
+            </p>
+            {wordCount > 0 && wordCount < 50 && (
+              <p className="text-xs text-amber-500">{50 - wordCount} more words needed</p>
+            )}
+          </div>
+          {/* Word count progress bar — shows progress toward minimum threshold */}
           {wordCount > 0 && wordCount < 50 && (
-            <p className="text-xs text-amber-500">Add more text for a reliable analysis</p>
+            <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-amber-400 rounded-full transition-all duration-300"
+                style={{ width: `${Math.min(100, (wordCount / 50) * 100)}%` }}
+              />
+            </div>
           )}
         </div>
         {diversity?.warning && (
