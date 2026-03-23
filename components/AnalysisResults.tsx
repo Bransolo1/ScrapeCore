@@ -508,7 +508,7 @@ export default function AnalysisResults({ state, inputText, usage, onCancel, onR
       {/* Behavioural context — collapsed by default */}
       <CollapsibleSection title="Behavioural Context" count={
         (analysis.behavioural_context?.triggers?.length ?? 0) +
-        (analysis.behavioural_context?.temporal_patterns?.length ?? 0)
+        (analysis.behavioural_context?.temporal_pattern ? 1 : 0)
       }>
         <BehaviouralContextPanel context={analysis.behavioural_context} />
       </CollapsibleSection>

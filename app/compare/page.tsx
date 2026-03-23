@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { Suspense, useEffect, useState, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import Header from "@/components/Header";
 import ComBChart from "@/components/ComBChart";
@@ -161,6 +161,14 @@ function DiffList({
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function ComparePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="animate-pulse text-sm text-gray-400">Loading comparison…</div></div>}>
+      <ComparePageInner />
+    </Suspense>
+  );
+}
+
+function ComparePageInner() {
   const searchParams = useSearchParams();
   const prefillId = searchParams.get("analysisId");
 
