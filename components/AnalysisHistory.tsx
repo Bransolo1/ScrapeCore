@@ -245,7 +245,7 @@ export default function AnalysisHistory({
 
       {!loading && !hasContent && debouncedSearch && (
         <div className="flex flex-col items-center justify-center py-10 gap-2 text-center">
-          <p className="text-sm text-gray-400">No results for "{debouncedSearch}"</p>
+          <p className="text-sm text-gray-400">No results for &ldquo;{debouncedSearch}&rdquo;</p>
           <button
             onClick={() => setSearch("")}
             className="text-xs text-brand-600 hover:text-brand-700"
