@@ -24,13 +24,28 @@ function MoonIcon() {
   );
 }
 
-const NAV = [
-  { href: "/",           label: "Analyse",   title: "Run a new behavioural analysis" },
-  { href: "/dashboard",  label: "Dashboard", title: "Quality trends and aggregate stats" },
-  { href: "/compare",    label: "Compare",   title: "Side-by-side COM-B diff between two analyses" },
-  { href: "/eval",       label: "Eval Lab",  title: "Rubric scoring and prompt A/B comparison" },
-  { href: "/monitoring", label: "Monitor",   title: "Scheduled competitor monitoring" },
-  { href: "/audit",      label: "Audit Log", title: "Full audit trail of analysis activity" },
+const NAV_GROUPS: { label: string; items: { href: string; label: string; title: string }[] }[] = [
+  {
+    label: "",
+    items: [
+      { href: "/", label: "Collect & Analyse", title: "Scrape web data and run COM-B behavioural analysis" },
+    ],
+  },
+  {
+    label: "Intelligence",
+    items: [
+      { href: "/dashboard",  label: "Dashboard",         title: "See patterns across all your analyses" },
+      { href: "/compare",    label: "Compare",            title: "Diff two analyses to spot competitive gaps" },
+      { href: "/monitoring", label: "Track Competitors",  title: "Set up automated competitor scraping on a schedule" },
+    ],
+  },
+  {
+    label: "Quality",
+    items: [
+      { href: "/eval",  label: "Quality Lab", title: "Score and validate your analysis quality" },
+      { href: "/audit", label: "Audit Log",   title: "Full trail of who ran what and when" },
+    ],
+  },
 ];
 
 export default function Header() {
@@ -53,29 +68,37 @@ export default function Header() {
           </div>
           <div className="hidden sm:block">
             <h1 className="text-base font-semibold text-gray-900 leading-none">ScrapeCore</h1>
-            <p className="text-xs text-gray-500 mt-0.5">Behavioural Market Intelligence</p>
+            <p className="text-xs text-gray-500 mt-0.5">Scrape. Analyse. Understand behaviour.</p>
           </div>
         </Link>
 
-        {/* Nav */}
-        <nav className="flex items-center gap-1">
-          {NAV.map(({ href, label, title }) => {
-            const active = pathname === href;
-            return (
-              <Link
-                key={href}
-                href={href}
-                title={title}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                  active
-                    ? "bg-brand-50 text-brand-700 border border-brand-200"
-                    : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-                }`}
-              >
-                {label}
-              </Link>
-            );
-          })}
+        {/* Nav — grouped by mission flow */}
+        <nav className="flex items-center gap-0.5">
+          {NAV_GROUPS.map((group, gi) => (
+            <div key={gi} className="flex items-center">
+              {gi > 0 && <div className="w-px h-5 bg-gray-200 mx-1.5" />}
+              {group.label && (
+                <span className="text-[9px] font-bold uppercase tracking-wider text-gray-300 mr-1 hidden lg:inline">{group.label}</span>
+              )}
+              {group.items.map(({ href, label, title }) => {
+                const active = pathname === href;
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    title={title}
+                    className={`px-2.5 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                      active
+                        ? "bg-brand-50 text-brand-700 border border-brand-200"
+                        : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                    }`}
+                  >
+                    {label}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
         {/* Right controls */}

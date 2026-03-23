@@ -41,6 +41,52 @@ interface AnalysisResultsProps {
   initialReviewNotes?: string | null;
 }
 
+/** Collapsible section wrapper — collapsed by default with a count badge */
+function CollapsibleSection({ title, count, children, defaultOpen = false }: { title: string; count?: number; children: React.ReactNode; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="border border-gray-200 rounded-xl overflow-hidden">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+      >
+        <span className="text-sm font-semibold text-gray-700">{title}</span>
+        <div className="flex items-center gap-2">
+          {count !== undefined && count > 0 && (
+            <span className="text-xs font-medium text-gray-400 bg-white border border-gray-200 px-2 py-0.5 rounded-full">{count} {count === 1 ? "item" : "items"}</span>
+          )}
+          <svg className={`w-4 h-4 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+      </button>
+      {open && <div className="px-4 py-4">{children}</div>}
+    </div>
+  );
+}
+
+/** Small explainer tooltip for COM-B newcomers */
+function SectionExplainer({ text }: { text: string }) {
+  const [show, setShow] = useState(false);
+  return (
+    <span className="relative inline-flex ml-1.5">
+      <button
+        onClick={() => setShow(!show)}
+        className="w-4 h-4 rounded-full bg-gray-200 hover:bg-brand-200 text-gray-500 hover:text-brand-600 flex items-center justify-center text-[10px] font-bold transition-colors"
+        aria-label="What is this?"
+      >
+        ?
+      </button>
+      {show && (
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-64 bg-gray-900 text-white text-xs rounded-lg px-3 py-2 shadow-lg z-20 leading-relaxed">
+          {text}
+          <div className="absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45 -mt-1" />
+        </div>
+      )}
+    </span>
+  );
+}
+
 function getActor() {
   if (typeof window === "undefined") return "analyst";
   return localStorage.getItem("scrapecore-user") ?? "analyst";
@@ -48,22 +94,55 @@ function getActor() {
 
 function EmptyState() {
   return (
-    <div className="flex flex-col items-center justify-center h-full min-h-96 text-center px-8">
-      <div className="w-14 h-14 bg-brand-50 rounded-2xl flex items-center justify-center mb-4">
-        <svg className="w-7 h-7 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+    <div className="flex flex-col items-center justify-center h-full min-h-96 text-center px-8 py-10">
+      {/* Mission reminder */}
+      <div className="w-14 h-14 bg-gradient-to-br from-brand-100 to-violet-100 rounded-2xl flex items-center justify-center mb-4">
+        <svg className="w-7 h-7 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
         </svg>
       </div>
-      <h3 className="text-base font-semibold text-gray-700 mb-2">Ready to analyse</h3>
-      <p className="text-sm text-gray-400 max-w-sm leading-relaxed">
-        Paste qualitative text on the left and run the analysis. Results will include COM-B mapping, barriers, motivators, and intervention recommendations.
+      <h3 className="text-base font-semibold text-gray-700 mb-1">Scrape data, then understand behaviour</h3>
+      <p className="text-sm text-gray-400 max-w-md leading-relaxed mb-6">
+        Use the collection tools on the left to scrape websites, app reviews, or social media — then ScrapeCore applies COM-B behavioural science to reveal barriers, motivators, and interventions.
       </p>
-      <div className="mt-6 grid grid-cols-3 gap-3 w-full max-w-sm">
-        {["Capability", "Opportunity", "Motivation"].map((label, i) => (
-          <div key={label} className={`rounded-lg p-3 text-center ${["bg-violet-50", "bg-sky-50", "bg-amber-50"][i]}`}>
-            <p className={`text-xs font-semibold ${["text-violet-600", "text-sky-600", "text-amber-600"][i]}`}>{label}</p>
+
+      {/* Quick start suggestions */}
+      <div className="w-full max-w-md space-y-2 mb-6">
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Try collecting from</p>
+        {[
+          { icon: "link", label: "Scrape a competitor website", desc: "Paste a URL to extract and analyse page content" },
+          { icon: "chat", label: "Search Reddit or app reviews", desc: "Find what real users say about a product or topic" },
+          { icon: "globe", label: "Run a digital footprint scan", desc: "Automatically gather data across multiple sources" },
+        ].map((item) => (
+          <div key={item.label} className="flex items-start gap-3 px-4 py-3 bg-gray-50 hover:bg-brand-50 border border-gray-200 hover:border-brand-200 rounded-xl transition-colors text-left cursor-default">
+            <div className="w-8 h-8 bg-white rounded-lg border border-gray-200 flex items-center justify-center shrink-0 mt-0.5">
+              {item.icon === "link" && <svg className="w-4 h-4 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>}
+              {item.icon === "chat" && <svg className="w-4 h-4 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" /></svg>}
+              {item.icon === "globe" && <svg className="w-4 h-4 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>}
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-700">{item.label}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{item.desc}</p>
+            </div>
           </div>
         ))}
+      </div>
+
+      {/* What you'll get */}
+      <div className="w-full max-w-md">
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">What you&apos;ll get</p>
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { label: "Barriers", desc: "What stops users", color: "bg-rose-50 text-rose-600" },
+            { label: "Motivators", desc: "What drives users", color: "bg-emerald-50 text-emerald-600" },
+            { label: "Interventions", desc: "How to change behaviour", color: "bg-violet-50 text-violet-600" },
+          ].map((item) => (
+            <div key={item.label} className={`rounded-xl p-3 text-center ${item.color}`}>
+              <p className="text-xs font-semibold">{item.label}</p>
+              <p className="text-[10px] opacity-70 mt-0.5">{item.desc}</p>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -338,6 +417,21 @@ export default function AnalysisResults({ state, inputText, usage, onCancel, onR
         </div>
       </div>
 
+      {/* At-a-glance summary card */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: "Barriers", count: analysis.barriers?.length ?? 0, color: "text-rose-600 bg-rose-50 border-rose-200" },
+          { label: "Motivators", count: analysis.motivators?.length ?? 0, color: "text-emerald-600 bg-emerald-50 border-emerald-200" },
+          { label: "Interventions", count: analysis.intervention_opportunities?.length ?? 0, color: "text-violet-600 bg-violet-50 border-violet-200" },
+          { label: "Confidence", count: null as number | null, color: `${analysis.confidence?.overall === "high" ? "text-emerald-600 bg-emerald-50 border-emerald-200" : analysis.confidence?.overall === "medium" ? "text-amber-600 bg-amber-50 border-amber-200" : "text-rose-600 bg-rose-50 border-rose-200"}` },
+        ].map((item) => (
+          <div key={item.label} className={`rounded-xl border p-3 text-center ${item.color}`}>
+            <p className="text-lg font-bold leading-none">{item.count !== null ? item.count : (analysis.confidence?.overall ?? "—")}</p>
+            <p className="text-[10px] font-medium uppercase tracking-wide mt-1 opacity-70">{item.label}</p>
+          </div>
+        ))}
+      </div>
+
       {/* Truncation warning */}
       {state.truncated && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
@@ -411,11 +505,20 @@ export default function AnalysisResults({ state, inputText, usage, onCancel, onR
         {rubricResult && <div className="mt-4"><RubricPanel result={rubricResult} /></div>}
       </div>
 
-      {/* Behavioural context */}
-      <BehaviouralContextPanel context={analysis.behavioural_context} />
+      {/* Behavioural context — collapsed by default */}
+      <CollapsibleSection title="Behavioural Context" count={
+        (analysis.behavioural_context?.triggers?.length ?? 0) +
+        (analysis.behavioural_context?.temporal_patterns?.length ?? 0)
+      }>
+        <BehaviouralContextPanel context={analysis.behavioural_context} />
+      </CollapsibleSection>
 
       {/* COM-B */}
       <div id="section-comb" className="space-y-4">
+        <div className="flex items-center gap-1 mb-1">
+          <span className="text-sm font-semibold text-gray-700">COM-B Mapping</span>
+          <SectionExplainer text="COM-B maps behaviours to Capability, Opportunity, and Motivation — the three things that must be present for any behaviour to occur. This chart shows how strongly each dimension features in your data." />
+        </div>
         <div className="bg-gray-50 rounded-xl border border-gray-100 px-5 py-4">
           <ComBChart mapping={analysis.com_b_mapping} />
         </div>
@@ -435,6 +538,10 @@ export default function AnalysisResults({ state, inputText, usage, onCancel, onR
 
       {/* Barriers */}
       <div id="section-barriers">
+        <div className="flex items-center gap-1 mb-2">
+          <span className="text-sm font-semibold text-gray-700">Barriers</span>
+          <SectionExplainer text="Barriers are factors preventing your target audience from performing the desired behaviour. Each is mapped to a COM-B dimension so you can identify the right intervention type." />
+        </div>
         <BarriersList
           barriers={analysis.barriers}
           groundingMap={groundingMap}
@@ -459,12 +566,16 @@ export default function AnalysisResults({ state, inputText, usage, onCancel, onR
         <AnalystAnnotations sectionKey="motivators" analysisId={state.savedId} />
       </div>
 
-      {/* Facilitators */}
-      <FacilitatorsSection facilitators={analysis.facilitators} />
-      <AnalystAnnotations sectionKey="facilitators" analysisId={state.savedId} />
+      {/* Facilitators — collapsed by default */}
+      <CollapsibleSection title="Facilitators" count={analysis.facilitators?.length ?? 0}>
+        <FacilitatorsSection facilitators={analysis.facilitators} />
+        <AnalystAnnotations sectionKey="facilitators" analysisId={state.savedId} />
+      </CollapsibleSection>
 
-      {/* Contradictions */}
-      <ContradictionsSection contradictions={analysis.contradictions ?? []} />
+      {/* Contradictions — collapsed by default */}
+      <CollapsibleSection title="Contradictions" count={analysis.contradictions?.length ?? 0}>
+        <ContradictionsSection contradictions={analysis.contradictions ?? []} />
+      </CollapsibleSection>
 
       {/* ─── PHASE: Action ─── */}
       <div className="flex items-center gap-2 pt-4">
@@ -475,6 +586,10 @@ export default function AnalysisResults({ state, inputText, usage, onCancel, onR
 
       {/* Interventions */}
       <div id="section-interventions">
+        <div className="flex items-center gap-1 mb-2">
+          <span className="text-sm font-semibold text-gray-700">Interventions</span>
+          <SectionExplainer text="Evidence-based strategies from the Behaviour Change Wheel (BCW) and Behaviour Change Techniques (BCT) taxonomy to address the barriers identified above." />
+        </div>
         <InterventionsSection
           interventions={analysis.intervention_opportunities}
           validityScores={validityScores}
@@ -569,27 +684,47 @@ export default function AnalysisResults({ state, inputText, usage, onCancel, onR
         </div>
       )}
 
-      {/* Quick-link footer to related pages */}
+      {/* Contextual next-step prompts */}
       <div className="border-t border-gray-100 pt-6 mt-4">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Continue with this analysis</p>
-        <div className="flex flex-wrap gap-2">
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">What to do next</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {state.savedId && (
-            <a href={`/analysis/${state.savedId}`} className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 transition-colors">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-              Open full page
+            <a href={`/analysis/${state.savedId}`} className="flex items-start gap-3 p-3 bg-gray-50 hover:bg-brand-50 border border-gray-200 hover:border-brand-200 rounded-xl transition-colors group">
+              <div className="w-8 h-8 bg-white rounded-lg border border-gray-200 group-hover:border-brand-200 flex items-center justify-center shrink-0">
+                <svg className="w-4 h-4 text-gray-400 group-hover:text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-700 group-hover:text-brand-700">Open full page</p>
+                <p className="text-xs text-gray-400 mt-0.5">View, validate, and share this analysis</p>
+              </div>
             </a>
           )}
-          <a href={`/dashboard${state.savedId ? `?highlight=${state.savedId}` : ""}`} className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 transition-colors">
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
-            View on Dashboard
+          <a href={`/compare${state.savedId ? `?analysisId=${state.savedId}` : ""}`} className="flex items-start gap-3 p-3 bg-gray-50 hover:bg-brand-50 border border-gray-200 hover:border-brand-200 rounded-xl transition-colors group">
+            <div className="w-8 h-8 bg-white rounded-lg border border-gray-200 group-hover:border-brand-200 flex items-center justify-center shrink-0">
+              <svg className="w-4 h-4 text-gray-400 group-hover:text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-700 group-hover:text-brand-700">Compare with another analysis</p>
+              <p className="text-xs text-gray-400 mt-0.5">Diff COM-B profiles to spot competitive gaps</p>
+            </div>
           </a>
-          <a href={`/compare${state.savedId ? `?analysisId=${state.savedId}` : ""}`} className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 transition-colors">
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
-            Compare with another
+          <a href="/monitoring" className="flex items-start gap-3 p-3 bg-gray-50 hover:bg-brand-50 border border-gray-200 hover:border-brand-200 rounded-xl transition-colors group">
+            <div className="w-8 h-8 bg-white rounded-lg border border-gray-200 group-hover:border-brand-200 flex items-center justify-center shrink-0">
+              <svg className="w-4 h-4 text-gray-400 group-hover:text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-700 group-hover:text-brand-700">Track this competitor over time</p>
+              <p className="text-xs text-gray-400 mt-0.5">Set up automated scraping on a schedule</p>
+            </div>
           </a>
-          <a href="/eval" className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 transition-colors">
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
-            Evaluate quality
+          <a href="/eval" className="flex items-start gap-3 p-3 bg-gray-50 hover:bg-brand-50 border border-gray-200 hover:border-brand-200 rounded-xl transition-colors group">
+            <div className="w-8 h-8 bg-white rounded-lg border border-gray-200 group-hover:border-brand-200 flex items-center justify-center shrink-0">
+              <svg className="w-4 h-4 text-gray-400 group-hover:text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-700 group-hover:text-brand-700">Check analysis quality</p>
+              <p className="text-xs text-gray-400 mt-0.5">Score against rubric and validate rigour</p>
+            </div>
           </a>
         </div>
       </div>

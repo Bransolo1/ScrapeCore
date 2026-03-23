@@ -457,7 +457,7 @@ export default function ComparePage() {
       <footer className="border-t border-gray-100 py-4 mt-auto">
         <div className="max-w-7xl mx-auto px-6">
           <p className="text-xs text-gray-400">
-            ScrapeCore · COM-B Competitor Comparison · Claude Opus 4.6
+            ScrapeCore · Scrape. Analyse. Understand behaviour. · Powered by Claude Opus 4.6
           </p>
         </div>
       </footer>

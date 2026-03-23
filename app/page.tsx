@@ -32,18 +32,7 @@ const INITIAL_STATE: AnalysisState = {
   durationMs: null,
 };
 
-const MODE_TABS: { id: InputMode; label: string; hint: string; group: "manual" | "collect" | "advanced"; icon: React.ReactNode }[] = [
-  {
-    id: "paste",
-    label: "Paste text",
-    hint: "Paste or upload qualitative data",
-    group: "manual",
-    icon: (
-      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-      </svg>
-    ),
-  },
+const MODE_TABS: { id: InputMode; label: string; hint: string; group: "collect" | "manual" | "advanced"; icon: React.ReactNode }[] = [
   {
     id: "scrape",
     label: "Scrape URLs",
@@ -78,6 +67,17 @@ const MODE_TABS: { id: InputMode; label: string; hint: string; group: "manual" |
     ),
   },
   {
+    id: "paste",
+    label: "Paste text",
+    hint: "Paste or upload your own qualitative data",
+    group: "manual",
+    icon: (
+      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+      </svg>
+    ),
+  },
+  {
     id: "batch",
     label: "Batch",
     hint: "Analyse multiple documents at once",
@@ -91,8 +91,8 @@ const MODE_TABS: { id: InputMode; label: string; hint: string; group: "manual" |
 ];
 
 const MODE_GROUPS: { key: string; label: string }[] = [
+  { key: "collect", label: "Collect data" },
   { key: "manual", label: "Your data" },
-  { key: "collect", label: "Collect" },
   { key: "advanced", label: "Advanced" },
 ];
 
@@ -102,7 +102,7 @@ function getActor(): string {
 }
 
 export default function Home() {
-  const [mode, setMode] = useState<InputMode>("paste");
+  const [mode, setMode] = useState<InputMode>("scrape");
 
   // Paste mode state — restored from localStorage on mount
   const [pasteText, setPasteText] = useState("");
@@ -139,6 +139,12 @@ export default function Home() {
 
   // Review data (loaded from history)
   const [reviewData, setReviewData] = useState<{ status?: string; notes?: string | null }>({});
+
+  // Hero banner
+  const [showHero, setShowHero] = useState(false);
+  useEffect(() => {
+    if (!localStorage.getItem("scrapecore-hero-dismissed")) setShowHero(true);
+  }, []);
 
   // Settings modal
   const [showSettings, setShowSettings] = useState(false);
@@ -407,6 +413,64 @@ export default function Home() {
       )}
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-8">
+        {/* ── Mission hero — dismissible after first view ── */}
+        {showHero && (
+          <div className="mb-6 relative bg-gradient-to-r from-brand-600 via-brand-700 to-violet-700 rounded-2xl p-6 text-white overflow-hidden">
+            <button
+              onClick={() => { localStorage.setItem("scrapecore-hero-dismissed", "1"); setShowHero(false); }}
+              className="absolute top-3 right-3 p-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+              aria-label="Dismiss"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+            <h2 className="text-xl font-bold mb-1">Scrape the web. Apply behavioural science. Understand your users.</h2>
+            <p className="text-brand-200 text-sm mb-4 max-w-2xl">
+              Collect data from app stores, social media, reviews, and websites — then let COM-B analysis reveal the barriers, motivators, and interventions hiding in your qualitative data.
+            </p>
+            {/* Pipeline visual */}
+            <div className="flex items-center gap-2 text-xs font-medium">
+              {[
+                { step: "1", label: "Collect", desc: "Scrape & gather data" },
+                { step: "2", label: "Preview", desc: "Select & review sources" },
+                { step: "3", label: "Analyse", desc: "COM-B behavioural analysis" },
+                { step: "4", label: "Validate", desc: "Review & refine findings" },
+              ].map((s, i) => (
+                <div key={s.step} className="flex items-center gap-2">
+                  {i > 0 && <svg className="w-4 h-4 text-white/40 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>}
+                  <div className="flex items-center gap-1.5 bg-white/15 rounded-lg px-3 py-1.5">
+                    <span className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center text-[10px] font-bold">{s.step}</span>
+                    <div>
+                      <span className="font-semibold">{s.label}</span>
+                      <span className="text-white/60 ml-1 hidden sm:inline">— {s.desc}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── Pipeline stepper (compact, always visible) ── */}
+        <div className="mb-4 flex items-center gap-1.5 text-xs font-medium">
+          {[
+            { label: "Collect", active: analysisState.status === "idle" && !previewText },
+            { label: "Preview", active: previewText !== null },
+            { label: "Analyse", active: analysisState.status === "streaming" },
+            { label: "Validate", active: analysisState.status === "complete" },
+          ].map((s, i) => (
+            <div key={s.label} className="flex items-center gap-1.5">
+              {i > 0 && <svg className="w-3 h-3 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>}
+              <span className={`px-2.5 py-1 rounded-full transition-all ${
+                s.active
+                  ? "bg-brand-100 text-brand-700 border border-brand-200"
+                  : "text-gray-400 bg-gray-100"
+              }`}>
+                {s.label}
+              </span>
+            </div>
+          ))}
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-6 items-start">
           {/* ── Input panel ── */}
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden sticky top-8">
@@ -612,7 +676,7 @@ export default function Home() {
       <footer className="border-t border-gray-100 py-4 mt-auto">
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
           <p className="text-xs text-gray-400">
-            Powered by Claude Opus 4.6 · COM-B · Behaviour Change Wheel
+            ScrapeCore · Scrape. Analyse. Understand behaviour. · Powered by Claude Opus 4.6
           </p>
           <p className="text-xs text-gray-400">
             AI-assisted — expert review required before operational use
