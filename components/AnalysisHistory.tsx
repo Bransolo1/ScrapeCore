@@ -228,7 +228,7 @@ export default function AnalysisHistory({
           </div>
           <div className="flex items-center gap-3 text-xs text-gray-400 mt-1">
             <span className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-violet-400" />
+              <span className="w-1.5 h-1.5 rounded-full bg-brand-400" />
               COM-B mapping
             </span>
             <span className="flex items-center gap-1">

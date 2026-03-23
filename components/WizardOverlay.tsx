@@ -155,8 +155,8 @@ export default function WizardOverlay({ showWelcome = true, onDone, onComplete }
                   { label: "2. AI analyses", desc: "COM-B mapping, barriers" },
                   { label: "3. You review", desc: "Confirm, dispute, export" },
                 ].map((s, i) => (
-                  <div key={i} className={`rounded-xl p-3 text-center ${["bg-violet-50", "bg-sky-50", "bg-amber-50"][i]}`}>
-                    <p className={`text-xs font-bold ${["text-violet-600", "text-sky-600", "text-amber-600"][i]}`}>{s.label}</p>
+                  <div key={i} className={`rounded-xl p-3 text-center ${["bg-rose-50", "bg-sky-50", "bg-amber-50"][i]}`}>
+                    <p className={`text-xs font-bold ${["text-rose-600", "text-sky-600", "text-amber-600"][i]}`}>{s.label}</p>
                     <p className="text-[10px] text-gray-500 mt-0.5">{s.desc}</p>
                   </div>
                 ))}

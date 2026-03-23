@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Header from "@/components/Header";
 import { getChangesBetween, type PromptVersionEntry } from "@/lib/promptVersions";
 
 interface EvalItem {
@@ -196,22 +197,14 @@ export default function EvalPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="border-b border-gray-200 bg-white/95 backdrop-blur-md shadow-sm sticky top-0 z-30">
-        <div className="max-w-6xl mx-auto px-6 py-3 flex items-center gap-4">
-          <Link href="/dashboard" className="text-gray-400 hover:text-gray-600 transition-colors">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </Link>
-          <div>
-            <h1 className="text-sm font-bold text-gray-900">Prompt A/B Evaluation</h1>
-            <p className="text-xs text-gray-400">Compare two analyses — rubric scores, grounding, and quality metrics side-by-side</p>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen flex flex-col bg-gray-50">
+      <Header />
 
-      <main className="max-w-6xl mx-auto px-6 py-6 space-y-6">
+      <main className="flex-1 max-w-6xl mx-auto w-full px-6 py-8 space-y-6">
+        <div className="mb-2">
+          <h1 className="text-2xl font-bold text-gray-900">Quality Lab</h1>
+          <p className="text-sm text-gray-500 mt-1">Compare two analyses — rubric scores, grounding, and quality metrics side-by-side</p>
+        </div>
         {/* Slot selectors */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {(["a", "b"] as const).map((slot) => {
@@ -343,6 +336,13 @@ export default function EvalPage() {
           </div>
         )}
       </main>
+
+      <footer className="border-t border-gray-100 py-4 mt-auto">
+        <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
+          <p className="text-xs text-gray-400">ScrapeCore · Behavioural Market Intelligence</p>
+          <p className="text-xs text-gray-400">AI-assisted — expert review required</p>
+        </div>
+      </footer>
     </div>
   );
 }

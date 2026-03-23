@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Header from "@/components/Header";
 
 interface Monitor {
   id: string;
@@ -106,23 +107,18 @@ export default function MonitoringPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="border-b border-gray-200 bg-white/95 backdrop-blur-md shadow-sm sticky top-0 z-30">
-        <div className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Link href="/dashboard" className="text-gray-400 hover:text-gray-600 transition-colors">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </Link>
-            <div>
-              <h1 className="text-sm font-bold text-gray-900">Competitor Monitoring</h1>
-              <p className="text-xs text-gray-400">Scheduled Perplexity scans — auto-analysed on each run</p>
-            </div>
+    <div className="min-h-screen flex flex-col bg-gray-50">
+      <Header />
+
+      <main className="flex-1 max-w-5xl mx-auto w-full px-6 py-8 space-y-4">
+        <div className="flex items-start justify-between mb-2">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Competitor Monitoring</h1>
+            <p className="text-sm text-gray-500 mt-1">Scheduled scans — automatically analysed on each run</p>
           </div>
           <button
             onClick={() => setShowCreate((v) => !v)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-lg transition-colors"
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-lg transition-colors"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -130,9 +126,6 @@ export default function MonitoringPage() {
             New monitor
           </button>
         </div>
-      </header>
-
-      <main className="max-w-5xl mx-auto px-6 py-6 space-y-4">
         {/* Create form */}
         {showCreate && (
           <div className="bg-white border border-brand-200 rounded-2xl shadow-sm p-5">
@@ -306,6 +299,13 @@ export default function MonitoringPage() {
           </p>
         </div>
       </main>
+
+      <footer className="border-t border-gray-100 py-4 mt-auto">
+        <div className="max-w-5xl mx-auto px-6 flex items-center justify-between">
+          <p className="text-xs text-gray-400">ScrapeCore · Behavioural Market Intelligence</p>
+          <p className="text-xs text-gray-400">AI-assisted — expert review required</p>
+        </div>
+      </footer>
     </div>
   );
 }

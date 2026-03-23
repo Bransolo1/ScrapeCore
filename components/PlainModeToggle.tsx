@@ -38,7 +38,7 @@ export default function PlainModeToggle() {
       title={isPlainMode ? "Switch to expert mode (COM-B jargon)" : "Switch to plain language mode"}
       className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border transition-all ${
         isPlainMode
-          ? "bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100"
+          ? "bg-brand-50 text-brand-700 border-brand-200 hover:bg-brand-100"
           : "text-gray-500 border-gray-200 hover:bg-gray-50"
       }`}
     >

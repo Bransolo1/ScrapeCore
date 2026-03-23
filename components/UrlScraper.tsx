@@ -143,7 +143,7 @@ export default function UrlScraper({ onSourcesReady }: UrlScraperProps) {
           onClick={() => setUseFirecrawl((v) => !v)}
           disabled={isFetching}
           className={`relative w-9 h-5 rounded-full transition-colors shrink-0 mt-0.5 ${
-            useFirecrawl ? "bg-violet-600" : "bg-gray-200"
+            useFirecrawl ? "bg-brand-600" : "bg-gray-200"
           }`}
         >
           <span
@@ -157,7 +157,7 @@ export default function UrlScraper({ onSourcesReady }: UrlScraperProps) {
             <p className="text-xs font-semibold text-gray-700">
               Use Firecrawl
               {useFirecrawl && (
-                <span className="ml-1.5 text-xs font-medium text-violet-600 bg-violet-50 border border-violet-200 px-1.5 py-0.5 rounded-full">
+                <span className="ml-1.5 text-xs font-medium text-brand-600 bg-brand-50 border border-brand-200 px-1.5 py-0.5 rounded-full">
                   Active
                 </span>
               )}
@@ -173,7 +173,7 @@ export default function UrlScraper({ onSourcesReady }: UrlScraperProps) {
         className={`w-full py-2.5 px-4 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
           hasUrls && !isFetching
             ? useFirecrawl
-              ? "bg-violet-600 hover:bg-violet-700 text-white shadow-sm"
+              ? "bg-brand-600 hover:bg-brand-700 text-white shadow-sm"
               : "bg-brand-600 hover:bg-brand-700 text-white shadow-sm"
             : "bg-gray-100 text-gray-400 cursor-not-allowed"
         }`}

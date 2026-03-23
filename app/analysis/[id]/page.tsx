@@ -110,7 +110,7 @@ export default function AnalysisDetailPage() {
       <footer className="border-t border-gray-100 py-4 mt-auto">
         <div className="max-w-4xl mx-auto px-6 flex items-center justify-between">
           <p className="text-xs text-gray-400">
-            Powered by Claude Opus 4.6 · COM-B · Behaviour Change Wheel
+            ScrapeCore · Behavioural Market Intelligence
           </p>
           <p className="text-xs text-gray-400">
             AI-assisted — expert review required before operational use

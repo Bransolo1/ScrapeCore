@@ -142,7 +142,7 @@ export default function SharePage() {
       <footer className="border-t border-gray-100 py-4 mt-8">
         <div className="max-w-5xl mx-auto px-6 text-center">
           <p className="text-xs text-gray-400">
-            Shared via ScrapeCore · COM-B · Behaviour Change Wheel · AI-assisted — expert review required
+            Shared via ScrapeCore · Behavioural Market Intelligence · AI-assisted — expert review required
           </p>
         </div>
       </footer>

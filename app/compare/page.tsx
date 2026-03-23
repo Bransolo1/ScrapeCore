@@ -64,13 +64,13 @@ function SlotSelector({
   label: string;
   analyses: AnalysisMeta[];
   onSelect: (id: string) => void;
-  color: "brand" | "violet";
+  color: "brand" | "sky";
 }) {
   const colorMap = {
     brand: "border-brand-200 bg-brand-50 text-brand-700",
-    violet: "border-violet-200 bg-violet-50 text-violet-700",
+    sky: "border-sky-200 bg-sky-50 text-sky-700",
   };
-  const dotColor = { brand: "bg-brand-500", violet: "bg-violet-500" };
+  const dotColor = { brand: "bg-brand-500", sky: "bg-sky-500" };
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 flex-1 min-w-0">
@@ -147,10 +147,10 @@ function DiffList({
           </div>
         ))}
         {onlyB.map((item, i) => (
-          <div key={i} className="flex items-start gap-2 px-3 py-2 rounded-lg bg-violet-50 border border-violet-200">
-            <span className="w-2 h-2 rounded-full bg-violet-500 shrink-0 mt-1.5" />
-            <span className="text-sm text-violet-800 flex-1">{item}</span>
-            <span className="text-xs text-violet-500 shrink-0 font-medium">{labelB} only</span>
+          <div key={i} className="flex items-start gap-2 px-3 py-2 rounded-lg bg-sky-50 border border-sky-200">
+            <span className="w-2 h-2 rounded-full bg-sky-500 shrink-0 mt-1.5" />
+            <span className="text-sm text-sky-800 flex-1">{item}</span>
+            <span className="text-xs text-sky-500 shrink-0 font-medium">{labelB} only</span>
           </div>
         ))}
       </div>
@@ -328,7 +328,7 @@ function ComparePageInner() {
               label="Analysis B"
               analyses={allAnalyses}
               onSelect={(id) => loadSlot(id, setSlotB)}
-              color="violet"
+              color="sky"
             />
           </div>
         )}
@@ -343,8 +343,8 @@ function ComparePageInner() {
                 <span className="text-brand-700">{labelA}</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-full bg-violet-500" />
-                <span className="text-violet-700">{labelB}</span>
+                <span className="w-3 h-3 rounded-full bg-sky-500" />
+                <span className="text-sky-700">{labelB}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="w-3 h-3 rounded-full bg-gray-400" />
@@ -356,7 +356,7 @@ function ComparePageInner() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {[
                 { slot: slotA, color: "bg-brand-50 border-brand-200" },
-                { slot: slotB, color: "bg-violet-50 border-violet-200" },
+                { slot: slotB, color: "bg-sky-50 border-sky-200" },
               ].map(({ slot, color }, i) => (
                 <div key={i} className={`rounded-2xl border p-5 ${color}`}>
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
@@ -386,8 +386,8 @@ function ComparePageInner() {
                   <ComBChart mapping={slotA.data!.com_b_mapping} />
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-violet-600 mb-3 flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-violet-500" />
+                  <p className="text-xs font-semibold text-sky-600 mb-3 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-sky-500" />
                     {labelB}
                   </p>
                   <ComBChart mapping={slotB.data!.com_b_mapping} />
@@ -463,10 +463,11 @@ function ComparePageInner() {
       </main>
 
       <footer className="border-t border-gray-100 py-4 mt-auto">
-        <div className="max-w-7xl mx-auto px-6">
+        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
           <p className="text-xs text-gray-400">
-            ScrapeCore · Scrape. Analyse. Understand behaviour. · Powered by Claude Opus 4.6
+            ScrapeCore · Behavioural Market Intelligence
           </p>
+          <p className="text-xs text-gray-400">AI-assisted — expert review required</p>
         </div>
       </footer>
     </div>

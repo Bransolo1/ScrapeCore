@@ -146,7 +146,7 @@ const SOURCE_DEFS = [
     id: "perplexity" as const,
     label: "Perplexity Research",
     group: "research",
-    activeClass: "border-violet-300 bg-violet-50 text-violet-800",
+    activeClass: "border-brand-300 bg-brand-50 text-brand-800",
     icon: (
       <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
         <circle cx="11" cy="11" r="8" />
@@ -1062,8 +1062,8 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
       {active.has("perplexity") && (
         <div className="space-y-3 pt-3 border-t border-gray-100">
           <GroupLabel label="Perplexity Research" />
-          <p className="text-xs text-gray-500 bg-violet-50 border border-violet-200 rounded-lg px-3 py-2 leading-relaxed">
-            AI-powered web research — synthesises market reports, news, competitor intel. Requires <code className="text-xs bg-violet-100 px-1 rounded">PERPLEXITY_API_KEY</code>
+          <p className="text-xs text-gray-500 bg-brand-50 border border-brand-200 rounded-lg px-3 py-2 leading-relaxed">
+            AI-powered web research — synthesises market reports, news, competitor intel. Requires <code className="text-xs bg-brand-100 px-1 rounded">PERPLEXITY_API_KEY</code>
           </p>
           <div>
             <label className={labelCls}>Research query</label>
