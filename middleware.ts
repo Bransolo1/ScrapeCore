@@ -8,6 +8,9 @@ export default withAuth(
     return NextResponse.next();
   },
   {
+    pages: {
+      signIn: "/login",
+    },
     callbacks: {
       authorized: ({ token }) => {
         if (process.env.SKIP_AUTH === "true") return true;
