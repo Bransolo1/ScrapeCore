@@ -12,7 +12,7 @@ model User {
   createdAt      DateTime      @default(now())
   email          String        @unique
   name           String?
-  passwordHash   String
+  passwordHash   String?
   role           String        @default("analyst")  // analyst | admin
   organisationId String?
   organisation   Organisation? @relation(fields: [organisationId], references: [id])
