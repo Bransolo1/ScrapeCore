@@ -13,7 +13,7 @@ export default function LowConfidenceGate({ confidence, textUnits, onAcknowledge
   const isTinyDataset = textUnits < 5;
 
   return (
-    <div className="flex flex-col items-center justify-center p-8 min-h-96 animate-fade-in">
+    <div className="flex flex-col items-center justify-center p-4 sm:p-8 min-h-96 animate-fade-in">
       {/* Warning icon */}
       <div className="w-14 h-14 bg-amber-50 border-2 border-amber-200 rounded-2xl flex items-center justify-center mb-5">
         <svg className="w-7 h-7 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -60,18 +60,18 @@ export default function LowConfidenceGate({ confidence, textUnits, onAcknowledge
       )}
 
       {/* Actions */}
-      <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full max-w-md sm:w-auto">
         <button
           onClick={onBack}
-          className="px-4 py-2 text-sm border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors"
+          className="px-4 py-2.5 text-sm border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors order-2 sm:order-1"
         >
           Go back
         </button>
         <button
           onClick={onAcknowledge}
-          className="px-5 py-2 text-sm bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-medium transition-colors"
+          className="px-5 py-2.5 text-sm bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-medium transition-colors order-1 sm:order-2"
         >
-          I understand — show analysis
+          Show analysis
         </button>
       </div>
 

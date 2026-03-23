@@ -40,11 +40,14 @@ export default function ContradictionsSection({ contradictions }: Contradictions
               <div className="hidden sm:flex items-center justify-center px-3">
                 <div className="flex flex-col items-center gap-1">
                   <div className="w-px h-5 bg-gray-200" />
-                  <span className="text-xs font-bold text-gray-300">vs</span>
+                  <span className="text-xs font-bold text-gray-500">vs</span>
                   <div className="w-px h-5 bg-gray-200" />
                 </div>
               </div>
-              <div className="bg-gray-50 rounded-lg p-3 border border-gray-100 mt-2 sm:mt-0">
+              <div className="flex sm:hidden items-center justify-center py-1">
+                <span className="text-xs font-bold text-gray-500">vs</span>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3 border border-gray-100 sm:mt-0">
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Evidence B</p>
                 <p className="text-xs text-gray-600 italic leading-relaxed">&ldquo;{c.evidence_b}&rdquo;</p>
               </div>

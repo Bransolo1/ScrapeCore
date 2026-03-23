@@ -32,6 +32,53 @@ function ScoreRing({ score }: { score: number }) {
   );
 }
 
+const SECTION_LABELS: Record<string, string> = {
+  key_behaviours: "Behaviour",
+  barriers: "Barrier",
+  motivators: "Motivator",
+  intervention_opportunities: "Intervention",
+  facilitators: "Facilitator",
+  contradictions: "Contradiction",
+};
+
+function formatSection(raw: string, index: number): string {
+  const label = SECTION_LABELS[raw] ?? raw.replace(/_/g, " ");
+  return `${label} #${index + 1}`;
+}
+
+function GroundingItem({ item }: { item: { level: string; section: string; index: number; quote: string } }) {
+  const [expanded, setExpanded] = useState(false);
+  const isLong = item.quote.length > 80;
+
+  return (
+    <div className="flex items-start gap-2.5 py-1.5">
+      <span className={`shrink-0 inline-flex items-center gap-1 text-xs border rounded-full px-1.5 py-0.5 font-semibold mt-0.5 ${
+        item.level === "grounded" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+        item.level === "partial"   ? "bg-amber-50 text-amber-700 border-amber-200" :
+                                     "bg-rose-50 text-rose-700 border-rose-200"
+      }`}>
+        {item.level === "grounded" ? "\u2713" : item.level === "partial" ? "~" : "!"}
+      </span>
+      <div className="min-w-0 flex-1">
+        <span className="text-xs text-gray-500 font-medium mr-1.5">
+          {formatSection(item.section, item.index)}
+        </span>
+        <span className={`text-xs text-gray-600 italic ${!expanded && isLong ? "line-clamp-1" : ""}`}>
+          &ldquo;{item.quote}&rdquo;
+        </span>
+        {isLong && (
+          <button
+            onClick={() => setExpanded((o) => !o)}
+            className="text-[10px] text-brand-600 hover:text-brand-700 font-medium ml-1"
+          >
+            {expanded ? "less" : "more"}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function GroundingPanel({ report }: GroundingPanelProps) {
   const [open, setOpen] = useState(report.ungroundedCount > 0 || report.score < 70);
 
@@ -54,7 +101,7 @@ export default function GroundingPanel({ report }: GroundingPanelProps) {
         <ScoreRing score={report.score} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-semibold text-gray-800">Evidence Grounding</span>
+            <span className="text-sm font-semibold text-gray-800">Source Verification</span>
             <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${
               report.score >= 80 ? "bg-emerald-100 text-emerald-700 border-emerald-200" :
               report.score >= 50 ? "bg-amber-100 text-amber-700 border-amber-200" :
@@ -103,23 +150,7 @@ export default function GroundingPanel({ report }: GroundingPanelProps) {
           {/* Finding breakdown */}
           <div className="space-y-1.5">
             {report.items.map((item, i) => (
-              <div key={i} className="flex items-start gap-2.5 py-1.5">
-                <span className={`shrink-0 inline-flex items-center gap-1 text-xs border rounded-full px-1.5 py-0.5 font-semibold mt-0.5 ${
-                  item.level === "grounded" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
-                  item.level === "partial"   ? "bg-amber-50 text-amber-700 border-amber-200" :
-                                               "bg-rose-50 text-rose-700 border-rose-200"
-                }`}>
-                  {item.level === "grounded" ? "✓" : item.level === "partial" ? "~" : "!"}
-                </span>
-                <div className="min-w-0">
-                  <span className="text-xs text-gray-400 font-medium capitalize mr-1.5">
-                    {item.section.replace("_", " ")} #{item.index + 1}
-                  </span>
-                  <span className="text-xs text-gray-600 italic line-clamp-1">
-                    &ldquo;{item.quote}&rdquo;
-                  </span>
-                </div>
-              </div>
+              <GroundingItem key={i} item={item} />
             ))}
           </div>
 

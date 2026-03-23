@@ -10,6 +10,7 @@ function LoginForm() {
   const callbackUrl = searchParams.get("callbackUrl") ?? "/";
 
   const [isFirstUser, setIsFirstUser] = useState(false);
+  const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [checkingFirstUser, setCheckingFirstUser] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,14 +18,16 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const showRegister = isFirstUser || isRegisterMode;
+
   useEffect(() => {
-    fetch("/api/auth/register", { method: "HEAD" })
-      .then(() => {})
-      .catch(() => {});
-    // Check if registration is possible (no users yet)
     fetch("/api/auth/check-first-user")
       .then((r) => r.json())
-      .then((d: { isFirstUser?: boolean }) => setIsFirstUser(d.isFirstUser ?? false))
+      .then((d: { isFirstUser?: boolean }) => {
+        const first = d.isFirstUser ?? false;
+        setIsFirstUser(first);
+        if (first) setIsRegisterMode(true);
+      })
       .catch(() => setIsFirstUser(false))
       .finally(() => setCheckingFirstUser(false));
   }, []);
@@ -35,8 +38,8 @@ function LoginForm() {
     setLoading(true);
 
     try {
-      if (isFirstUser) {
-        // Register first user
+      if (showRegister) {
+        // Register new user
         const res = await fetch("/api/auth/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -109,11 +112,13 @@ function LoginForm() {
         {/* Card */}
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8">
           <h2 className="text-base font-semibold text-gray-900 mb-1">
-            {isFirstUser ? "Create your account" : "Sign in to ScrapeCore"}
+            {isFirstUser ? "Create your account" : showRegister ? "Create an account" : "Sign in to ScrapeCore"}
           </h2>
           <p className="text-xs text-gray-500 mb-6">
             {isFirstUser
               ? "No accounts exist yet. Set up your admin account to get started."
+              : showRegister
+              ? "Sign up to get started with ScrapeCore."
               : "Enter your credentials to continue."}
           </p>
 
@@ -124,7 +129,7 @@ function LoginForm() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {isFirstUser && (
+            {showRegister && (
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1.5">
                   Full name <span className="text-gray-400 font-normal">(optional)</span>
@@ -157,7 +162,7 @@ function LoginForm() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={8}
-                placeholder={isFirstUser ? "At least 8 characters" : ""}
+                placeholder={showRegister ? "At least 8 characters" : ""}
                 className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
               />
             </div>
@@ -169,14 +174,43 @@ function LoginForm() {
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
                   <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                  {isFirstUser ? "Creating account…" : "Signing in…"}
+                  {showRegister ? "Creating account…" : "Signing in…"}
                 </span>
               ) : (
-                isFirstUser ? "Create account" : "Sign in"
+                showRegister ? "Create account" : "Sign in"
               )}
             </button>
           </form>
         </div>
+
+        {/* Toggle between Sign in / Sign up */}
+        {!isFirstUser && (
+          <p className="text-center text-xs text-gray-500 mt-4">
+            {showRegister ? (
+              <>
+                Already have an account?{" "}
+                <button
+                  type="button"
+                  onClick={() => { setIsRegisterMode(false); setError(null); }}
+                  className="text-brand-600 hover:text-brand-700 font-medium"
+                >
+                  Sign in
+                </button>
+              </>
+            ) : (
+              <>
+                Don&apos;t have an account?{" "}
+                <button
+                  type="button"
+                  onClick={() => { setIsRegisterMode(true); setError(null); }}
+                  className="text-brand-600 hover:text-brand-700 font-medium"
+                >
+                  Sign up
+                </button>
+              </>
+            )}
+          </p>
+        )}
       </div>
     </div>
   );

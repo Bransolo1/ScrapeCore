@@ -33,6 +33,7 @@ export default function ShareButton({ analysisId }: ShareButtonProps) {
   }
 
   async function revokeLink() {
+    if (!window.confirm("Revoke this share link? Anyone with the link will lose access.")) return;
     await fetch(`/api/analyses/${analysisId}/share`, { method: "DELETE" });
     setShareUrl(null);
   }
