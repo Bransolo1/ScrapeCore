@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Header from "@/components/Header";
+import { LogoMark } from "@/components/Logo";
 import AnalysisResults from "@/components/AnalysisResults";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import type { AnalysisState, BehaviourAnalysis } from "@/lib/types";
@@ -109,12 +110,11 @@ export default function AnalysisDetailPage() {
 
       <footer className="border-t border-gray-100 py-4 mt-auto">
         <div className="max-w-4xl mx-auto px-6 flex items-center justify-between">
-          <p className="text-xs text-gray-400">
-            ScrapeCore · Behavioural Market Intelligence
-          </p>
-          <p className="text-xs text-gray-400">
-            AI-assisted — expert review required before operational use
-          </p>
+          <div className="flex items-center gap-2">
+            <LogoMark size={16} />
+            <p className="text-xs text-gray-400">ScrapeCore · Behavioural Market Intelligence</p>
+          </div>
+          <p className="text-xs text-gray-400">AI-assisted — expert review required</p>
         </div>
       </footer>
     </div>

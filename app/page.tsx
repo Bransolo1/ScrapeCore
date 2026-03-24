@@ -21,6 +21,7 @@ import { scanForPII, redactPII } from "@/lib/pii";
 import type { PIIScanResult } from "@/lib/pii";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import SettingsModal from "@/components/SettingsModal";
+import { LogoMark } from "@/components/Logo";
 
 type InputMode = "paste" | "scrape" | "social" | "footprint" | "batch";
 
@@ -671,9 +672,12 @@ export default function Home() {
 
       <footer className="border-t border-gray-100 py-4 mt-auto">
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-          <p className="text-xs text-gray-400">
-            ScrapeCore · Behavioural Market Intelligence
-          </p>
+          <div className="flex items-center gap-2">
+            <LogoMark size={16} />
+            <p className="text-xs text-gray-400">
+              ScrapeCore · Behavioural Market Intelligence
+            </p>
+          </div>
           <p className="text-xs text-gray-400">
             AI-assisted — expert review required before operational use
           </p>

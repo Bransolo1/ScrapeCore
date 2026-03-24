@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Header from "@/components/Header";
+import { LogoMark } from "@/components/Logo";
 import {
   AreaChart,
   Area,
@@ -131,10 +132,8 @@ function ChartTooltip({
 function EmptyDashboard() {
   return (
     <div className="flex flex-col items-center justify-center min-h-96 text-center px-8">
-      <div className="w-16 h-16 bg-brand-50 border border-brand-200 rounded-2xl flex items-center justify-center mb-4">
-        <svg className="w-8 h-8 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-        </svg>
+      <div className="mb-4">
+        <LogoMark size={64} />
       </div>
       <h3 className="text-base font-semibold text-gray-700 mb-2">No analyses yet</h3>
       <p className="text-sm text-gray-400 max-w-sm leading-relaxed mb-6">
@@ -558,9 +557,10 @@ export default function DashboardPage() {
 
       <footer className="border-t border-gray-100 py-4 mt-auto">
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-          <p className="text-xs text-gray-400">
-            ScrapeCore · Behavioural Market Intelligence
-          </p>
+          <div className="flex items-center gap-2">
+            <LogoMark size={16} />
+            <p className="text-xs text-gray-400">ScrapeCore · Behavioural Market Intelligence</p>
+          </div>
           <p className="text-xs text-gray-400">AI-assisted — expert review required</p>
         </div>
       </footer>

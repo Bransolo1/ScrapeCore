@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import Header from "@/components/Header";
+import { LogoMark } from "@/components/Logo";
 import ComBChart from "@/components/ComBChart";
 import CompetitiveSummaryPanel from "@/components/CompetitiveSummaryPanel";
 import type { BehaviourAnalysis } from "@/lib/types";
@@ -464,9 +465,10 @@ function ComparePageInner() {
 
       <footer className="border-t border-gray-100 py-4 mt-auto">
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-          <p className="text-xs text-gray-400">
-            ScrapeCore · Behavioural Market Intelligence
-          </p>
+          <div className="flex items-center gap-2">
+            <LogoMark size={16} />
+            <p className="text-xs text-gray-400">ScrapeCore · Behavioural Market Intelligence</p>
+          </div>
           <p className="text-xs text-gray-400">AI-assisted — expert review required</p>
         </div>
       </footer>

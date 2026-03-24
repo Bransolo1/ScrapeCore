@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Header from "@/components/Header";
+import { LogoMark } from "@/components/Logo";
 import { getChangesBetween, type PromptVersionEntry } from "@/lib/promptVersions";
 
 interface EvalItem {
@@ -339,7 +340,10 @@ export default function EvalPage() {
 
       <footer className="border-t border-gray-100 py-4 mt-auto">
         <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
-          <p className="text-xs text-gray-400">ScrapeCore · Behavioural Market Intelligence</p>
+          <div className="flex items-center gap-2">
+            <LogoMark size={16} />
+            <p className="text-xs text-gray-400">ScrapeCore · Behavioural Market Intelligence</p>
+          </div>
           <p className="text-xs text-gray-400">AI-assisted — expert review required</p>
         </div>
       </footer>
