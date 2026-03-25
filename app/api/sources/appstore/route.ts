@@ -1,4 +1,6 @@
 import type { AppStoreReview } from "@/lib/scraper";
+import { requireAuth } from "@/lib/apiAuth";
+import { validateCSRF } from "@/lib/csrf";
 
 // Apple's public RSS API for customer reviews — no auth required
 // https://itunes.apple.com/{country}/rss/customerreviews/page={n}/id={appId}/sortBy=mostRecent/json
@@ -70,6 +72,12 @@ async function fetchPage(
 // ─── Route handler ──────────────────────────────────────────────────────────
 
 export async function POST(req: Request) {
+  const csrfError = validateCSRF(req);
+  if (csrfError) return csrfError;
+
+  const auth = await requireAuth();
+  if (auth instanceof Response) return auth;
+
   try {
     const { appId, country = "gb", pages = 2 } = (await req.json()) as {
       appId: string;

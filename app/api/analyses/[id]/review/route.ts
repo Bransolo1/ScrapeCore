@@ -1,10 +1,19 @@
 import { prisma } from "@/lib/db";
 import { logAudit } from "@/lib/audit";
+import { requireAuth } from "@/lib/apiAuth";
+import { validateCSRF } from "@/lib/csrf";
+import { safeErrorMessage } from "@/lib/safeError";
 
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const csrfError = validateCSRF(req);
+  if (csrfError) return csrfError;
+
+  const auth = await requireAuth();
+  if (auth instanceof Response) return auth;
+
   try {
     const { id } = await params;
     const body = (await req.json()) as {
@@ -48,7 +57,6 @@ export async function PATCH(
 
     return Response.json(updated);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return Response.json({ error: message }, { status: 500 });
+    return Response.json({ error: safeErrorMessage(err) }, { status: 500 });
   }
 }

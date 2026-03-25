@@ -1,10 +1,16 @@
 import { prisma } from "@/lib/db";
 import { logAudit } from "@/lib/audit";
+import { requireAuth } from "@/lib/apiAuth";
+import { validateCSRF } from "@/lib/csrf";
+import { safeErrorMessage } from "@/lib/safeError";
 
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await requireAuth();
+  if (auth instanceof Response) return auth;
+
   try {
     const { id } = await params;
     const corrections = await prisma.analysisCorrection.findMany({
@@ -13,8 +19,7 @@ export async function GET(
     });
     return Response.json({ corrections });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return Response.json({ error: message }, { status: 500 });
+    return Response.json({ error: safeErrorMessage(err) }, { status: 500 });
   }
 }
 
@@ -22,6 +27,12 @@ export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const csrfError = validateCSRF(req);
+  if (csrfError) return csrfError;
+
+  const auth = await requireAuth();
+  if (auth instanceof Response) return auth;
+
   try {
     const { id } = await params;
     const body = (await req.json()) as {
@@ -82,7 +93,6 @@ export async function POST(
 
     return Response.json(correction);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return Response.json({ error: message }, { status: 500 });
+    return Response.json({ error: safeErrorMessage(err) }, { status: 500 });
   }
 }

@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/db";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { requireAuth } from "@/lib/apiAuth";
 
 const PERPLEXITY_API = "https://api.perplexity.ai/chat/completions";
 
@@ -53,10 +52,11 @@ export async function POST(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await requireAuth();
+  if (auth instanceof Response) return auth;
+
   try {
     const { id } = await params;
-    const session = await getServerSession(authOptions);
-    const userId = (session?.user as { id?: string } | undefined)?.id ?? undefined;
 
     const monitor = await prisma.competitorMonitor.findUnique({ where: { id } });
     if (!monitor) return Response.json({ error: "Monitor not found" }, { status: 404 });
@@ -126,7 +126,7 @@ export async function POST(
         nextRunAt: nextRunDate(monitor.schedule),
         lastAnalysisId: analysisId,
         runCount: { increment: 1 },
-        userId: userId ?? monitor.userId,
+        userId: auth.userId ?? monitor.userId,
       },
     });
 

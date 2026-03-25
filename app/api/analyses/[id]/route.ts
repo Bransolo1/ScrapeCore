@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/db";
 import { logAudit } from "@/lib/audit";
+import { optionalAuth, requireAuth } from "@/lib/apiAuth";
+import { safeErrorMessage } from "@/lib/safeError";
 
 export async function GET(
   req: Request,
@@ -7,6 +9,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    const auth = await optionalAuth();
     const { searchParams } = new URL(req.url);
     const actor = searchParams.get("actor") ?? "system";
 
@@ -16,16 +19,20 @@ export async function GET(
       return Response.json({ error: "Not found" }, { status: 404 });
     }
 
+    // If authenticated, filter by userId
+    if (auth?.userId && analysis.userId && analysis.userId !== auth.userId) {
+      return Response.json({ error: "Not found" }, { status: 404 });
+    }
+
     // Fire-and-forget audit log
-    logAudit({ event: "analysis.viewed", actor, analysisId: id, entityId: id, entityType: "analysis" });
+    logAudit({ event: "analysis.viewed", actor: auth?.userId ?? actor, analysisId: id, entityId: id, entityType: "analysis" });
 
     return Response.json({
       ...analysis,
       analysisJson: JSON.parse(analysis.analysisJson),
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return Response.json({ error: message }, { status: 500 });
+    return Response.json({ error: safeErrorMessage(err) }, { status: 500 });
   }
 }
 
@@ -33,6 +40,9 @@ export async function DELETE(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await requireAuth();
+  if (auth instanceof Response) return auth;
+
   try {
     const { id } = await params;
     const { searchParams } = new URL(req.url);
@@ -44,7 +54,6 @@ export async function DELETE(
 
     return Response.json({ success: true });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return Response.json({ error: message }, { status: 500 });
+    return Response.json({ error: safeErrorMessage(err) }, { status: 500 });
   }
 }

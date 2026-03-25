@@ -1,4 +1,6 @@
 import type { GooglePlayReview } from "@/lib/scraper";
+import { requireAuth } from "@/lib/apiAuth";
+import { validateCSRF } from "@/lib/csrf";
 
 interface GPlayReview {
   id: string;
@@ -14,6 +16,12 @@ interface GPlayReview {
 // ─── Route handler ──────────────────────────────────────────────────────────
 
 export async function POST(req: Request) {
+  const csrfError = validateCSRF(req);
+  if (csrfError) return csrfError;
+
+  const auth = await requireAuth();
+  if (auth instanceof Response) return auth;
+
   try {
     const { packageId, country = "gb", num = 100 } = (await req.json()) as {
       packageId: string;

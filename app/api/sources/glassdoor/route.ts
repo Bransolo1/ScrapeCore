@@ -4,6 +4,7 @@
 // slug is the Glassdoor review page slug (e.g. "Company-Name-Reviews-E12345")
 
 import { requireAuth } from "@/lib/apiAuth";
+import { validateCSRF } from "@/lib/csrf";
 
 const MAX_PAGES = 3;
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
@@ -121,6 +122,9 @@ function extractHtmlReviews(html: string, pageUrl: string): GlassdoorReview[] {
 }
 
 export async function POST(req: Request) {
+  const csrfError = validateCSRF(req);
+  if (csrfError) return csrfError;
+
   const auth = await requireAuth();
   if (auth instanceof Response) return auth;
 

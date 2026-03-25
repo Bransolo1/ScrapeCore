@@ -1,4 +1,6 @@
 import type { WebSearchResult } from "@/lib/scraper";
+import { requireAuth } from "@/lib/apiAuth";
+import { validateCSRF } from "@/lib/csrf";
 
 // DuckDuckGo HTML version — no API key required, explicitly scraper-friendly
 const DDG_HEADERS = {
@@ -67,6 +69,12 @@ function parseDDGResults(html: string, limit: number): WebSearchResult[] {
 // ─── Route handler ──────────────────────────────────────────────────────────
 
 export async function POST(req: Request) {
+  const csrfError = validateCSRF(req);
+  if (csrfError) return csrfError;
+
+  const auth = await requireAuth();
+  if (auth instanceof Response) return auth;
+
   try {
     const { queries, limit = 10 } = (await req.json()) as {
       queries: string | string[];

@@ -1,5 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { BehaviourAnalysis } from "@/lib/types";
+import { requireAuth } from "@/lib/apiAuth";
+import { validateCSRF } from "@/lib/csrf";
 
 const client = new Anthropic();
 
@@ -16,6 +18,12 @@ Confidence: ${a.confidence?.overall ?? "unknown"}`;
 }
 
 export async function POST(req: Request) {
+  const csrfError = validateCSRF(req);
+  if (csrfError) return csrfError;
+
+  const auth = await requireAuth();
+  if (auth instanceof Response) return auth;
+
   try {
     const { analysisA, analysisB, labelA, labelB } = (await req.json()) as {
       analysisA: BehaviourAnalysis;

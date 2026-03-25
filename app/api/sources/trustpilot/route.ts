@@ -1,4 +1,6 @@
 import type { TrustpilotReview } from "@/lib/scraper";
+import { requireAuth } from "@/lib/apiAuth";
+import { validateCSRF } from "@/lib/csrf";
 
 const FETCH_HEADERS = {
   "User-Agent":
@@ -121,6 +123,12 @@ function extractFromJsonLd(html: string): TrustpilotReview[] {
 // ─── Route handler ──────────────────────────────────────────────────────────
 
 export async function POST(req: Request) {
+  const csrfError = validateCSRF(req);
+  if (csrfError) return csrfError;
+
+  const auth = await requireAuth();
+  if (auth instanceof Response) return auth;
+
   try {
     const { company, pages = 2 } = (await req.json()) as {
       company: string;
