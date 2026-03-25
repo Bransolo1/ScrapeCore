@@ -21,14 +21,14 @@ const DIMENSIONS = [
     key: "cap_physical",
     label: "Physical\nCapability",
     shortLabel: "C-Phys",
-    color: "#7c3aed",
+    color: "#0d9488",
     group: "Capability",
   },
   {
     key: "cap_psych",
     label: "Psychological\nCapability",
     shortLabel: "C-Psych",
-    color: "#8b5cf6",
+    color: "#14b8a6",
     group: "Capability",
   },
   {
@@ -62,7 +62,7 @@ const DIMENSIONS = [
 ] as const;
 
 const GROUP_COLORS: Record<string, string> = {
-  Capability: "#7c3aed",
+  Capability: "#0d9488",
   Opportunity: "#0284c7",
   Motivation: "#d97706",
 };

@@ -40,13 +40,7 @@ import { scoreRubric } from "@/lib/rubric";
 import { appendEvalLog } from "@/lib/evalLog";
 import { buildProjectMemoryBlock } from "@/lib/projectMemory";
 import { validateCSRF } from "@/lib/csrf";
-import { getApiKey } from "@/lib/getApiKey";
-
-function createClient(): Anthropic {
-  const apiKey = getApiKey();
-  if (!apiKey) throw Object.assign(new Error("No Anthropic API key configured. Add your key in Settings."), { code: "no_api_key" });
-  return new Anthropic({ apiKey });
-}
+import { resolveApiKey } from "@/lib/resolveApiKey";
 
 function parseAnalysis(text: string): BehaviourAnalysis | null {
   let raw: unknown;
@@ -155,16 +149,17 @@ export async function POST(req: Request) {
     );
   }
 
-  // Fail early if no API key is configured — before touching auth/DB
-  if (!getApiKey()) {
-    return Response.json({ error: "No Anthropic API key configured. Add your key in Settings.", code: "no_api_key" }, { status: 503 });
-  }
-
   try {
     // Enforce authentication
     const authResult = await requireAuth();
     if (authResult instanceof Response) return authResult;
     const sessionUserId = authResult.userId;
+
+    // Resolve API key (user's own → platform → 503)
+    const resolved = await resolveApiKey("anthropic", sessionUserId);
+    if (!resolved) {
+      return Response.json({ error: "No Anthropic API key configured. Add your key in Settings.", code: "no_api_key" }, { status: 503 });
+    }
 
     const { text, dataType, actor, piiDetected: clientPiiFlag, projectContext, project } = (await req.json()) as {
       text: string;
@@ -198,7 +193,7 @@ export async function POST(req: Request) {
         ? SYSTEM_PROMPT + COMPETITOR_PROMPT_SUFFIX
         : SYSTEM_PROMPT;
 
-    const claudeClient = createClient();
+    const claudeClient = new Anthropic({ apiKey: resolved.key });
 
     const stream = new ReadableStream({
       async start(controller) {

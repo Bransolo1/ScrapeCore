@@ -83,6 +83,18 @@ export interface GooglePlayReview {
   source: "googleplay";
 }
 
+export interface GlassdoorReview {
+  title: string;
+  text: string;
+  rating: number;
+  pros: string;
+  cons: string;
+  author: string;
+  date: string;
+  url: string;
+  source: "glassdoor";
+}
+
 export interface WebSearchResult {
   title: string;
   url: string;

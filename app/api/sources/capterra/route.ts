@@ -143,7 +143,12 @@ async function scrapeCapterraPage(slug: string, page: number): Promise<CapterraR
   throw new Error(`Could not extract reviews from Capterra for "${slug}"`);
 }
 
+import { requireAuth } from "@/lib/apiAuth";
+
 export async function POST(req: Request) {
+  const auth = await requireAuth();
+  if (auth instanceof Response) return auth;
+
   let body: { slug?: string; pages?: number };
   try {
     body = await req.json();

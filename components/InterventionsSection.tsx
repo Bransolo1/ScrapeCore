@@ -21,10 +21,10 @@ interface InterventionsSectionProps {
 
 const BCW_COLORS: Record<string, { pill: string; dot: string }> = {
   Education:                    { pill: "bg-blue-50 text-blue-700 border border-blue-100",          dot: "bg-blue-500" },
-  Persuasion:                   { pill: "bg-purple-50 text-purple-700 border border-purple-100",     dot: "bg-purple-500" },
+  Persuasion:                   { pill: "bg-pink-50 text-pink-700 border border-pink-100",            dot: "bg-pink-500" },
   Incentivisation:              { pill: "bg-amber-50 text-amber-700 border border-amber-100",        dot: "bg-amber-500" },
   Coercion:                     { pill: "bg-red-50 text-red-700 border border-red-100",              dot: "bg-red-500" },
-  Training:                     { pill: "bg-violet-50 text-violet-700 border border-violet-100",     dot: "bg-violet-500" },
+  Training:                     { pill: "bg-teal-50 text-teal-700 border border-teal-100",            dot: "bg-teal-500" },
   Restriction:                  { pill: "bg-orange-50 text-orange-700 border border-orange-100",     dot: "bg-orange-500" },
   "Environmental restructuring":{ pill: "bg-teal-50 text-teal-700 border border-teal-100",          dot: "bg-teal-500" },
   Modelling:                    { pill: "bg-indigo-50 text-indigo-700 border border-indigo-100",     dot: "bg-indigo-500" },

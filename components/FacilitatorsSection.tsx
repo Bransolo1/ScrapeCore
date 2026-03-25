@@ -5,7 +5,7 @@ import type { Facilitator } from "@/lib/types";
 const TYPE_COLOURS: Record<string, string> = {
   environmental: "bg-teal-50 text-teal-700 border-teal-200",
   social:        "bg-sky-50  text-sky-700  border-sky-200",
-  institutional: "bg-violet-50 text-violet-700 border-violet-200",
+  institutional: "bg-blue-50 text-blue-700 border-blue-200",
   digital:       "bg-indigo-50 text-indigo-700 border-indigo-200",
   personal:      "bg-orange-50 text-orange-700 border-orange-200",
 };

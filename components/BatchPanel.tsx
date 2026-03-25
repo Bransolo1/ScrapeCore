@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import type { DataType, BehaviourAnalysis, AnalysisState } from "@/lib/types";
 import BatchCompareView from "./BatchCompareView";
 
@@ -20,6 +20,11 @@ const EMPTY_STATE: AnalysisState = { status: "idle", streamingText: "", analysis
 
 function newDoc(index: number): BatchDoc {
   return { id: crypto.randomUUID(), title: `Document ${index}`, text: "", dataType: "free_text", state: EMPTY_STATE };
+}
+
+function newDocFromFile(name: string, text: string): BatchDoc {
+  const title = name.replace(/\.[^.]+$/, "");
+  return { id: crypto.randomUUID(), title, text, dataType: "free_text", state: EMPTY_STATE };
 }
 
 async function analyseDoc(
@@ -101,12 +106,65 @@ export default function BatchPanel({ onSelectResult }: BatchPanelProps) {
   const [activeId, setActiveId] = useState(docs[0].id);
   const [running, setRunning] = useState(false);
   const [showCompare, setShowCompare] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
   const actorRef = useRef<string>("");
   const batchAbortRef = useRef<AbortController | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   if (typeof window !== "undefined" && !actorRef.current) {
     actorRef.current = localStorage.getItem("scrapecore-user") ?? "analyst";
   }
+
+  const handleBulkFiles = useCallback((files: FileList | File[]) => {
+    const fileArray = Array.from(files);
+    if (!fileArray.length) return;
+
+    const promises = fileArray.map((file) =>
+      new Promise<BatchDoc | null>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const text = ev.target?.result;
+          if (typeof text === "string" && text.trim()) {
+            resolve(newDocFromFile(file.name, text));
+          } else {
+            resolve(null);
+          }
+        };
+        reader.onerror = () => resolve(null);
+        reader.readAsText(file);
+      })
+    );
+
+    Promise.all(promises).then((results) => {
+      const newDocs = results.filter((d): d is BatchDoc => d !== null);
+      if (newDocs.length > 0) {
+        setDocs((prev) => {
+          // Replace empty docs, append the rest
+          const nonEmpty = prev.filter((d) => d.text.trim());
+          return [...nonEmpty, ...newDocs];
+        });
+        setActiveId(newDocs[0].id);
+      }
+    });
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    if (e.dataTransfer.files.length > 0) {
+      handleBulkFiles(e.dataTransfer.files);
+    }
+  }, [handleBulkFiles]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  }, []);
 
   const updateDoc = (id: string, patch: Partial<BatchDoc> | ((prev: BatchDoc) => Partial<BatchDoc>)) => {
     setDocs((prev) => prev.map((d) => d.id === id ? { ...d, ...(typeof patch === "function" ? patch(d) : patch) } : d));
@@ -162,6 +220,45 @@ export default function BatchPanel({ onSelectResult }: BatchPanelProps) {
   return (
     <div className="space-y-4">
       {showCompare && <BatchCompareView docs={docs} onClose={() => setShowCompare(false)} />}
+      {/* Drop zone for bulk file import */}
+      <div
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        className={`relative rounded-xl border-2 transition-colors p-3 ${
+          isDragOver
+            ? "border-brand-400 bg-brand-50/50 border-dashed"
+            : "border-dashed border-gray-200 bg-surface-50"
+        }`}
+      >
+        {isDragOver ? (
+          <p className="text-sm font-medium text-brand-600 text-center py-2">Drop files to create batch documents</p>
+        ) : (
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-gray-400">
+              Drop multiple files here to bulk import, or
+            </p>
+            <button
+              onClick={() => fileRef.current?.click()}
+              className="text-xs font-medium text-brand-600 hover:text-brand-700 flex items-center gap-1"
+            >
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              </svg>
+              Upload files
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".txt,.csv,.tsv,.md,.json,.xml,.log,.rtf"
+              className="hidden"
+              onChange={(e) => { if (e.target.files) handleBulkFiles(e.target.files); e.target.value = ""; }}
+              multiple
+            />
+          </div>
+        )}
+      </div>
+
       {/* Document tabs */}
       <div className="flex items-center gap-1 flex-wrap">
         {docs.map((doc) => (
@@ -221,7 +318,7 @@ export default function BatchPanel({ onSelectResult }: BatchPanelProps) {
             <select
               value={activeDoc.dataType}
               onChange={(e) => updateDoc(activeDoc.id, { dataType: e.target.value as DataType })}
-              className="text-xs border border-gray-200 rounded-lg px-2 py-1 text-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-300 bg-white"
+              className="text-xs border border-gray-200 rounded-xl px-2 py-1 text-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-300 bg-white"
             >
               {(["free_text", "survey", "reviews", "social", "interviews", "competitor"] as DataType[]).map((dt) => (
                 <option key={dt} value={dt}>{dt}</option>
@@ -283,7 +380,7 @@ export default function BatchPanel({ onSelectResult }: BatchPanelProps) {
           <button
             onClick={runAll}
             disabled={running || pendingCount === 0}
-            className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 disabled:bg-gray-300 disabled:cursor-not-allowed rounded-xl transition-all"
+            className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-brand-500 hover:bg-brand-600 disabled:bg-gray-300 disabled:cursor-not-allowed rounded-xl transition-all"
           >
             {running ? (
               <>

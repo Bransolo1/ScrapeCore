@@ -15,7 +15,9 @@ export type AuditEvent =
   | "review.updated"
   | "source.fetched"
   | "pii.detected"
-  | "pii.redacted";
+  | "pii.redacted"
+  | "apikey.updated"
+  | "apikey.deleted";
 
 export interface AuditParams {
   event: AuditEvent;
@@ -24,6 +26,7 @@ export interface AuditParams {
   entityId?: string;
   entityType?: string;
   metadata?: Record<string, unknown>;
+  userId?: string;
 }
 
 export async function logAudit(params: AuditParams): Promise<void> {
@@ -36,6 +39,7 @@ export async function logAudit(params: AuditParams): Promise<void> {
         entityId: params.entityId ?? null,
         entityType: params.entityType ?? null,
         metadata: JSON.stringify(params.metadata ?? {}),
+        userId: params.userId ?? null,
       },
     });
   } catch {

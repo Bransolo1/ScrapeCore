@@ -61,15 +61,21 @@ async function scrapeWithFirecrawl(
   };
 }
 
-export async function POST(req: Request) {
-  const apiKey = process.env.FIRECRAWL_API_KEY;
+import { requireAuth } from "@/lib/apiAuth";
+import { resolveApiKey } from "@/lib/resolveApiKey";
 
-  if (!apiKey) {
+export async function POST(req: Request) {
+  const auth = await requireAuth();
+  if (auth instanceof Response) return auth;
+
+  const resolved = await resolveApiKey("firecrawl", auth.userId);
+  if (!resolved) {
     return Response.json(
-      { error: "FIRECRAWL_API_KEY is not configured in environment variables." },
+      { error: "No Firecrawl API key configured. Add your key in Settings.", code: "no_api_key" },
       { status: 503 }
     );
   }
+  const apiKey = resolved.key;
 
   let body: { urls?: unknown };
   try {
