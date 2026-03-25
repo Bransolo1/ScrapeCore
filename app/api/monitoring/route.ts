@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { requireAuth } from "@/lib/apiAuth";
+import { validateCSRF } from "@/lib/csrf";
+import { safeErrorMessage } from "@/lib/safeError";
 
 function nextRunDate(schedule: string): Date {
   const now = new Date();
@@ -12,27 +13,30 @@ function nextRunDate(schedule: string): Date {
 
 // GET — list all monitors for the current user
 export async function GET() {
-  try {
-    const session = await getServerSession(authOptions);
-    const userId = (session?.user as { id?: string } | undefined)?.id ?? undefined;
+  const auth = await requireAuth();
+  if (auth instanceof Response) return auth;
 
+  try {
     const monitors = await prisma.competitorMonitor.findMany({
-      where: userId && process.env.SKIP_AUTH !== "true" ? { userId } : {},
+      where: { userId: auth.userId },
       orderBy: { createdAt: "desc" },
     });
 
     return Response.json({ monitors });
   } catch (err) {
-    return Response.json({ error: err instanceof Error ? err.message : "Unknown" }, { status: 500 });
+    return Response.json({ error: safeErrorMessage(err) }, { status: 500 });
   }
 }
 
 // POST — create a new monitor
 export async function POST(req: Request) {
-  try {
-    const session = await getServerSession(authOptions);
-    const userId = (session?.user as { id?: string } | undefined)?.id ?? undefined;
+  const csrfError = validateCSRF(req);
+  if (csrfError) return csrfError;
 
+  const auth = await requireAuth();
+  if (auth instanceof Response) return auth;
+
+  try {
     const body = (await req.json()) as {
       name: string;
       competitorName: string;
@@ -53,12 +57,12 @@ export async function POST(req: Request) {
         keywords: JSON.stringify(body.keywords ?? []),
         schedule,
         nextRunAt: nextRunDate(schedule),
-        userId,
+        userId: auth.userId,
       },
     });
 
     return Response.json({ monitor });
   } catch (err) {
-    return Response.json({ error: err instanceof Error ? err.message : "Unknown" }, { status: 500 });
+    return Response.json({ error: safeErrorMessage(err) }, { status: 500 });
   }
 }

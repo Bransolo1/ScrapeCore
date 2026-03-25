@@ -84,6 +84,55 @@ export async function checkRateLimit(identifier: string): Promise<RateLimitResul
   }
 }
 
+/**
+ * Rate limiter with custom limit — for routes that need a different threshold.
+ * Uses same DB/fallback mechanism but with a separate namespace.
+ */
+export async function checkRateLimitWithConfig(
+  identifier: string,
+  limit: number,
+  windowMs: number = WINDOW_MS
+): Promise<RateLimitResult> {
+  const now = Date.now();
+  const resetAt = new Date(now + windowMs);
+
+  try {
+    const row = await prisma.rateLimit.findUnique({ where: { id: identifier } });
+
+    if (!row || row.resetAt.getTime() <= now) {
+      await prisma.rateLimit.upsert({
+        where: { id: identifier },
+        update: { count: 1, resetAt },
+        create: { id: identifier, count: 1, resetAt },
+      });
+      return { allowed: true, remaining: limit - 1, resetAt: resetAt.getTime(), limit };
+    }
+
+    if (row.count >= limit) {
+      return { allowed: false, remaining: 0, resetAt: row.resetAt.getTime(), limit };
+    }
+
+    const updated = await prisma.rateLimit.update({
+      where: { id: identifier },
+      data: { count: { increment: 1 } },
+    });
+
+    return { allowed: true, remaining: limit - updated.count, resetAt: row.resetAt.getTime(), limit };
+  } catch {
+    const entry = fallback.get(identifier);
+    if (!entry || entry.resetAt <= now) {
+      const resetAtMs = now + windowMs;
+      fallback.set(identifier, { count: 1, resetAt: resetAtMs });
+      return { allowed: true, remaining: limit - 1, resetAt: resetAtMs, limit };
+    }
+    if (entry.count >= limit) {
+      return { allowed: false, remaining: 0, resetAt: entry.resetAt, limit };
+    }
+    entry.count++;
+    return { allowed: true, remaining: limit - entry.count, resetAt: entry.resetAt, limit };
+  }
+}
+
 export function getClientIp(request: Request): string {
   return (
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??

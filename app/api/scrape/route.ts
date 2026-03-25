@@ -1,5 +1,8 @@
 import { extractTextFromHtml } from "@/lib/scraper";
 import type { ScrapeResult } from "@/lib/scraper";
+import { requireAuth } from "@/lib/apiAuth";
+import { checkRateLimitWithConfig, getClientIp } from "@/lib/rateLimit";
+import { validateCSRF } from "@/lib/csrf";
 
 const FETCH_TIMEOUT_MS = 20_000;
 const MAX_URLS = 15;
@@ -30,7 +33,41 @@ const TEXT_CONTENT_TYPES = [
   "application/atom+xml",
 ];
 
+function isPrivateUrl(url: string): boolean {
+  try {
+    const { hostname } = new URL(url);
+    // Block obvious private/reserved hostnames
+    if (hostname === "localhost" || hostname === "0.0.0.0" || hostname === "[::1]") return true;
+    // Block cloud metadata endpoints
+    if (hostname === "169.254.169.254" || hostname === "metadata.google.internal") return true;
+    // Block private IPv4 ranges
+    const parts = hostname.split(".").map(Number);
+    if (parts.length === 4 && parts.every((n) => !isNaN(n))) {
+      if (parts[0] === 10) return true;
+      if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
+      if (parts[0] === 192 && parts[1] === 168) return true;
+      if (parts[0] === 127) return true;
+      if (parts[0] === 0) return true;
+    }
+    return false;
+  } catch {
+    return true;
+  }
+}
+
 export async function POST(req: Request) {
+  const csrfError = validateCSRF(req);
+  if (csrfError) return csrfError;
+
+  const auth = await requireAuth();
+  if (auth instanceof Response) return auth;
+
+  // Rate limit: 60 scrape requests per hour per user
+  const rl = await checkRateLimitWithConfig(`scrape:${auth.userId ?? getClientIp(req)}`, 60);
+  if (!rl.allowed) {
+    return Response.json({ error: "Rate limit exceeded. Try again later." }, { status: 429 });
+  }
+
   try {
     const { urls } = (await req.json()) as { urls: string[] };
 
@@ -52,6 +89,17 @@ export async function POST(req: Request) {
               wordCount: 0,
               success: false,
               error: "Only http/https URLs are supported",
+            };
+          }
+
+          if (isPrivateUrl(url)) {
+            return {
+              url,
+              title: url,
+              text: "",
+              wordCount: 0,
+              success: false,
+              error: "URL points to a private or reserved address",
             };
           }
 

@@ -5,7 +5,13 @@ import { NextResponse } from "next/server";
 // Set SKIP_AUTH=true in env to disable auth (e.g. local dev / Electron build).
 export default withAuth(
   function middleware() {
-    return NextResponse.next();
+    const response = NextResponse.next();
+    response.headers.set("X-Content-Type-Options", "nosniff");
+    response.headers.set("X-Frame-Options", "DENY");
+    response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+    response.headers.set("X-DNS-Prefetch-Control", "off");
+    response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+    return response;
   },
   {
     pages: {

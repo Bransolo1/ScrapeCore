@@ -1,5 +1,7 @@
 import { parseRssItems } from "@/lib/scraper";
 import type { RssFeedItem } from "@/lib/scraper";
+import { requireAuth } from "@/lib/apiAuth";
+import { validateCSRF } from "@/lib/csrf";
 
 const FETCH_HEADERS = {
   "User-Agent":
@@ -40,6 +42,12 @@ async function fetchFeed(url: string): Promise<{ items: RssFeedItem[]; error?: s
 // ─── Route handler ──────────────────────────────────────────────────────────
 
 export async function POST(req: Request) {
+  const csrfError = validateCSRF(req);
+  if (csrfError) return csrfError;
+
+  const auth = await requireAuth();
+  if (auth instanceof Response) return auth;
+
   try {
     const { urls } = (await req.json()) as { urls: string[] };
 

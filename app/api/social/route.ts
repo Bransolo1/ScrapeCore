@@ -1,5 +1,8 @@
 import type { RedditPost, HNItem, GNewsItem, StockTwitsMessage } from "@/lib/scraper";
 import { parseRssItems } from "@/lib/scraper";
+import { requireAuth } from "@/lib/apiAuth";
+import { checkRateLimitWithConfig, getClientIp } from "@/lib/rateLimit";
+import { validateCSRF } from "@/lib/csrf";
 
 const REDDIT_UA = "BehaviourInsight/1.0 (social listening platform; contact via github.com/Bransolo1/ScrapeCore)";
 
@@ -246,6 +249,18 @@ async function fetchStockTwits(
 // ─── Route handler ──────────────────────────────────────────────────────────
 
 export async function POST(req: Request) {
+  const csrfError = validateCSRF(req);
+  if (csrfError) return csrfError;
+
+  const auth = await requireAuth();
+  if (auth instanceof Response) return auth;
+
+  // Rate limit: 60 social requests per hour per user
+  const rl = await checkRateLimitWithConfig(`social:${auth.userId ?? getClientIp(req)}`, 60);
+  if (!rl.allowed) {
+    return Response.json({ error: "Rate limit exceeded. Try again later." }, { status: 429 });
+  }
+
   try {
     const {
       query,

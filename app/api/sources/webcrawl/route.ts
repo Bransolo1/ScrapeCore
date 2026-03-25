@@ -1,5 +1,7 @@
 import type { Source } from "@/lib/scraper";
 import { scrapeUrl, SCRAPE_HEADERS } from "@/lib/scraper";
+import { requireAuth } from "@/lib/apiAuth";
+import { validateCSRF } from "@/lib/csrf";
 
 // ─── URL priority scoring ─────────────────────────────────────────────────────
 
@@ -77,6 +79,12 @@ function extractInternalLinks(html: string, baseOrigin: string): string[] {
 // ─── Route handler ────────────────────────────────────────────────────────────
 
 export async function POST(req: Request) {
+  const csrfError = validateCSRF(req);
+  if (csrfError) return csrfError;
+
+  const auth = await requireAuth();
+  if (auth instanceof Response) return auth;
+
   try {
     const { domain, maxPages = 12 } = (await req.json()) as {
       domain: string;

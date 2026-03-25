@@ -148,8 +148,12 @@ async function scrapeG2Page(slug: string, page: number): Promise<G2Review[]> {
 }
 
 import { requireAuth } from "@/lib/apiAuth";
+import { validateCSRF } from "@/lib/csrf";
 
 export async function POST(req: Request) {
+  const csrfError = validateCSRF(req);
+  if (csrfError) return csrfError;
+
   const auth = await requireAuth();
   if (auth instanceof Response) return auth;
 

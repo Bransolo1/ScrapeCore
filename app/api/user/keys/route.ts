@@ -8,6 +8,7 @@ import { requireAuth } from "@/lib/apiAuth";
 import { prisma } from "@/lib/db";
 import { encrypt } from "@/lib/crypto";
 import { logAudit } from "@/lib/audit";
+import { validateCSRF } from "@/lib/csrf";
 
 const PROVIDERS = {
   anthropic:  { prefix: "sk-ant-", minLen: 20, label: "Anthropic" },
@@ -36,6 +37,9 @@ export async function GET() {
 
 // PUT — upsert a key
 export async function PUT(req: Request) {
+  const csrfError = validateCSRF(req);
+  if (csrfError) return csrfError;
+
   const auth = await requireAuth();
   if (auth instanceof Response) return auth;
 
@@ -103,6 +107,9 @@ export async function PUT(req: Request) {
 
 // DELETE — remove a key
 export async function DELETE(req: Request) {
+  const csrfError = validateCSRF(req);
+  if (csrfError) return csrfError;
+
   const auth = await requireAuth();
   if (auth instanceof Response) return auth;
 

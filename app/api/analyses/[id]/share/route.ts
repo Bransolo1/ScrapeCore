@@ -1,5 +1,7 @@
 import { randomBytes } from "crypto";
 import { prisma } from "@/lib/db";
+import { requireAuth } from "@/lib/apiAuth";
+import { validateCSRF } from "@/lib/csrf";
 
 // POST  /api/analyses/[id]/share  → create or return existing share token
 // DELETE /api/analyses/[id]/share → revoke share token
@@ -8,6 +10,12 @@ export async function POST(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const csrfError = validateCSRF(_req);
+  if (csrfError) return csrfError;
+
+  const auth = await requireAuth();
+  if (auth instanceof Response) return auth;
+
   try {
     const { id } = await params;
     const analysis = await prisma.analysis.findUnique({ where: { id }, select: { id: true, shareToken: true } });
@@ -29,6 +37,12 @@ export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const csrfError = validateCSRF(_req);
+  if (csrfError) return csrfError;
+
+  const auth = await requireAuth();
+  if (auth instanceof Response) return auth;
+
   try {
     const { id } = await params;
     await prisma.analysis.update({ where: { id }, data: { shareToken: null } });

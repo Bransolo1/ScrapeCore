@@ -1,6 +1,14 @@
 import { scanForPII } from "@/lib/pii";
+import { requireAuth } from "@/lib/apiAuth";
+import { validateCSRF } from "@/lib/csrf";
 
 export async function POST(req: Request) {
+  const csrfError = validateCSRF(req);
+  if (csrfError) return csrfError;
+
+  const auth = await requireAuth();
+  if (auth instanceof Response) return auth;
+
   try {
     const { text } = (await req.json()) as { text: string };
     if (!text?.trim()) {

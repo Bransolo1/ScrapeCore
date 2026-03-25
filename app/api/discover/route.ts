@@ -7,9 +7,13 @@
 
 import { requireAuth } from "@/lib/apiAuth";
 import { discoverCompany } from "@/lib/discovery";
+import { validateCSRF } from "@/lib/csrf";
 export type { DiscoveryResult } from "@/lib/discovery";
 
 export async function POST(req: Request) {
+  const csrfError = validateCSRF(req);
+  if (csrfError) return csrfError;
+
   const auth = await requireAuth();
   if (auth instanceof Response) return auth;
 
