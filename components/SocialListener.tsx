@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import type {
   Source,
   RedditPost,
@@ -12,9 +12,14 @@ import type {
   RssFeedItem,
   GooglePlayReview,
 } from "@/lib/scraper";
+import { smartExtract } from "@/lib/urlParsers";
+import CompanySearchBar from "./CompanySearchBar";
+import type { DiscoveryResult } from "./CompanySearchBar";
 
 interface SocialListenerProps {
   onSourcesReady: (sources: Source[]) => void;
+  discovery?: DiscoveryResult | null;
+  onDiscoveryChange?: (result: DiscoveryResult) => void;
 }
 
 // ─── Source definitions ───────────────────────────────────────────────────────
@@ -88,7 +93,7 @@ const SOURCE_DEFS = [
     id: "rss" as const,
     label: "RSS Feeds",
     group: "feeds",
-    activeClass: "border-purple-300 bg-purple-50 text-purple-700",
+    activeClass: "border-brand-300 bg-brand-50 text-brand-700",
     icon: (
       <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
         <path d="M4 11a9 9 0 019 9M4 4a16 16 0 0116 16" strokeLinecap="round" />
@@ -104,6 +109,17 @@ const SOURCE_DEFS = [
     icon: (
       <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
         <path d="M3.18 23.76A1.5 1.5 0 0 1 1.5 22.5V1.5A1.5 1.5 0 0 1 3.18.24L14.93 12 3.18 23.76zm2.64-2.14 8.11-8.11L6.06 5.62 3.44 20.74l2.38.88zM19.28 14.1l-2.82 1.63L13.2 12l3.26-3.73 2.82 1.63c.8.46.8 1.64 0 2.2z" />
+      </svg>
+    ),
+  },
+  {
+    id: "glassdoor" as const,
+    label: "Glassdoor",
+    group: "b2b",
+    activeClass: "border-green-300 bg-green-50 text-green-800",
+    icon: (
+      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
       </svg>
     ),
   },
@@ -146,7 +162,7 @@ const SOURCE_DEFS = [
     id: "perplexity" as const,
     label: "Perplexity Research",
     group: "research",
-    activeClass: "border-violet-300 bg-violet-50 text-violet-800",
+    activeClass: "border-brand-300 bg-brand-50 text-brand-800",
     icon: (
       <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
         <circle cx="11" cy="11" r="8" />
@@ -232,7 +248,7 @@ function GroupLabel({ label }: { label: string }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function SocialListener({ onSourcesReady }: SocialListenerProps) {
+export default function SocialListener({ onSourcesReady, discovery, onDiscoveryChange }: SocialListenerProps) {
   const [active, setActive] = useState<Set<SourceId>>(new Set<SourceId>(["reddit"]));
 
   // Shared search
@@ -264,6 +280,9 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
   // Capterra
   const [capterraSlug, setCapterraSlug] = useState("");
   const [capterraPages, setCapterraPages] = useState(2);
+  // Glassdoor
+  const [glassdoorSlug, setGlassdoorSlug] = useState("");
+  const [glassdoorPages, setGlassdoorPages] = useState(2);
   // Twitter/X (via Perplexity)
   const [twitterQuery, setTwitterQuery] = useState("");
   const [twitterRecency, setTwitterRecency] = useState("week");
@@ -275,12 +294,69 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
   const [error, setError] = useState<string | null>(null);
   const [fetchedCount, setFetchedCount] = useState<number | null>(null);
 
+  // Per-source progress tracking
+  type TaskStatus = "idle" | "running" | "done" | "error";
+  interface TaskProgress { label: string; status: TaskStatus; count: number; error?: string }
+  const [taskProgress, setTaskProgress] = useState<Record<string, TaskProgress>>({});
+
+  const setTaskState = (key: string, update: Partial<TaskProgress>) => {
+    setTaskProgress((prev) => ({ ...prev, [key]: { ...prev[key], ...update } as TaskProgress }));
+  };
+
   const toggle = (id: SourceId) =>
     setActive((prev) => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
+
+  // ─── Auto-discovery prefill ─────────────────────────────────────────────────
+
+  const prefillFromDiscovery = useCallback((result: DiscoveryResult) => {
+    const toActivate = new Set<SourceId>();
+
+    // Always activate query-based sources
+    toActivate.add("reddit");
+    toActivate.add("hackernews");
+    toActivate.add("gnews");
+
+    // Activate discovered review sources
+    if (result.trustpilot?.found) toActivate.add("trustpilot");
+    if (result.appstore?.found) toActivate.add("appstore");
+    if (result.googleplay?.found) toActivate.add("googleplay");
+    if (result.g2?.found) toActivate.add("g2");
+    if (result.capterra?.found) toActivate.add("capterra");
+    if (result.glassdoor?.found) toActivate.add("glassdoor");
+    if (result.stocktwits?.found) toActivate.add("stocktwits");
+
+    setActive(toActivate);
+
+    // Prefill all fields
+    setQuery(result.reddit.query);
+    if (result.reddit.subreddits[0]) setSubreddit(result.reddit.subreddits[0]);
+    if (result.trustpilot.domain) setTpDomain(result.trustpilot.domain);
+    if (result.appstore.appId) setAppId(result.appstore.appId);
+    if (result.googleplay.packageId) setGpPackageId(result.googleplay.packageId);
+    if (result.g2.slug) setG2Slug(result.g2.slug);
+    if (result.capterra.slug) setCapterraSlug(result.capterra.slug);
+    if (result.glassdoor?.slug) setGlassdoorSlug(result.glassdoor.slug);
+    if (result.stocktwits.symbol) setSymbol(result.stocktwits.symbol);
+    if (result.queries.twitter) setTwitterQuery(result.queries.twitter);
+    if (result.queries.perplexity) setPerplexityQuery(result.queries.perplexity);
+
+    // Share discovery result with parent for cross-tab use
+    onDiscoveryChange?.(result);
+  }, [onDiscoveryChange]);
+
+  // Auto-prefill when discovery prop arrives from another tab (e.g. Quick Research)
+  const lastAppliedDiscovery = useRef<string | null>(null);
+  useEffect(() => {
+    if (!discovery) return;
+    const key = discovery.company + (discovery.domain ?? "");
+    if (key === lastAppliedDiscovery.current) return;
+    lastAppliedDiscovery.current = key;
+    prefillFromDiscovery(discovery);
+  }, [discovery, prefillFromDiscovery]);
 
   const needsQuery = active.has("reddit") || active.has("hackernews") || active.has("gnews");
   const hasSocialSearch =
@@ -296,6 +372,7 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
     (!active.has("googleplay") || gpPackageId.trim()) &&
     (!active.has("g2") || g2Slug.trim()) &&
     (!active.has("capterra") || capterraSlug.trim()) &&
+    (!active.has("glassdoor") || glassdoorSlug.trim()) &&
     (!active.has("twitter") || twitterQuery.trim()) &&
     (!active.has("perplexity") || perplexityQuery.trim());
 
@@ -413,223 +490,228 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
     };
   }
 
-  // ─── Fetch handler ───────────────────────────────────────────────────────────
+  // ─── Fetch handler (parallel) ───────────────────────────────────────────────
 
   const handleFetch = async () => {
     if (!canSubmit) return;
     setIsFetching(true);
     setError(null);
     setFetchedCount(null);
+    setTaskProgress({});
 
     const allSources: Source[] = [];
     const allErrors: string[] = [];
+    const runners: Promise<void>[] = [];
 
-    try {
-      // 1. Social / news via /api/social
-      const socialSources = (["reddit", "hackernews", "gnews", "stocktwits"] as SourceId[]).filter(
-        (s) => active.has(s)
-      );
-      if (socialSources.length > 0) {
-        const res = await fetch("/api/social", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            query: query.trim() || undefined,
-            symbol: symbol.trim() || undefined,
-            subreddit: subreddit.trim() || undefined,
-            timeframe,
-            sort,
-            limit,
-            includeComments,
-            sources: socialSources,
-          }),
-        });
-        const data = (await res.json()) as {
-          items?: (RedditPost | HNItem | GNewsItem | StockTwitsMessage)[];
-          errors?: string[];
-          error?: string;
-        };
-        if (data.error) allErrors.push(data.error);
-        if (data.errors?.length) allErrors.push(...data.errors);
-        for (const item of data.items ?? []) allSources.push(socialItemToSource(item));
-      }
-
-      // 2. Trustpilot
-      if (active.has("trustpilot") && tpDomain.trim()) {
-        const res = await fetch("/api/sources/trustpilot", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ company: tpDomain.trim(), pages: tpPages }),
-        });
-        const data = (await res.json()) as {
-          reviews?: TrustpilotReview[];
-          errors?: string[];
-          error?: string;
-        };
-        if (data.error) allErrors.push(`Trustpilot: ${data.error}`);
-        if (data.errors?.length) allErrors.push(...data.errors.map((e) => `Trustpilot: ${e}`));
-        for (const r of data.reviews ?? []) allSources.push(trustpilotToSource(r, tpDomain.trim()));
-      }
-
-      // 3. App Store
-      if (active.has("appstore") && appId.trim()) {
-        const res = await fetch("/api/sources/appstore", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ appId: appId.trim(), country: appCountry, pages: appPages }),
-        });
-        const data = (await res.json()) as {
-          reviews?: AppStoreReview[];
-          errors?: string[];
-          error?: string;
-        };
-        if (data.error) allErrors.push(`App Store: ${data.error}`);
-        if (data.errors?.length) allErrors.push(...data.errors.map((e) => `App Store: ${e}`));
-        for (const r of data.reviews ?? []) allSources.push(appStoreToSource(r));
-      }
-
-      // 4. Google Play
-      if (active.has("googleplay") && gpPackageId.trim()) {
-        const res = await fetch("/api/sources/googleplay", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ packageId: gpPackageId.trim(), country: gpCountry, num: gpNum }),
-        });
-        const data = (await res.json()) as {
-          reviews?: GooglePlayReview[];
-          error?: string;
-        };
-        if (data.error) allErrors.push(`Google Play: ${data.error}`);
-        for (const r of data.reviews ?? []) allSources.push(googlePlayToSource(r));
-      }
-
-      // 5. RSS
-      if (active.has("rss") && rssUrls.trim()) {
-        const urls = rssUrls
-          .split(/[\n,]+/)
-          .map((u) => u.trim())
-          .filter(Boolean);
-        const res = await fetch("/api/sources/rss", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ urls }),
-        });
-        const data = (await res.json()) as {
-          items?: RssFeedItem[];
-          errors?: string[];
-          error?: string;
-        };
-        if (data.error) allErrors.push(`RSS: ${data.error}`);
-        if (data.errors?.length) allErrors.push(...data.errors.map((e) => `RSS: ${e}`));
-        for (const item of data.items ?? []) allSources.push(rssFeedItemToSource(item));
-      }
-
-      // 6. G2 Reviews
-      if (active.has("g2") && g2Slug.trim()) {
-        const res = await fetch("/api/sources/g2", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ slug: g2Slug.trim(), pages: g2Pages }),
-        });
-        const data = (await res.json()) as {
-          reviews?: Array<{ title: string; text: string; rating: number; author: string; date: string; url: string; pros?: string; cons?: string }>;
-          error?: string;
-          hint?: string;
-        };
-        if (data.error) allErrors.push(`G2: ${data.error}${data.hint ? " — " + data.hint : ""}`);
-        for (const r of data.reviews ?? []) {
-          const stars = "★".repeat(Math.round(r.rating)) + "☆".repeat(Math.max(0, 5 - Math.round(r.rating)));
-          const fullText = [r.pros ? `Pros: ${r.pros}` : "", r.cons ? `Cons: ${r.cons}` : "", r.text].filter(Boolean).join("\n");
-          allSources.push({
-            id: `g2-${r.date}-${r.title.slice(0, 10)}`,
-            title: r.title || `${r.rating}★ G2 review`,
-            text: fullText,
-            url: r.url,
-            wordCount: fullText.split(/\s+/).length,
-            source: "url",
-            meta: `G2 ${stars} · ${r.date.slice(0, 10)}`,
-            selected: true,
+    // 1. Social / news via /api/social (Reddit, HN, Google News, StockTwits)
+    const socialSources = (["reddit", "hackernews", "gnews", "stocktwits"] as SourceId[]).filter(
+      (s) => active.has(s)
+    );
+    if (socialSources.length > 0) {
+      const label = socialSources.map((s) => SOURCE_DEFS.find((d) => d.id === s)?.label).filter(Boolean).join(", ");
+      setTaskState("social", { label, status: "running", count: 0 });
+      runners.push((async () => {
+        try {
+          const res = await fetch("/api/social", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query: query.trim() || undefined, symbol: symbol.trim() || undefined, subreddit: subreddit.trim() || undefined, timeframe, sort, limit, includeComments, sources: socialSources }),
           });
+          const data = (await res.json()) as { items?: (RedditPost | HNItem | GNewsItem | StockTwitsMessage)[]; errors?: string[]; error?: string };
+          if (data.error) allErrors.push(data.error);
+          if (data.errors?.length) allErrors.push(...data.errors);
+          const items = (data.items ?? []).map(socialItemToSource);
+          allSources.push(...items);
+          setTaskState("social", { status: "done", count: items.length });
+        } catch (err) {
+          setTaskState("social", { status: "error", error: err instanceof Error ? err.message : "Failed" });
+          allErrors.push("Social sources: " + (err instanceof Error ? err.message : "Failed"));
         }
-      }
-
-      // 7. Capterra Reviews
-      if (active.has("capterra") && capterraSlug.trim()) {
-        const res = await fetch("/api/sources/capterra", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ slug: capterraSlug.trim(), pages: capterraPages }),
-        });
-        const data = (await res.json()) as {
-          reviews?: Array<{ title: string; text: string; pros: string; cons: string; rating: number; author: string; date: string; url: string }>;
-          error?: string;
-          hint?: string;
-        };
-        if (data.error) allErrors.push(`Capterra: ${data.error}${data.hint ? " — " + data.hint : ""}`);
-        for (const r of data.reviews ?? []) {
-          const stars = "★".repeat(Math.round(r.rating)) + "☆".repeat(Math.max(0, 5 - Math.round(r.rating)));
-          const fullText = [r.pros ? `Pros: ${r.pros}` : "", r.cons ? `Cons: ${r.cons}` : "", r.text].filter(Boolean).join("\n");
-          allSources.push({
-            id: `cap-${r.date}-${r.title.slice(0, 10)}`,
-            title: r.title || `${r.rating}★ Capterra review`,
-            text: fullText,
-            url: r.url,
-            wordCount: fullText.split(/\s+/).length,
-            source: "url",
-            meta: `Capterra ${stars} · ${r.date.slice(0, 10)}`,
-            selected: true,
-          });
-        }
-      }
-
-      // 8. Twitter/X via Perplexity
-      if (active.has("twitter") && twitterQuery.trim()) {
-        const res = await fetch("/api/sources/perplexity", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ query: twitterQuery.trim(), mode: "twitter", recency: twitterRecency }),
-        });
-        const data = (await res.json()) as { title?: string; text?: string; wordCount?: number; citations?: string[]; error?: string };
-        if (data.error) allErrors.push(`Twitter/X: ${data.error}`);
-        if (data.text) {
-          allSources.push({
-            id: `twitter-${Date.now()}`,
-            title: data.title ?? `Twitter/X — ${twitterQuery.trim()}`,
-            text: data.text,
-            url: data.citations?.[0] ?? "https://x.com",
-            wordCount: data.wordCount ?? 0,
-            source: "url",
-            meta: `Twitter/X · ${data.citations?.length ?? 0} citations`,
-            selected: true,
-          });
-        }
-      }
-
-      // 9. Perplexity Research
-      if (active.has("perplexity") && perplexityQuery.trim()) {
-        const res = await fetch("/api/sources/perplexity", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ query: perplexityQuery.trim(), mode: "research", recency: perplexityRecency }),
-        });
-        const data = (await res.json()) as { title?: string; text?: string; wordCount?: number; citations?: string[]; error?: string };
-        if (data.error) allErrors.push(`Perplexity: ${data.error}`);
-        if (data.text) {
-          allSources.push({
-            id: `perplexity-${Date.now()}`,
-            title: data.title ?? `Perplexity — ${perplexityQuery.trim()}`,
-            text: data.text,
-            url: data.citations?.[0] ?? "https://perplexity.ai",
-            wordCount: data.wordCount ?? 0,
-            source: "url",
-            meta: `Perplexity · ${data.citations?.length ?? 0} citations`,
-            selected: true,
-          });
-        }
-      }
-    } catch (err) {
-      allErrors.push(err instanceof Error ? err.message : "Network error");
+      })());
     }
+
+    // 2. Trustpilot
+    if (active.has("trustpilot") && tpDomain.trim()) {
+      setTaskState("trustpilot", { label: "Trustpilot", status: "running", count: 0 });
+      runners.push((async () => {
+        try {
+          const res = await fetch("/api/sources/trustpilot", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ company: tpDomain.trim(), pages: tpPages }) });
+          const data = (await res.json()) as { reviews?: TrustpilotReview[]; errors?: string[]; error?: string };
+          if (data.error) allErrors.push(`Trustpilot: ${data.error}`);
+          if (data.errors?.length) allErrors.push(...data.errors.map((e) => `Trustpilot: ${e}`));
+          const items = (data.reviews ?? []).map((r) => trustpilotToSource(r, tpDomain.trim()));
+          allSources.push(...items);
+          setTaskState("trustpilot", { status: "done", count: items.length });
+        } catch (err) {
+          setTaskState("trustpilot", { status: "error", error: err instanceof Error ? err.message : "Failed" });
+          allErrors.push("Trustpilot: " + (err instanceof Error ? err.message : "Failed"));
+        }
+      })());
+    }
+
+    // 3. App Store
+    if (active.has("appstore") && appId.trim()) {
+      setTaskState("appstore", { label: "App Store", status: "running", count: 0 });
+      runners.push((async () => {
+        try {
+          const res = await fetch("/api/sources/appstore", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ appId: appId.trim(), country: appCountry, pages: appPages }) });
+          const data = (await res.json()) as { reviews?: AppStoreReview[]; errors?: string[]; error?: string };
+          if (data.error) allErrors.push(`App Store: ${data.error}`);
+          if (data.errors?.length) allErrors.push(...data.errors.map((e) => `App Store: ${e}`));
+          const items = (data.reviews ?? []).map(appStoreToSource);
+          allSources.push(...items);
+          setTaskState("appstore", { status: "done", count: items.length });
+        } catch (err) {
+          setTaskState("appstore", { status: "error", error: err instanceof Error ? err.message : "Failed" });
+          allErrors.push("App Store: " + (err instanceof Error ? err.message : "Failed"));
+        }
+      })());
+    }
+
+    // 4. Google Play
+    if (active.has("googleplay") && gpPackageId.trim()) {
+      setTaskState("googleplay", { label: "Google Play", status: "running", count: 0 });
+      runners.push((async () => {
+        try {
+          const res = await fetch("/api/sources/googleplay", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ packageId: gpPackageId.trim(), country: gpCountry, num: gpNum }) });
+          const data = (await res.json()) as { reviews?: GooglePlayReview[]; error?: string };
+          if (data.error) allErrors.push(`Google Play: ${data.error}`);
+          const items = (data.reviews ?? []).map(googlePlayToSource);
+          allSources.push(...items);
+          setTaskState("googleplay", { status: "done", count: items.length });
+        } catch (err) {
+          setTaskState("googleplay", { status: "error", error: err instanceof Error ? err.message : "Failed" });
+          allErrors.push("Google Play: " + (err instanceof Error ? err.message : "Failed"));
+        }
+      })());
+    }
+
+    // 5. RSS
+    if (active.has("rss") && rssUrls.trim()) {
+      setTaskState("rss", { label: "RSS Feeds", status: "running", count: 0 });
+      runners.push((async () => {
+        try {
+          const urls = rssUrls.split(/[\n,]+/).map((u) => u.trim()).filter(Boolean);
+          const res = await fetch("/api/sources/rss", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ urls }) });
+          const data = (await res.json()) as { items?: RssFeedItem[]; errors?: string[]; error?: string };
+          if (data.error) allErrors.push(`RSS: ${data.error}`);
+          if (data.errors?.length) allErrors.push(...data.errors.map((e) => `RSS: ${e}`));
+          const items = (data.items ?? []).map(rssFeedItemToSource);
+          allSources.push(...items);
+          setTaskState("rss", { status: "done", count: items.length });
+        } catch (err) {
+          setTaskState("rss", { status: "error", error: err instanceof Error ? err.message : "Failed" });
+          allErrors.push("RSS: " + (err instanceof Error ? err.message : "Failed"));
+        }
+      })());
+    }
+
+    // 6. G2 Reviews
+    if (active.has("g2") && g2Slug.trim()) {
+      setTaskState("g2", { label: "G2 Reviews", status: "running", count: 0 });
+      runners.push((async () => {
+        try {
+          const res = await fetch("/api/sources/g2", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slug: g2Slug.trim(), pages: g2Pages }) });
+          const data = (await res.json()) as { reviews?: Array<{ title: string; text: string; rating: number; author: string; date: string; url: string; pros?: string; cons?: string }>; error?: string; hint?: string };
+          if (data.error) allErrors.push(`G2: ${data.error}${data.hint ? " — " + data.hint : ""}`);
+          const items: Source[] = (data.reviews ?? []).map((r) => {
+            const stars = "★".repeat(Math.round(r.rating)) + "☆".repeat(Math.max(0, 5 - Math.round(r.rating)));
+            const fullText = [r.pros ? `Pros: ${r.pros}` : "", r.cons ? `Cons: ${r.cons}` : "", r.text].filter(Boolean).join("\n");
+            return { id: `g2-${r.date}-${r.title.slice(0, 10)}`, title: r.title || `${r.rating}★ G2 review`, text: fullText, url: r.url, wordCount: fullText.split(/\s+/).length, source: "url" as const, meta: `G2 ${stars} · ${r.date.slice(0, 10)}`, selected: true };
+          });
+          allSources.push(...items);
+          setTaskState("g2", { status: "done", count: items.length });
+        } catch (err) {
+          setTaskState("g2", { status: "error", error: err instanceof Error ? err.message : "Failed" });
+          allErrors.push("G2: " + (err instanceof Error ? err.message : "Failed"));
+        }
+      })());
+    }
+
+    // 7. Capterra Reviews
+    if (active.has("capterra") && capterraSlug.trim()) {
+      setTaskState("capterra", { label: "Capterra", status: "running", count: 0 });
+      runners.push((async () => {
+        try {
+          const res = await fetch("/api/sources/capterra", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slug: capterraSlug.trim(), pages: capterraPages }) });
+          const data = (await res.json()) as { reviews?: Array<{ title: string; text: string; pros: string; cons: string; rating: number; author: string; date: string; url: string }>; error?: string; hint?: string };
+          if (data.error) allErrors.push(`Capterra: ${data.error}${data.hint ? " — " + data.hint : ""}`);
+          const items: Source[] = (data.reviews ?? []).map((r) => {
+            const stars = "★".repeat(Math.round(r.rating)) + "☆".repeat(Math.max(0, 5 - Math.round(r.rating)));
+            const fullText = [r.pros ? `Pros: ${r.pros}` : "", r.cons ? `Cons: ${r.cons}` : "", r.text].filter(Boolean).join("\n");
+            return { id: `cap-${r.date}-${r.title.slice(0, 10)}`, title: r.title || `${r.rating}★ Capterra review`, text: fullText, url: r.url, wordCount: fullText.split(/\s+/).length, source: "url" as const, meta: `Capterra ${stars} · ${r.date.slice(0, 10)}`, selected: true };
+          });
+          allSources.push(...items);
+          setTaskState("capterra", { status: "done", count: items.length });
+        } catch (err) {
+          setTaskState("capterra", { status: "error", error: err instanceof Error ? err.message : "Failed" });
+          allErrors.push("Capterra: " + (err instanceof Error ? err.message : "Failed"));
+        }
+      })());
+    }
+
+    // 8. Glassdoor Reviews
+    if (active.has("glassdoor") && glassdoorSlug.trim()) {
+      setTaskState("glassdoor", { label: "Glassdoor", status: "running", count: 0 });
+      runners.push((async () => {
+        try {
+          const res = await fetch("/api/sources/glassdoor", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slug: glassdoorSlug.trim(), pages: glassdoorPages }) });
+          const data = (await res.json()) as { reviews?: Array<{ title: string; text: string; rating: number; pros: string; cons: string; author: string; date: string; url: string }>; error?: string; hint?: string };
+          if (data.error) allErrors.push(`Glassdoor: ${data.error}${data.hint ? " — " + data.hint : ""}`);
+          const items: Source[] = (data.reviews ?? []).map((r) => {
+            const stars = "★".repeat(Math.round(r.rating)) + "☆".repeat(Math.max(0, 5 - Math.round(r.rating)));
+            const fullText = [r.pros ? `Pros: ${r.pros}` : "", r.cons ? `Cons: ${r.cons}` : "", r.text].filter(Boolean).join("\n");
+            return { id: `gd-${r.date}-${r.title.slice(0, 10)}`, title: r.title || `${r.rating}★ Glassdoor review`, text: fullText, url: r.url, wordCount: fullText.split(/\s+/).length, source: "url" as const, meta: `Glassdoor ${stars} · ${r.author}`, selected: true };
+          });
+          allSources.push(...items);
+          setTaskState("glassdoor", { status: "done", count: items.length });
+        } catch (err) {
+          setTaskState("glassdoor", { status: "error", error: err instanceof Error ? err.message : "Failed" });
+          allErrors.push("Glassdoor: " + (err instanceof Error ? err.message : "Failed"));
+        }
+      })());
+    }
+
+    // 9. Twitter/X via Perplexity
+    if (active.has("twitter") && twitterQuery.trim()) {
+      setTaskState("twitter", { label: "Twitter / X", status: "running", count: 0 });
+      runners.push((async () => {
+        try {
+          const res = await fetch("/api/sources/perplexity", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ query: twitterQuery.trim(), mode: "twitter", recency: twitterRecency }) });
+          const data = (await res.json()) as { title?: string; text?: string; wordCount?: number; citations?: string[]; error?: string };
+          if (data.error) allErrors.push(`Twitter/X: ${data.error}`);
+          if (data.text) {
+            allSources.push({ id: `twitter-${Date.now()}`, title: data.title ?? `Twitter/X — ${twitterQuery.trim()}`, text: data.text, url: data.citations?.[0] ?? "https://x.com", wordCount: data.wordCount ?? 0, source: "url", meta: `Twitter/X · ${data.citations?.length ?? 0} citations`, selected: true });
+          }
+          setTaskState("twitter", { status: "done", count: data.text ? 1 : 0 });
+        } catch (err) {
+          setTaskState("twitter", { status: "error", error: err instanceof Error ? err.message : "Failed" });
+          allErrors.push("Twitter/X: " + (err instanceof Error ? err.message : "Failed"));
+        }
+      })());
+    }
+
+    // 9. Perplexity Research
+    if (active.has("perplexity") && perplexityQuery.trim()) {
+      setTaskState("perplexity", { label: "Perplexity Research", status: "running", count: 0 });
+      runners.push((async () => {
+        try {
+          const res = await fetch("/api/sources/perplexity", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ query: perplexityQuery.trim(), mode: "research", recency: perplexityRecency }) });
+          const data = (await res.json()) as { title?: string; text?: string; wordCount?: number; citations?: string[]; error?: string };
+          if (data.error) allErrors.push(`Perplexity: ${data.error}`);
+          if (data.text) {
+            allSources.push({ id: `perplexity-${Date.now()}`, title: data.title ?? `Perplexity — ${perplexityQuery.trim()}`, text: data.text, url: data.citations?.[0] ?? "https://perplexity.ai", wordCount: data.wordCount ?? 0, source: "url", meta: `Perplexity · ${data.citations?.length ?? 0} citations`, selected: true });
+          }
+          setTaskState("perplexity", { status: "done", count: data.text ? 1 : 0 });
+        } catch (err) {
+          setTaskState("perplexity", { status: "error", error: err instanceof Error ? err.message : "Failed" });
+          allErrors.push("Perplexity: " + (err instanceof Error ? err.message : "Failed"));
+        }
+      })());
+    }
+
+    // Run all source fetches in parallel
+    await Promise.allSettled(runners);
 
     setFetchedCount(allSources.length);
     if (allErrors.length) setError(allErrors.join(" · "));
@@ -640,7 +722,7 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
   // ─── Shared class helpers ────────────────────────────────────────────────────
 
   const inputCls =
-    "w-full px-3 py-2.5 text-sm text-gray-800 placeholder-gray-400 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent disabled:opacity-50";
+    "w-full px-3 py-2.5 text-sm text-gray-800 placeholder-gray-400 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 focus:border-transparent disabled:opacity-50";
   const labelCls = "block text-sm font-medium text-gray-700 mb-1.5";
   const smallLabelCls = "block text-xs font-medium text-gray-500 mb-1";
 
@@ -666,6 +748,9 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
 
   return (
     <div className="space-y-5">
+      {/* Company auto-discovery */}
+      <CompanySearchBar onDiscovery={prefillFromDiscovery} />
+
       {/* Source toggles */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
@@ -723,7 +808,7 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
           <label className={labelCls}>
             Ticker symbol <span className="font-normal text-gray-400">(StockTwits)</span>
           </label>
-          <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-brand-500">
+          <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-brand-500">
             <span className="px-3 py-2.5 text-sm text-gray-400 bg-gray-50 border-r border-gray-200">$</span>
             <input
               type="text"
@@ -746,7 +831,7 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
           <label className={labelCls}>
             Subreddit <span className="font-normal text-gray-400">(optional)</span>
           </label>
-          <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-brand-500">
+          <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-brand-500">
             <span className="px-3 py-2.5 text-sm text-gray-400 bg-gray-50 border-r border-gray-200">r/</span>
             <input
               type="text"
@@ -770,7 +855,7 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
                 <select
                   value={timeframe}
                   onChange={(e) => setTimeframe(e.target.value)}
-                  className="w-full px-2.5 py-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50"
+                  className="w-full px-2.5 py-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 disabled:opacity-50"
                   disabled={isFetching}
                 >
                   {TIMEFRAMES.map((t) => (
@@ -785,7 +870,7 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
                 <select
                   value={sort}
                   onChange={(e) => setSort(e.target.value)}
-                  className="w-full px-2.5 py-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50"
+                  className="w-full px-2.5 py-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 disabled:opacity-50"
                   disabled={isFetching}
                 >
                   {SORT_OPTIONS.map((s) => (
@@ -805,7 +890,7 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
                 onChange={(e) =>
                   setLimit(Math.min(100, Math.max(5, parseInt(e.target.value) || 25)))
                 }
-                className="w-16 px-2 py-1.5 text-sm text-gray-700 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 text-center disabled:opacity-50"
+                className="w-16 px-2 py-1.5 text-sm text-gray-700 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 text-center disabled:opacity-50"
                 min={5}
                 max={100}
                 disabled={isFetching}
@@ -816,7 +901,7 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
                 <div
                   onClick={() => setIncludeComments(!includeComments)}
                   className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer ${
-                    includeComments ? "bg-brand-600" : "bg-gray-200"
+                    includeComments ? "bg-brand-500" : "bg-gray-200"
                   }`}
                 >
                   <span
@@ -837,17 +922,25 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
         <div className="space-y-3 pt-3 border-t border-gray-100">
           <GroupLabel label="Trustpilot" />
           <div>
-            <label className={labelCls}>Company domain</label>
+            <label className={labelCls}>Company domain or Trustpilot URL</label>
             <input
               type="text"
               value={tpDomain}
-              onChange={(e) => setTpDomain(e.target.value)}
-              placeholder="bet365.com · williamhill.com · ig.com · etoro.com"
+              onChange={(e) => {
+                const { value } = smartExtract(e.target.value, "trustpilot");
+                setTpDomain(value);
+              }}
+              onPaste={(e) => {
+                const pasted = e.clipboardData.getData("text");
+                const { value, wasUrl } = smartExtract(pasted, "trustpilot");
+                if (wasUrl) { e.preventDefault(); setTpDomain(value); }
+              }}
+              placeholder="bet365.com or paste Trustpilot URL"
               className={inputCls}
               disabled={isFetching}
             />
             <p className="mt-1 text-xs text-gray-400">
-              Domain as shown in: trustpilot.com/review/<strong>bet365.com</strong>
+              Paste the full Trustpilot URL — domain is extracted automatically
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -858,7 +951,7 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
               onChange={(e) =>
                 setTpPages(Math.min(5, Math.max(1, parseInt(e.target.value) || 1)))
               }
-              className="w-16 px-2 py-1.5 text-sm text-gray-700 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 text-center disabled:opacity-50"
+              className="w-16 px-2 py-1.5 text-sm text-gray-700 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 text-center disabled:opacity-50"
               min={1}
               max={5}
               disabled={isFetching}
@@ -874,17 +967,25 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
           <GroupLabel label="App Store (Apple)" />
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={labelCls}>App ID</label>
+              <label className={labelCls}>App ID or App Store URL</label>
               <input
                 type="text"
                 value={appId}
-                onChange={(e) => setAppId(e.target.value)}
-                placeholder="1234567890"
+                onChange={(e) => {
+                  const { value } = smartExtract(e.target.value, "appstore");
+                  setAppId(value);
+                }}
+                onPaste={(e) => {
+                  const pasted = e.clipboardData.getData("text");
+                  const { value, wasUrl } = smartExtract(pasted, "appstore");
+                  if (wasUrl) { e.preventDefault(); setAppId(value); }
+                }}
+                placeholder="1234567890 or paste App Store URL"
                 className={inputCls}
                 disabled={isFetching}
               />
               <p className="mt-1 text-xs text-gray-400">
-                From URL: apps.apple.com/.../id<strong>1234567890</strong>
+                Paste the full App Store URL — ID is extracted automatically
               </p>
             </div>
             <div>
@@ -892,7 +993,7 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
               <select
                 value={appCountry}
                 onChange={(e) => setAppCountry(e.target.value)}
-                className="w-full px-2.5 py-2.5 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50"
+                className="w-full px-2.5 py-2.5 text-sm text-gray-700 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 disabled:opacity-50"
                 disabled={isFetching}
               >
                 {COUNTRY_OPTIONS.map((c) => (
@@ -909,7 +1010,7 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
               onChange={(e) =>
                 setAppPages(Math.min(10, Math.max(1, parseInt(e.target.value) || 1)))
               }
-              className="w-16 px-2 py-1.5 text-sm text-gray-700 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 text-center disabled:opacity-50"
+              className="w-16 px-2 py-1.5 text-sm text-gray-700 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 text-center disabled:opacity-50"
               min={1}
               max={10}
               disabled={isFetching}
@@ -949,7 +1050,7 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
                       setRssUrls((prev) => (prev.trim() ? `${prev.trim()}\n${p.url}` : p.url));
                     }
                   }}
-                  className="px-2 py-1 text-xs bg-purple-50 border border-purple-200 text-purple-700 rounded hover:bg-purple-100 transition-colors disabled:opacity-50"
+                  className="px-2 py-1 text-xs bg-brand-50 border border-brand-200 text-brand-700 rounded hover:bg-brand-100 transition-colors disabled:opacity-50"
                   disabled={isFetching}
                 >
                   + {p.label}
@@ -965,20 +1066,28 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
         <div className="space-y-3 pt-3 border-t border-gray-100">
           <GroupLabel label="G2 Reviews" />
           <div>
-            <label className={labelCls}>Product slug</label>
-            <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-brand-500">
+            <label className={labelCls}>Product slug or G2 URL</label>
+            <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-brand-500">
               <span className="px-3 py-2.5 text-xs text-gray-400 bg-gray-50 border-r border-gray-200 whitespace-nowrap">g2.com/products/</span>
               <input
                 type="text"
                 value={g2Slug}
-                onChange={(e) => setG2Slug(e.target.value)}
-                placeholder="salesforce-crm · hubspot · intercom"
+                onChange={(e) => {
+                  const { value } = smartExtract(e.target.value, "g2");
+                  setG2Slug(value);
+                }}
+                onPaste={(e) => {
+                  const pasted = e.clipboardData.getData("text");
+                  const { value, wasUrl } = smartExtract(pasted, "g2");
+                  if (wasUrl) { e.preventDefault(); setG2Slug(value); }
+                }}
+                placeholder="salesforce-crm or paste G2 URL"
                 className="flex-1 px-3 py-2.5 text-sm text-gray-800 placeholder-gray-400 bg-white focus:outline-none disabled:opacity-50"
                 disabled={isFetching}
               />
               <span className="px-3 py-2.5 text-xs text-gray-400 bg-gray-50 border-l border-gray-200">/reviews</span>
             </div>
-            <p className="mt-1 text-xs text-gray-400">From URL: g2.com/products/<strong>salesforce-crm</strong>/reviews</p>
+            <p className="mt-1 text-xs text-gray-400">Paste the full G2 URL — slug is extracted automatically</p>
           </div>
           <div className="flex items-center gap-3">
             <label className="text-xs font-medium text-gray-500 whitespace-nowrap">Pages</label>
@@ -986,7 +1095,7 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
               type="number"
               value={g2Pages}
               onChange={(e) => setG2Pages(Math.min(5, Math.max(1, parseInt(e.target.value) || 2)))}
-              className="w-16 px-2 py-1.5 text-sm text-gray-700 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 text-center disabled:opacity-50"
+              className="w-16 px-2 py-1.5 text-sm text-gray-700 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 text-center disabled:opacity-50"
               min={1} max={5}
               disabled={isFetching}
             />
@@ -1000,16 +1109,24 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
         <div className="space-y-3 pt-3 border-t border-gray-100">
           <GroupLabel label="Capterra Reviews" />
           <div>
-            <label className={labelCls}>Product slug or ID</label>
+            <label className={labelCls}>Product slug or Capterra URL</label>
             <input
               type="text"
               value={capterraSlug}
-              onChange={(e) => setCapterraSlug(e.target.value)}
-              placeholder="salesforce-crm · hubspot-crm · 12345"
+              onChange={(e) => {
+                const { value } = smartExtract(e.target.value, "capterra");
+                setCapterraSlug(value);
+              }}
+              onPaste={(e) => {
+                const pasted = e.clipboardData.getData("text");
+                const { value, wasUrl } = smartExtract(pasted, "capterra");
+                if (wasUrl) { e.preventDefault(); setCapterraSlug(value); }
+              }}
+              placeholder="salesforce-crm or paste Capterra URL"
               className={inputCls}
               disabled={isFetching}
             />
-            <p className="mt-1 text-xs text-gray-400">From URL: capterra.com/p/<strong>salesforce-crm</strong> or capterra.com/software/<strong>slug</strong></p>
+            <p className="mt-1 text-xs text-gray-400">Paste the full Capterra URL — slug is extracted automatically</p>
           </div>
           <div className="flex items-center gap-3">
             <label className="text-xs font-medium text-gray-500 whitespace-nowrap">Pages</label>
@@ -1017,7 +1134,7 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
               type="number"
               value={capterraPages}
               onChange={(e) => setCapterraPages(Math.min(5, Math.max(1, parseInt(e.target.value) || 2)))}
-              className="w-16 px-2 py-1.5 text-sm text-gray-700 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 text-center disabled:opacity-50"
+              className="w-16 px-2 py-1.5 text-sm text-gray-700 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 text-center disabled:opacity-50"
               min={1} max={5}
               disabled={isFetching}
             />
@@ -1026,11 +1143,52 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
         </div>
       )}
 
+      {/* ── Glassdoor settings ── */}
+      {active.has("glassdoor") && (
+        <div className="space-y-3 pt-3 border-t border-gray-100">
+          <GroupLabel label="Glassdoor Reviews" />
+          <div>
+            <label className={labelCls}>Review page slug</label>
+            <input
+              type="text"
+              value={glassdoorSlug}
+              onChange={(e) => {
+                // Extract slug from full Glassdoor URL if pasted
+                const val = e.target.value;
+                const match = val.match(/glassdoor\.com\/Reviews\/([a-zA-Z0-9-]+)/i);
+                setGlassdoorSlug(match ? match[1] : val);
+              }}
+              onPaste={(e) => {
+                const pasted = e.clipboardData.getData("text");
+                const match = pasted.match(/glassdoor\.com\/Reviews\/([a-zA-Z0-9-]+)/i);
+                if (match) { e.preventDefault(); setGlassdoorSlug(match[1]); }
+              }}
+              placeholder="Company-Name-Reviews-E12345 or paste URL"
+              className={inputCls}
+              disabled={isFetching}
+            />
+            <p className="mt-1 text-xs text-gray-400">Paste the full Glassdoor URL — slug is extracted automatically</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="text-xs font-medium text-gray-500 whitespace-nowrap">Pages</label>
+            <input
+              type="number"
+              value={glassdoorPages}
+              onChange={(e) => setGlassdoorPages(Math.min(3, Math.max(1, parseInt(e.target.value) || 2)))}
+              className="w-16 px-2 py-1.5 text-sm text-gray-700 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 text-center disabled:opacity-50"
+              min={1} max={3}
+              disabled={isFetching}
+            />
+            <span className="text-xs text-gray-400">max 3 · employee reviews</span>
+          </div>
+        </div>
+      )}
+
       {/* ── Twitter / X settings ── */}
       {active.has("twitter") && (
         <div className="space-y-3 pt-3 border-t border-gray-100">
           <GroupLabel label="Twitter / X" />
-          <p className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 leading-relaxed">
+          <p className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 leading-relaxed">
             Searches Twitter/X via <strong>Perplexity AI</strong> — requires <code className="text-xs bg-gray-100 px-1 rounded">PERPLEXITY_API_KEY</code>
           </p>
           <div>
@@ -1049,7 +1207,7 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
             <select
               value={twitterRecency}
               onChange={(e) => setTwitterRecency(e.target.value)}
-              className="w-full px-2.5 py-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50"
+              className="w-full px-2.5 py-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 disabled:opacity-50"
               disabled={isFetching}
             >
               {RECENCY_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -1062,8 +1220,8 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
       {active.has("perplexity") && (
         <div className="space-y-3 pt-3 border-t border-gray-100">
           <GroupLabel label="Perplexity Research" />
-          <p className="text-xs text-gray-500 bg-violet-50 border border-violet-200 rounded-lg px-3 py-2 leading-relaxed">
-            AI-powered web research — synthesises market reports, news, competitor intel. Requires <code className="text-xs bg-violet-100 px-1 rounded">PERPLEXITY_API_KEY</code>
+          <p className="text-xs text-gray-500 bg-brand-50 border border-brand-200 rounded-lg px-3 py-2 leading-relaxed">
+            AI-powered web research — synthesises market reports, news, competitor intel. Requires <code className="text-xs bg-brand-100 px-1 rounded">PERPLEXITY_API_KEY</code>
           </p>
           <div>
             <label className={labelCls}>Research query</label>
@@ -1082,7 +1240,7 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
             <select
               value={perplexityRecency}
               onChange={(e) => setPerplexityRecency(e.target.value)}
-              className="w-full px-2.5 py-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50"
+              className="w-full px-2.5 py-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 disabled:opacity-50"
               disabled={isFetching}
             >
               {RECENCY_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -1096,17 +1254,25 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
         <div className="space-y-3 pt-3 border-t border-gray-100">
           <GroupLabel label="Google Play (Android)" />
           <div>
-            <label className={labelCls}>Package ID</label>
+            <label className={labelCls}>Package ID or Play Store URL</label>
             <input
               type="text"
               value={gpPackageId}
-              onChange={(e) => setGpPackageId(e.target.value)}
-              placeholder="com.bet365.android · com.williamhill.racing"
+              onChange={(e) => {
+                const { value } = smartExtract(e.target.value, "googleplay");
+                setGpPackageId(value);
+              }}
+              onPaste={(e) => {
+                const pasted = e.clipboardData.getData("text");
+                const { value, wasUrl } = smartExtract(pasted, "googleplay");
+                if (wasUrl) { e.preventDefault(); setGpPackageId(value); }
+              }}
+              placeholder="com.example.app or paste Play Store URL"
               className={inputCls}
               disabled={isFetching}
             />
             <p className="mt-1 text-xs text-gray-400">
-              Reverse-domain format — from Play Store URL <strong>id=com.example.app</strong>
+              Paste the full Play Store URL — package ID is extracted automatically
             </p>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -1115,7 +1281,7 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
               <select
                 value={gpCountry}
                 onChange={(e) => setGpCountry(e.target.value)}
-                className="w-full px-2.5 py-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50"
+                className="w-full px-2.5 py-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 disabled:opacity-50"
                 disabled={isFetching}
               >
                 {COUNTRY_OPTIONS_GP.map((c) => (
@@ -1129,7 +1295,7 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
                 type="number"
                 value={gpNum}
                 onChange={(e) => setGpNum(Math.min(200, Math.max(10, parseInt(e.target.value) || 100)))}
-                className="w-full px-2.5 py-2 text-sm text-gray-700 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 text-center disabled:opacity-50"
+                className="w-full px-2.5 py-2 text-sm text-gray-700 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 text-center disabled:opacity-50"
                 min={10}
                 max={200}
                 disabled={isFetching}
@@ -1146,7 +1312,7 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
         disabled={!canSubmit || isFetching}
         className={`w-full py-2.5 px-4 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
           canSubmit && !isFetching
-            ? "bg-brand-600 hover:bg-brand-700 text-white shadow-sm"
+            ? "bg-brand-500 hover:bg-brand-600 text-white shadow-sm"
             : "bg-gray-100 text-gray-400 cursor-not-allowed"
         }`}
       >
@@ -1168,6 +1334,41 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
         )}
       </button>
 
+      {/* Per-source progress */}
+      {Object.keys(taskProgress).length > 0 && (
+        <div className="space-y-1.5 pt-2">
+          {Object.entries(taskProgress).map(([key, task]) => (
+            <div key={key} className="flex items-center gap-2.5">
+              {task.status === "running" && (
+                <svg className="w-3.5 h-3.5 animate-spin text-brand-500 shrink-0" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              )}
+              {task.status === "done" && (
+                <svg className="w-3.5 h-3.5 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+              {task.status === "error" && (
+                <svg className="w-3.5 h-3.5 text-amber-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              )}
+              <span className={`text-xs flex-1 ${task.status === "error" ? "text-amber-600" : "text-gray-600"}`}>
+                {task.label}
+              </span>
+              {task.status === "done" && task.count > 0 && (
+                <span className="text-xs text-emerald-600 font-medium">{task.count}</span>
+              )}
+              {task.status === "error" && task.error && (
+                <span className="text-xs text-amber-500 truncate max-w-32">{task.error}</span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
       {error && (
         <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 leading-relaxed">
           {error}
@@ -1176,7 +1377,7 @@ export default function SocialListener({ onSourcesReady }: SocialListenerProps) 
 
       {fetchedCount !== null && !isFetching && (
         <p className="text-xs text-emerald-600 font-medium">
-          ✓ {fetchedCount} items collected — scroll down to review and analyse
+          {fetchedCount} items collected — scroll down to review and analyse
         </p>
       )}
     </div>

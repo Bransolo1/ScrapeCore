@@ -32,7 +32,7 @@
   select:focus-visible,
   textarea:focus-visible,
   [tabindex]:focus-visible {
-    outline: 2px solid #6366f1;
+    outline: 2px solid #f97316;
     outline-offset: 2px;
     border-radius: 6px;
   }
@@ -152,10 +152,10 @@ html.dark .divide-gray-100 > * + * { border-color: #1e293b; }
 html.dark .divide-gray-200 > * + * { border-color: #1e293b; }
 
 /* Brand accents stay vibrant in dark */
-html.dark .bg-brand-50  { background-color: #1e1b4b; }
-html.dark .bg-brand-100 { background-color: #312e81; }
-html.dark .border-brand-200 { border-color: #4338ca; }
-html.dark .text-brand-700   { color: #a5b4fc; }
+html.dark .bg-brand-50  { background-color: rgba(249, 115, 22, 0.12); }
+html.dark .bg-brand-100 { background-color: rgba(249, 115, 22, 0.20); }
+html.dark .border-brand-200 { border-color: rgba(251, 146, 60, 0.35); }
+html.dark .text-brand-700   { color: #fdba74; }
 
 /* COM-B colored sections — dark variants, strong enough to be legible */
 html.dark .bg-violet-50  { background-color: rgba(109,  40, 217, 0.20); }
@@ -193,7 +193,7 @@ html.dark .text-indigo-700 { color: #a5b4fc; }
 /* Accent bar colors stay vivid in dark */
 html.dark .bg-rose-400   { background-color: #fb7185; }
 html.dark .bg-emerald-400 { background-color: #34d399; }
-html.dark .bg-brand-400  { background-color: #818cf8; }
+html.dark .bg-brand-400  { background-color: #fb923c; }
 
 /* Input / textarea dark */
 html.dark input,

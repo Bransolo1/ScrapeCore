@@ -147,7 +147,12 @@ async function scrapeG2Page(slug: string, page: number): Promise<G2Review[]> {
   return extractNextDataReviews(html, url);
 }
 
+import { requireAuth } from "@/lib/apiAuth";
+
 export async function POST(req: Request) {
+  const auth = await requireAuth();
+  if (auth instanceof Response) return auth;
+
   let body: { slug?: string; pages?: number };
   try {
     body = await req.json();

@@ -97,7 +97,7 @@ export default function SourcesPanel({
         disabled={selected.length === 0 || isLoading}
         className={`w-full py-3 px-4 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
           selected.length > 0 && !isLoading
-            ? "bg-brand-600 hover:bg-brand-700 text-white shadow-sm"
+            ? "bg-brand-500 hover:bg-brand-600 text-white shadow-sm"
             : "bg-gray-100 text-gray-400 cursor-not-allowed"
         }`}
       >

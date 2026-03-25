@@ -8,9 +8,35 @@ export async function GET(req: Request) {
     const session = await getServerSession(authOptions);
     const sessionUserId = (session?.user as { id?: string } | undefined)?.id ?? undefined;
 
+    // Parse filter query params
+    const url = new URL(req.url);
+    const rangeParam = url.searchParams.get("range"); // 7d | 30d | 90d | all
+    const dataTypeParam = url.searchParams.get("dataType"); // survey | reviews | social | interviews | free_text | competitor
+    const projectParam = url.searchParams.get("project"); // free-text search
+
     const where: Record<string, unknown> = {};
     if (sessionUserId && process.env.SKIP_AUTH !== "true") {
       where.OR = [{ userId: sessionUserId }, { userId: null }];
+    }
+
+    // Date range filter
+    if (rangeParam && rangeParam !== "all") {
+      const days = rangeParam === "7d" ? 7 : rangeParam === "30d" ? 30 : rangeParam === "90d" ? 90 : 0;
+      if (days > 0) {
+        const from = new Date();
+        from.setDate(from.getDate() - days);
+        where.createdAt = { gte: from };
+      }
+    }
+
+    // Data type filter
+    if (dataTypeParam) {
+      where.dataType = dataTypeParam;
+    }
+
+    // Project context filter (substring match)
+    if (projectParam) {
+      where.project = { contains: projectParam, mode: "insensitive" };
     }
 
     const all = await prisma.analysis.findMany({

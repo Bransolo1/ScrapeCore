@@ -9,7 +9,7 @@ interface BatchCompareViewProps {
 }
 
 const COM_B_COLORS: Record<string, string> = {
-  capability: "bg-violet-500",
+  capability: "bg-teal-500",
   opportunity: "bg-sky-500",
   motivation: "bg-amber-500",
 };
@@ -111,9 +111,9 @@ export default function BatchCompareView({ docs, onClose }: BatchCompareViewProp
                 </tr>
 
                 {/* COM-B Capability */}
-                <tr className="bg-violet-50/40">
+                <tr className="bg-teal-50/40">
                   <td className="px-6 py-3">
-                    <span className="text-xs font-medium text-violet-700">Capability signals</span>
+                    <span className="text-xs font-medium text-teal-700">Capability signals</span>
                   </td>
                   {comBCounts.map((c, i) => (
                     <td key={i} className="px-4 py-3">

@@ -157,7 +157,7 @@ export default function AnalysisHistory({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search analyses…"
-            className="w-full pl-8 pr-8 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent text-gray-700 placeholder-gray-400"
+            className="w-full pl-8 pr-8 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 focus:border-transparent text-gray-700 placeholder-gray-400"
           />
           {search && (
             <button
@@ -228,7 +228,7 @@ export default function AnalysisHistory({
           </div>
           <div className="flex items-center gap-3 text-xs text-gray-400 mt-1">
             <span className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-violet-400" />
+              <span className="w-1.5 h-1.5 rounded-full bg-brand-400" />
               COM-B mapping
             </span>
             <span className="flex items-center gap-1">

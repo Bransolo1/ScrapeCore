@@ -106,10 +106,10 @@ export default function CompetitorProfilePanel({ model }: Props) {
           <ProfileSection
             title="Opportunities to beat them"
             items={model.opportunities_to_beat_them}
-            dotCls="bg-violet-500"
-            bgCls="bg-violet-50"
-            borderCls="border-violet-200"
-            titleCls="text-violet-700"
+            dotCls="bg-teal-500"
+            bgCls="bg-teal-50"
+            borderCls="border-teal-200"
+            titleCls="text-teal-700"
           />
         </div>
       )}

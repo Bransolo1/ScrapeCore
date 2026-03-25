@@ -1,10 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import type { Source, TrustpilotReview, AppStoreReview, GooglePlayReview, WebSearchResult, RssFeedItem } from "@/lib/scraper";
+import { smartExtract } from "@/lib/urlParsers";
+import CompanySearchBar from "./CompanySearchBar";
+import type { DiscoveryResult } from "./CompanySearchBar";
+import { INDUSTRY_RSS, INDUSTRY_IDS, getIndustryFeeds } from "@/lib/rssPresets";
 
 interface CompanyFootprintProps {
   onSourcesReady: (sources: Source[]) => void;
+  discovery?: DiscoveryResult | null;
 }
 
 type TaskStatus = "idle" | "running" | "done" | "error";
@@ -25,11 +30,7 @@ const INITIAL_TASKS: Record<string, TaskState> = {
   rss: { label: "Industry RSS feeds", status: "idle", count: 0 },
 };
 
-const INDUSTRY_RSS = [
-  "https://www.gamblinginsider.com/feed",
-  "https://igamingbusiness.com/feed/",
-  "https://www.gamblingcommission.gov.uk/rss.xml",
-];
+const DEFAULT_INDUSTRY = "general";
 
 function statusIcon(s: TaskStatus) {
   if (s === "idle") return <span className="w-4 h-4 rounded-full border border-gray-200 inline-block" />;
@@ -119,12 +120,30 @@ function rssFeedItemToSource(item: RssFeedItem): Source {
   };
 }
 
-export default function CompanyFootprint({ onSourcesReady }: CompanyFootprintProps) {
+export default function CompanyFootprint({ onSourcesReady, discovery }: CompanyFootprintProps) {
   const [companyName, setCompanyName] = useState("");
   const [domain, setDomain] = useState("");
   const [iosAppId, setIosAppId] = useState("");
   const [androidPackage, setAndroidPackage] = useState("");
   const [country, setCountry] = useState("gb");
+  const [industry, setIndustry] = useState(DEFAULT_INDUSTRY);
+
+  // Auto-prefill from cross-tab discovery (e.g. from Social Listening tab)
+  useEffect(() => {
+    if (!discovery) return;
+    if (!companyName && discovery.company) setCompanyName(discovery.company);
+    if (!domain && discovery.domain) setDomain(discovery.domain);
+    if (!iosAppId && discovery.appstore?.appId) setIosAppId(discovery.appstore.appId);
+    if (!androidPackage && discovery.googleplay?.packageId) setAndroidPackage(discovery.googleplay.packageId);
+  }, [discovery]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Prefill from inline CompanySearchBar discovery
+  const prefillFromDiscovery = useCallback((result: DiscoveryResult) => {
+    if (result.company) setCompanyName(result.company);
+    if (result.domain) setDomain(result.domain);
+    if (result.appstore?.appId) setIosAppId(result.appstore.appId);
+    if (result.googleplay?.packageId) setAndroidPackage(result.googleplay.packageId);
+  }, []);
 
   const [tasks, setTasks] = useState<Record<string, TaskState>>(INITIAL_TASKS);
   const [isRunning, setIsRunning] = useState(false);
@@ -267,7 +286,7 @@ export default function CompanyFootprint({ onSourcesReady }: CompanyFootprintPro
         const res = await fetch("/api/sources/rss", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ urls: INDUSTRY_RSS, query: company }),
+          body: JSON.stringify({ urls: getIndustryFeeds(industry).map((f) => f.url), query: company }),
         });
         const data = await res.json() as { items?: RssFeedItem[]; error?: string };
         if (data.error) throw new Error(data.error);
@@ -291,7 +310,7 @@ export default function CompanyFootprint({ onSourcesReady }: CompanyFootprintPro
   };
 
   const inputCls =
-    "w-full px-3 py-2.5 text-sm text-gray-800 placeholder-gray-400 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent disabled:opacity-50";
+    "w-full px-3.5 py-2.5 text-sm text-gray-800 placeholder-gray-400 bg-surface-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 focus:border-brand-400 focus:bg-white disabled:opacity-50";
 
   const anyRunning = isRunning;
   const doneCount = Object.values(tasks).filter((t) => t.status === "done" || t.status === "error").length;
@@ -299,10 +318,13 @@ export default function CompanyFootprint({ onSourcesReady }: CompanyFootprintPro
 
   return (
     <div className="space-y-5">
+      {/* Company auto-discovery */}
+      <CompanySearchBar onDiscovery={prefillFromDiscovery} />
+
       {/* Company name + domain */}
       <div className="space-y-3">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Company name</label>
+          <label className="block text-sm font-medium text-gray-600 mb-1.5">Company name</label>
           <input
             type="text"
             value={companyName}
@@ -313,7 +335,7 @@ export default function CompanyFootprint({ onSourcesReady }: CompanyFootprintPro
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Domain</label>
+          <label className="block text-sm font-medium text-gray-600 mb-1.5">Domain</label>
           <input
             type="text"
             value={domain}
@@ -330,28 +352,44 @@ export default function CompanyFootprint({ onSourcesReady }: CompanyFootprintPro
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">App store IDs (optional)</p>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">iOS App ID</label>
+            <label className="block text-xs font-medium text-gray-500 mb-1">iOS App ID or App Store URL</label>
             <input
               type="text"
               value={iosAppId}
-              onChange={(e) => setIosAppId(e.target.value)}
-              placeholder="1234567890"
+              onChange={(e) => {
+                const { value } = smartExtract(e.target.value, "appstore");
+                setIosAppId(value);
+              }}
+              onPaste={(e) => {
+                const pasted = e.clipboardData.getData("text");
+                const { value, wasUrl } = smartExtract(pasted, "appstore");
+                if (wasUrl) { e.preventDefault(); setIosAppId(value); }
+              }}
+              placeholder="1234567890 or paste App Store URL"
               className={inputCls}
               disabled={anyRunning}
             />
-            <p className="mt-1 text-xs text-gray-400">id<strong>…</strong> from App Store URL</p>
+            <p className="mt-1 text-xs text-gray-400">Paste the App Store URL — ID is extracted automatically</p>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Android package ID</label>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Android package or Play Store URL</label>
             <input
               type="text"
               value={androidPackage}
-              onChange={(e) => setAndroidPackage(e.target.value)}
-              placeholder="com.bet365.android"
+              onChange={(e) => {
+                const { value } = smartExtract(e.target.value, "googleplay");
+                setAndroidPackage(value);
+              }}
+              onPaste={(e) => {
+                const pasted = e.clipboardData.getData("text");
+                const { value, wasUrl } = smartExtract(pasted, "googleplay");
+                if (wasUrl) { e.preventDefault(); setAndroidPackage(value); }
+              }}
+              placeholder="com.example.app or paste Play Store URL"
               className={inputCls}
               disabled={anyRunning}
             />
-            <p className="mt-1 text-xs text-gray-400">reverse-domain format</p>
+            <p className="mt-1 text-xs text-gray-400">Paste the Play Store URL — package ID is extracted automatically</p>
           </div>
         </div>
         <div>
@@ -359,7 +397,7 @@ export default function CompanyFootprint({ onSourcesReady }: CompanyFootprintPro
           <select
             value={country}
             onChange={(e) => setCountry(e.target.value)}
-            className="w-full px-2.5 py-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50"
+            className="w-full px-2.5 py-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 disabled:opacity-50"
             disabled={anyRunning}
           >
             <option value="gb">🇬🇧 United Kingdom</option>
@@ -368,6 +406,28 @@ export default function CompanyFootprint({ onSourcesReady }: CompanyFootprintPro
             <option value="ie">🇮🇪 Ireland</option>
             <option value="ca">🇨🇦 Canada</option>
           </select>
+        </div>
+      </div>
+
+      {/* Industry RSS presets */}
+      <div className="space-y-2 pt-3 border-t border-gray-100">
+        <label className="block text-xs font-medium text-gray-500">Industry RSS feeds</label>
+        <select
+          value={industry}
+          onChange={(e) => setIndustry(e.target.value)}
+          className="w-full px-2.5 py-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 disabled:opacity-50"
+          disabled={anyRunning}
+        >
+          {INDUSTRY_IDS.map((id) => (
+            <option key={id} value={id}>{INDUSTRY_RSS[id].name}</option>
+          ))}
+        </select>
+        <div className="flex flex-wrap gap-1.5">
+          {getIndustryFeeds(industry).map((feed) => (
+            <span key={feed.url} className="text-[10px] text-gray-400 bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded">
+              {feed.label}
+            </span>
+          ))}
         </div>
       </div>
 
@@ -409,7 +469,7 @@ export default function CompanyFootprint({ onSourcesReady }: CompanyFootprintPro
         disabled={!canRun}
         className={`w-full py-2.5 px-4 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
           canRun
-            ? "bg-brand-600 hover:bg-brand-700 text-white shadow-sm"
+            ? "bg-brand-500 hover:bg-brand-600 text-white shadow-sm"
             : "bg-gray-100 text-gray-400 cursor-not-allowed"
         }`}
       >

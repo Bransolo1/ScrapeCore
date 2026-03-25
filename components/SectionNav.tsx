@@ -15,7 +15,7 @@ interface SectionNavProps {
 }
 
 const PHASE_STYLES: Record<string, { dot: string; label: string }> = {
-  diagnosis: { dot: "bg-violet-500", label: "Diagnosis" },
+  diagnosis: { dot: "bg-brand-500", label: "Diagnosis" },
   action: { dot: "bg-emerald-500", label: "Action" },
   review: { dot: "bg-amber-500", label: "Review" },
 };

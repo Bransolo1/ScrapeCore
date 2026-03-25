@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Header from "@/components/Header";
+import { LogoMark } from "@/components/Logo";
 
 interface AuditEntry {
   id: string;
@@ -18,7 +19,7 @@ interface AuditEntry {
 const EVENT_COLORS: Record<string, string> = {
   "analysis.created":  "bg-emerald-50 text-emerald-700 border-emerald-200",
   "analysis.viewed":   "bg-blue-50 text-blue-700 border-blue-200",
-  "analysis.exported": "bg-violet-50 text-violet-700 border-violet-200",
+  "analysis.exported": "bg-brand-50 text-brand-700 border-brand-200",
   "analysis.deleted":  "bg-rose-50 text-rose-700 border-rose-200",
   "review.updated":    "bg-amber-50 text-amber-700 border-amber-200",
   "source.fetched":    "bg-sky-50 text-sky-700 border-sky-200",
@@ -240,6 +241,16 @@ export default function AuditPage() {
           </div>
         )}
       </main>
+
+      <footer className="border-t border-gray-100 py-4 mt-auto">
+        <div className="max-w-5xl mx-auto px-6 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <LogoMark size={16} />
+            <p className="text-xs text-gray-400">ScrapeCore · Behavioural Market Intelligence</p>
+          </div>
+          <p className="text-xs text-gray-400">AI-assisted — expert review required</p>
+        </div>
+      </footer>
     </div>
   );
 }

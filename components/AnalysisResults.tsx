@@ -30,6 +30,7 @@ import { scoreRubric } from "@/lib/rubric";
 import { usePlainMode } from "./PlainModeToggle";
 import SectionNav, { useActiveSection } from "./SectionNav";
 import type { SectionDef } from "./SectionNav";
+import { LogoMark } from "./Logo";
 
 interface AnalysisResultsProps {
   state: AnalysisState;
@@ -96,10 +97,8 @@ function EmptyState() {
   return (
     <div className="flex flex-col items-center justify-center h-full min-h-96 text-center px-8 py-10">
       {/* Mission reminder */}
-      <div className="w-14 h-14 bg-gradient-to-br from-brand-100 to-violet-100 rounded-2xl flex items-center justify-center mb-4">
-        <svg className="w-7 h-7 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-        </svg>
+      <div className="mb-4">
+        <LogoMark size={56} />
       </div>
       <h3 className="text-base font-semibold text-gray-700 mb-1">Scrape data, then understand behaviour</h3>
       <p className="text-sm text-gray-400 max-w-md leading-relaxed mb-6">
@@ -135,7 +134,7 @@ function EmptyState() {
           {[
             { label: "Barriers", desc: "What stops users", color: "bg-rose-50 text-rose-600" },
             { label: "Motivators", desc: "What drives users", color: "bg-emerald-50 text-emerald-600" },
-            { label: "Interventions", desc: "How to change behaviour", color: "bg-violet-50 text-violet-600" },
+            { label: "Interventions", desc: "How to change behaviour", color: "bg-brand-50 text-brand-600" },
           ].map((item) => (
             <div key={item.label} className={`rounded-xl p-3 text-center ${item.color}`}>
               <p className="text-xs font-semibold">{item.label}</p>
@@ -422,7 +421,7 @@ export default function AnalysisResults({ state, inputText, usage, onCancel, onR
         {[
           { label: "Barriers", count: analysis.barriers?.length ?? 0, color: "text-rose-600 bg-rose-50 border-rose-200" },
           { label: "Motivators", count: analysis.motivators?.length ?? 0, color: "text-emerald-600 bg-emerald-50 border-emerald-200" },
-          { label: "Interventions", count: analysis.intervention_opportunities?.length ?? 0, color: "text-violet-600 bg-violet-50 border-violet-200" },
+          { label: "Interventions", count: analysis.intervention_opportunities?.length ?? 0, color: "text-brand-600 bg-brand-50 border-brand-200" },
           { label: "Confidence", count: null as number | null, color: `${analysis.confidence?.overall === "high" ? "text-emerald-600 bg-emerald-50 border-emerald-200" : analysis.confidence?.overall === "medium" ? "text-amber-600 bg-amber-50 border-amber-200" : "text-rose-600 bg-rose-50 border-rose-200"}` },
         ].map((item) => (
           <div key={item.label} className={`rounded-xl border p-3 text-center ${item.color}`}>
@@ -492,9 +491,9 @@ export default function AnalysisResults({ state, inputText, usage, onCancel, onR
 
       {/* ─── PHASE: Diagnosis ─── */}
       <div className="flex items-center gap-2 pt-2">
-        <span className="w-2 h-2 rounded-full bg-violet-500" />
-        <span className="text-xs font-bold uppercase tracking-wider text-violet-600">Diagnosis</span>
-        <div className="flex-1 h-px bg-violet-100" />
+        <span className="w-2 h-2 rounded-full bg-brand-500" />
+        <span className="text-xs font-bold uppercase tracking-wider text-brand-600">Diagnosis</span>
+        <div className="flex-1 h-px bg-brand-100" />
       </div>
 
       {/* Quality & Evidence */}
@@ -644,16 +643,16 @@ export default function AnalysisResults({ state, inputText, usage, onCancel, onR
       {/* Re-analyse with corrections */}
       {onReanalyse && corrections.size > 0 && inputText.trim().length > 0 && (
         <div className="border-t border-gray-100 pt-6 mt-4">
-          <div className="bg-violet-50 border border-violet-200 rounded-xl p-4">
+          <div className="bg-brand-50 border border-brand-200 rounded-xl p-4">
             <div className="flex items-start gap-3">
-              <div className="w-8 h-8 bg-violet-100 rounded-lg flex items-center justify-center shrink-0 mt-0.5">
-                <svg className="w-4 h-4 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-8 h-8 bg-brand-100 rounded-lg flex items-center justify-center shrink-0 mt-0.5">
+                <svg className="w-4 h-4 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
               </div>
               <div className="flex-1">
-                <p className="text-sm font-medium text-violet-900 mb-1">Refine this analysis</p>
-                <p className="text-xs text-violet-700 leading-relaxed mb-3">
+                <p className="text-sm font-medium text-brand-900 mb-1">Refine this analysis</p>
+                <p className="text-xs text-brand-700 leading-relaxed mb-3">
                   You&apos;ve made {corrections.size} correction{corrections.size !== 1 ? "s" : ""}. Re-run the analysis with your feedback incorporated — disputed findings will be reconsidered, removed items excluded, and confirmed findings reinforced.
                 </p>
                 <button
@@ -671,7 +670,7 @@ export default function AnalysisResults({ state, inputText, usage, onCancel, onR
                     });
                     onReanalyse(lines.join("\n"));
                   }}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-violet-600 hover:bg-violet-700 text-white rounded-lg transition-colors"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-brand-600 hover:bg-brand-700 text-white rounded-lg transition-colors"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />

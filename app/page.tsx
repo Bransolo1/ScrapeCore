@@ -21,6 +21,7 @@ import { scanForPII, redactPII } from "@/lib/pii";
 import type { PIIScanResult } from "@/lib/pii";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import SettingsModal from "@/components/SettingsModal";
+import { LogoMark } from "@/components/Logo";
 
 type InputMode = "paste" | "scrape" | "social" | "footprint" | "batch";
 
@@ -174,12 +175,8 @@ export default function Home() {
     );
   };
 
-  // Prompt for user name on first use + show wizard
+  // Show wizard for first-time users
   useEffect(() => {
-    if (!localStorage.getItem("scrapecore-user")) {
-      const name = window.prompt("Enter your name (used for audit logs):", "Analyst");
-      if (name?.trim()) localStorage.setItem("scrapecore-user", name.trim());
-    }
     if (!localStorage.getItem("scrapecore-wizard-done")) {
       setShowWizard(true);
     }
@@ -415,7 +412,7 @@ export default function Home() {
       <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-8">
         {/* ── Mission hero — dismissible after first view ── */}
         {showHero && (
-          <div className="mb-6 relative bg-gradient-to-r from-brand-600 via-brand-700 to-violet-700 rounded-2xl p-6 text-white overflow-hidden">
+          <div className="mb-6 relative bg-gradient-to-r from-brand-600 via-brand-700 to-amber-800 rounded-2xl p-6 text-white overflow-hidden">
             <button
               onClick={() => { localStorage.setItem("scrapecore-hero-dismissed", "1"); setShowHero(false); }}
               className="absolute top-3 right-3 p-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
@@ -675,9 +672,12 @@ export default function Home() {
 
       <footer className="border-t border-gray-100 py-4 mt-auto">
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-          <p className="text-xs text-gray-400">
-            ScrapeCore · Scrape. Analyse. Understand behaviour. · Powered by Claude Opus 4.6
-          </p>
+          <div className="flex items-center gap-2">
+            <LogoMark size={16} />
+            <p className="text-xs text-gray-400">
+              ScrapeCore · Behavioural Market Intelligence
+            </p>
+          </div>
           <p className="text-xs text-gray-400">
             AI-assisted — expert review required before operational use
           </p>
