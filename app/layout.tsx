@@ -3,9 +3,9 @@ import "./globals.css";
 import Providers from "@/components/Providers";
 
 export const metadata: Metadata = {
-  title: "ScrapeCore — Behavioural Market Intelligence",
+  title: "ScrapeCore — Scrape. Analyse. Understand behaviour.",
   description:
-    "Multi-source market intelligence platform. Scrape web, reviews, and social signals, then analyse with COM-B, BCW, and Claude AI.",
+    "Scrape data from websites, app stores, reviews, and social media — then apply COM-B behavioural science to reveal barriers, motivators, and interventions.",
 };
 
 export default function RootLayout({

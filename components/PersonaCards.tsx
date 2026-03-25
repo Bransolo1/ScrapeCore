@@ -106,7 +106,7 @@ export default function PersonaCards({ insights, barriers, motivators }: Persona
 
               {/* Key insight */}
               <p className="text-xs text-gray-700 leading-relaxed border-l-2 border-current pl-2.5 italic">
-                "{insight.insight}"
+                &ldquo;{insight.insight}&rdquo;
               </p>
 
               {/* Evidence */}

@@ -60,7 +60,13 @@ export default function CorrectionControls({ correction, onSave, compact = false
     <div className="relative">
       {/* Dispute note popover */}
       {disputeOpen && (
-        <div className="absolute bottom-8 left-0 z-20 w-64 bg-white border border-amber-200 rounded-xl shadow-xl p-3 animate-scale-in">
+        <div
+          className="absolute bottom-10 left-0 z-30 w-72 bg-white border border-amber-200 rounded-xl shadow-xl p-3 animate-scale-in"
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setDisputeOpen(false);
+            if (e.key === "Enter" && e.metaKey) handleDispute();
+          }}
+        >
           <p className="text-xs font-semibold text-gray-700 mb-1.5">Add dispute note</p>
           <textarea
             value={note}
@@ -74,17 +80,18 @@ export default function CorrectionControls({ correction, onSave, compact = false
             <button
               onClick={handleDispute}
               disabled={saving}
-              className="flex-1 text-xs font-semibold bg-amber-500 text-white rounded-lg py-1.5 hover:bg-amber-600 disabled:opacity-50 transition-colors"
+              className="flex-1 text-xs font-semibold bg-amber-500 text-white rounded-lg py-2 hover:bg-amber-600 disabled:opacity-50 transition-colors"
             >
               {saving ? "Saving…" : "Dispute"}
             </button>
             <button
               onClick={() => setDisputeOpen(false)}
-              className="text-xs text-gray-500 hover:text-gray-700 px-2"
+              className="text-xs text-gray-500 hover:text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors"
             >
               Cancel
             </button>
           </div>
+          <p className="text-[10px] text-gray-300 mt-1.5">Esc to cancel · Cmd+Enter to submit</p>
         </div>
       )}
 
@@ -102,7 +109,8 @@ export default function CorrectionControls({ correction, onSave, compact = false
             onClick={() => handle("confirmed")}
             disabled={saving}
             title="Mark as confirmed"
-            className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-emerald-600 font-medium px-1.5 py-0.5 rounded-md hover:bg-emerald-50 transition-colors disabled:opacity-50"
+            aria-label="Confirm this finding"
+            className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-emerald-600 font-medium px-2 py-1.5 rounded-md hover:bg-emerald-50 transition-colors disabled:opacity-50"
           >
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
@@ -124,7 +132,8 @@ export default function CorrectionControls({ correction, onSave, compact = false
             onClick={() => setDisputeOpen((o) => !o)}
             disabled={saving}
             title="Dispute this finding"
-            className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-amber-600 font-medium px-1.5 py-0.5 rounded-md hover:bg-amber-50 transition-colors disabled:opacity-50"
+            aria-label="Dispute this finding"
+            className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-amber-600 font-medium px-2 py-1.5 rounded-md hover:bg-amber-50 transition-colors disabled:opacity-50"
           >
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -138,7 +147,8 @@ export default function CorrectionControls({ correction, onSave, compact = false
           onClick={() => handle("removed")}
           disabled={saving}
           title="Remove this finding"
-          className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-rose-600 font-medium px-1.5 py-0.5 rounded-md hover:bg-rose-50 transition-colors disabled:opacity-50 ml-auto"
+          aria-label="Remove this finding"
+          className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-rose-600 font-medium px-2 py-1.5 rounded-md hover:bg-rose-50 transition-colors disabled:opacity-50 ml-auto"
         >
           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

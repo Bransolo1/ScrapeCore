@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useMemo, useState, useCallback } from "react";
+import { useRef, useMemo } from "react";
 import type { DataType } from "@/lib/types";
 import { EXAMPLE_DATA } from "@/lib/prompts";
 import ProjectContextInput from "./ProjectContextInput";
@@ -26,24 +26,6 @@ const DATA_TYPES: { value: DataType; label: string; description: string }[] = [
   { value: "competitor", label: "Competitor intel", description: "Reviews, messaging, or UX signals from a competitor" },
 ];
 
-/** Try to auto-detect data type from file name or content */
-function inferDataType(filename: string, content: string): DataType | null {
-  const lower = filename.toLowerCase();
-  if (lower.includes("survey") || lower.includes("questionnaire")) return "survey";
-  if (lower.includes("interview") || lower.includes("transcript")) return "interviews";
-  if (lower.includes("review")) return "reviews";
-  if (lower.includes("social") || lower.includes("twitter") || lower.includes("reddit")) return "social";
-  if (lower.includes("competitor") || lower.includes("competitive")) return "competitor";
-
-  // Content-based detection
-  const sample = content.slice(0, 2000).toLowerCase();
-  if (sample.includes("q:") && sample.includes("a:")) return "interviews";
-  if (/\b(stars?|rating|★|☆)\b/.test(sample)) return "reviews";
-  if (/@\w|#\w|tweet|reddit|r\//.test(sample)) return "social";
-
-  return null;
-}
-
 export default function DataInput({
   text,
   dataType,
@@ -55,71 +37,22 @@ export default function DataInput({
   onSubmit,
 }: DataInputProps) {
   const fileRef = useRef<HTMLInputElement>(null);
-  const [isDragOver, setIsDragOver] = useState(false);
-
-  const readFileAsText = useCallback((file: File): Promise<string> => {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const result = ev.target?.result;
-        resolve(typeof result === "string" ? result : "");
-      };
-      reader.onerror = () => resolve("");
-      reader.readAsText(file);
-    });
-  }, []);
-
-  const handleFiles = useCallback(async (files: FileList | File[]) => {
-    const allText: string[] = [];
-    let detectedType: DataType | null = null;
-
-    for (const file of Array.from(files)) {
-      const content = await readFileAsText(file);
-      if (content.trim()) {
-        allText.push(content);
-        if (!detectedType) {
-          detectedType = inferDataType(file.name, content);
-        }
-      }
-    }
-
-    if (allText.length > 0) {
-      onTextChange(allText.join("\n\n---\n\n"));
-      if (detectedType) onDataTypeChange(detectedType);
-    }
-  }, [onTextChange, onDataTypeChange, readFileAsText]);
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) handleFiles(e.target.files);
-    e.target.value = "";
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const result = ev.target?.result;
+      if (typeof result === "string") onTextChange(result);
+    };
+    reader.readAsText(file);
   };
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-
-    if (e.dataTransfer.files.length > 0) {
-      handleFiles(e.dataTransfer.files);
+  const loadExample = () => {
+    if (text.trim().length > 0 && !window.confirm("This will replace your current text with example data. Continue?")) {
       return;
     }
-
-    const droppedText = e.dataTransfer.getData("text/plain");
-    if (droppedText) {
-      onTextChange(text ? text + "\n\n" + droppedText : droppedText);
-    }
-  }, [handleFiles, onTextChange, text]);
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(true);
-  }, []);
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-  }, []);
-
-  const loadExample = () => {
     onTextChange(EXAMPLE_DATA.text);
     onDataTypeChange(EXAMPLE_DATA.dataType);
   };
@@ -137,20 +70,20 @@ export default function DataInput({
     <div className="flex flex-col gap-5">
       {/* Data type */}
       <div>
-        <label className="block text-sm font-medium text-gray-600 mb-2">Data type</label>
-        <div className="grid grid-cols-1 gap-1.5">
+        <label className="block text-sm font-medium text-gray-700 mb-2">Data type</label>
+        <div className="grid grid-cols-1 gap-2">
           {DATA_TYPES.map((dt) => (
             <button
               key={dt.value}
               onClick={() => onDataTypeChange(dt.value)}
-              className={`text-left px-3.5 py-2.5 rounded-xl border text-sm transition-all ${
+              className={`text-left px-3 py-2.5 rounded-lg border text-sm transition-all ${
                 dataType === dt.value
-                  ? "border-brand-400 bg-brand-50 text-brand-700 shadow-sm shadow-brand-100"
-                  : "border-gray-200 bg-surface-50 text-gray-600 hover:border-gray-300 hover:bg-white"
+                  ? "border-brand-500 bg-brand-50 text-brand-700"
+                  : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
               }`}
             >
               <span className="font-medium">{dt.label}</span>
-              <span className="text-xs text-gray-400 ml-2">{dt.description}</span>
+              <span className="text-xs text-gray-500 ml-2">{dt.description}</span>
             </button>
           ))}
         </div>
@@ -166,7 +99,7 @@ export default function DataInput({
       {/* Text input */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="block text-sm font-medium text-gray-600">Input data</label>
+          <label className="block text-sm font-medium text-gray-700">Input data</label>
           <div className="flex items-center gap-2">
             <button
               onClick={loadExample}
@@ -175,64 +108,49 @@ export default function DataInput({
             >
               Load example
             </button>
-            <span className="text-gray-200">|</span>
+            <span className="text-gray-300">|</span>
             <button
               onClick={() => fileRef.current?.click()}
-              className="text-xs text-brand-600 hover:text-brand-700 font-medium flex items-center gap-1"
+              className="text-xs text-brand-600 hover:text-brand-700 font-medium"
               disabled={isLoading}
             >
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-              </svg>
-              Upload files
+              Upload file
             </button>
             <input
               ref={fileRef}
               type="file"
-              accept=".txt,.csv,.tsv,.md,.json,.xml,.log,.rtf"
+              accept=".txt,.csv,.md"
               className="hidden"
               onChange={handleFile}
-              multiple
             />
           </div>
         </div>
-        <div
-          onDrop={handleDrop}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          className={`relative rounded-xl border-2 transition-colors ${
-            isDragOver
-              ? "border-brand-400 bg-brand-50/50 border-dashed"
-              : "border-transparent"
-          }`}
-        >
-          {isDragOver && (
-            <div className="absolute inset-0 flex items-center justify-center bg-brand-50/80 rounded-xl z-10 pointer-events-none">
-              <div className="text-center">
-                <svg className="w-8 h-8 text-brand-500 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                </svg>
-                <p className="text-sm font-medium text-brand-600">Drop files or text here</p>
-                <p className="text-xs text-brand-400">.txt, .csv, .json, .md and more</p>
-              </div>
-            </div>
-          )}
-          <textarea
-            value={text}
-            onChange={(e) => onTextChange(e.target.value)}
-            placeholder="Paste text, drag files, or upload — survey responses, interview excerpts, reviews, or social exports.
+        <textarea
+          value={text}
+          onChange={(e) => onTextChange(e.target.value)}
+          placeholder="Paste your qualitative text here — survey responses, interview excerpts, reviews, or social listening exports. Separate individual responses with line breaks.
 
 One response per line works best for the analysis."
-            className="w-full h-64 px-3.5 py-3 text-sm text-gray-800 placeholder-gray-400 bg-surface-50 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-brand-400/50 focus:border-brand-400 focus:bg-white font-mono leading-relaxed"
-            disabled={isLoading}
-          />
-        </div>
-        <div className="flex items-center justify-between mt-1.5">
-          <p className="text-xs text-gray-400">
-            {wordCount > 0 ? `${wordCount.toLocaleString()} words · ${lineCount} text units` : "Paste, drag, or upload files to begin"}
-          </p>
+          className="w-full h-64 px-3 py-3 text-sm text-gray-800 placeholder-gray-400 bg-white border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent font-mono leading-relaxed"
+          disabled={isLoading}
+        />
+        <div className="mt-1.5 space-y-1.5">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-gray-400">
+              {wordCount > 0 ? `${wordCount.toLocaleString()} words · ${lineCount} text units` : "Paste or upload qualitative text to begin"}
+            </p>
+            {wordCount > 0 && wordCount < 50 && (
+              <p className="text-xs text-amber-500">{50 - wordCount} more words needed</p>
+            )}
+          </div>
+          {/* Word count progress bar — shows progress toward minimum threshold */}
           {wordCount > 0 && wordCount < 50 && (
-            <p className="text-xs text-amber-500">Add more text for a reliable analysis</p>
+            <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-amber-400 rounded-full transition-all duration-300"
+                style={{ width: `${Math.min(100, (wordCount / 50) * 100)}%` }}
+              />
+            </div>
           )}
         </div>
         {diversity?.warning && (
@@ -249,9 +167,9 @@ One response per line works best for the analysis."
       <button
         onClick={onSubmit}
         disabled={!canSubmit}
-        className={`w-full py-3 px-4 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+        className={`w-full py-3 px-4 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
           canSubmit
-            ? "bg-brand-500 hover:bg-brand-600 text-white shadow-md shadow-brand-500/25 hover:shadow-lg hover:shadow-brand-500/30"
+            ? "bg-brand-600 hover:bg-brand-700 text-white shadow-sm"
             : "bg-gray-100 text-gray-400 cursor-not-allowed"
         }`}
       >
@@ -274,10 +192,10 @@ One response per line works best for the analysis."
       </button>
 
       {/* Framework note */}
-      <div className="bg-surface-50 rounded-xl p-3 border border-gray-100">
+      <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
         <p className="text-xs text-gray-500 font-medium mb-1">What this analyses</p>
-        <p className="text-xs text-gray-400 leading-relaxed">
-          Applies the <strong className="text-gray-500">COM-B model</strong> (Capability, Opportunity, Motivation → Behaviour) and <strong className="text-gray-500">Behaviour Change Wheel</strong> to map behavioural signals, barriers, motivators, and intervention opportunities from your data.
+        <p className="text-xs text-gray-500 leading-relaxed">
+          Applies the <strong>COM-B model</strong> (Capability, Opportunity, Motivation → Behaviour) and <strong>Behaviour Change Wheel</strong> to map behavioural signals, barriers, motivators, and intervention opportunities from your data.
         </p>
       </div>
     </div>

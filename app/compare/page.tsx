@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { Suspense, useEffect, useState, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import Header from "@/components/Header";
 import ComBChart from "@/components/ComBChart";
 import CompetitiveSummaryPanel from "@/components/CompetitiveSummaryPanel";
@@ -160,6 +161,17 @@ function DiffList({
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function ComparePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="animate-pulse text-sm text-gray-400">Loading comparison…</div></div>}>
+      <ComparePageInner />
+    </Suspense>
+  );
+}
+
+function ComparePageInner() {
+  const searchParams = useSearchParams();
+  const prefillId = searchParams.get("analysisId");
+
   const [allAnalyses, setAllAnalyses] = useState<AnalysisMeta[]>([]);
   const [loadingList, setLoadingList] = useState(true);
 
@@ -171,6 +183,7 @@ export default function ComparePage() {
   const [competitiveSummary, setCompetitiveSummary] = useState<CompetitiveSummary | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const summaryFetchedForRef = useRef<string | null>(null);
+  const prefillDoneRef = useRef(false);
 
   // Load analysis list
   useEffect(() => {
@@ -179,6 +192,28 @@ export default function ComparePage() {
       .then((d) => setAllAnalyses(d.analyses ?? []))
       .finally(() => setLoadingList(false));
   }, []);
+
+  // Pre-fill slot A from URL query param
+  useEffect(() => {
+    if (!prefillId || prefillDoneRef.current || allAnalyses.length === 0) return;
+    if (allAnalyses.some((a) => a.id === prefillId)) {
+      prefillDoneRef.current = true;
+      loadSlotById(prefillId, setSlotA);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefillId, allAnalyses]);
+
+  const loadSlotById = async (id: string, setter: React.Dispatch<React.SetStateAction<Slot>>) => {
+    const meta = allAnalyses.find((a) => a.id === id) ?? null;
+    setter({ meta, data: null, loading: true });
+    try {
+      const res = await fetch(`/api/analyses/${id}`);
+      const d = await res.json();
+      setter({ meta, data: d.analysisJson as BehaviourAnalysis, loading: false });
+    } catch {
+      setter((prev) => ({ ...prev, loading: false }));
+    }
+  };
 
   const loadSlot = async (
     id: string,
@@ -430,7 +465,7 @@ export default function ComparePage() {
       <footer className="border-t border-gray-100 py-4 mt-auto">
         <div className="max-w-7xl mx-auto px-6">
           <p className="text-xs text-gray-400">
-            ScrapeCore · COM-B Competitor Comparison · Claude Opus 4.6
+            ScrapeCore · Scrape. Analyse. Understand behaviour. · Powered by Claude Opus 4.6
           </p>
         </div>
       </footer>

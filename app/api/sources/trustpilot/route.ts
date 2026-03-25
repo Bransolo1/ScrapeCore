@@ -44,7 +44,6 @@ function extractFromNextData(html: string): TrustpilotReview[] {
   if (!match) return [];
 
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const data = JSON.parse(match[1]) as any;
     const pageProps = data?.props?.pageProps ?? {};
 
@@ -94,7 +93,6 @@ function extractFromJsonLd(html: string): TrustpilotReview[] {
 
   while ((m = scriptRe.exec(html)) !== null) {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const data = JSON.parse(m[1]) as any;
       const items = Array.isArray(data) ? data : [data];
       for (const item of items) {

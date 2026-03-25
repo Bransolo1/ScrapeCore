@@ -651,7 +651,7 @@ export default function DashboardPage() {
       <footer className="border-t border-gray-100 py-4 mt-auto">
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
           <p className="text-xs text-gray-400">
-            ScrapeCore · COM-B · Behaviour Change Wheel · Claude Opus 4.6
+            ScrapeCore · Scrape. Analyse. Understand behaviour. · Powered by Claude Opus 4.6
           </p>
           <p className="text-xs text-gray-400">AI-assisted — expert review required</p>
         </div>

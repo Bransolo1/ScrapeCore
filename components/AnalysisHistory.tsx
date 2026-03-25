@@ -20,7 +20,7 @@ interface AnalysisSummary {
 }
 
 interface AnalysisHistoryProps {
-  onLoad: (analysis: BehaviourAnalysis, dataType: DataType, savedId?: string) => void;
+  onLoad: (analysis: BehaviourAnalysis, dataType: DataType, savedId?: string, reviewStatus?: string, reviewNotes?: string | null) => void;
   refreshKey: number;
 }
 
@@ -118,7 +118,7 @@ export default function AnalysisHistory({
       const res = await fetch(`/api/analyses/${id}?actor=${encodeURIComponent(actor)}`);
       const data = await res.json();
       if (data.analysisJson) {
-        onLoad(data.analysisJson as BehaviourAnalysis, data.dataType as DataType, data.id);
+        onLoad(data.analysisJson as BehaviourAnalysis, data.dataType as DataType, data.id, data.reviewStatus, data.reviewNotes);
       }
     } finally {
       setLoadingId(null);
@@ -214,18 +214,38 @@ export default function AnalysisHistory({
       )}
 
       {!loading && !hasContent && !debouncedSearch && (
-        <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
-          <svg className="w-10 h-10 text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <p className="text-sm text-gray-400">No saved analyses yet.</p>
-          <p className="text-xs text-gray-300">Completed analyses are saved automatically.</p>
+        <div className="flex flex-col items-center justify-center py-12 gap-4 text-center px-6">
+          <div className="w-12 h-12 bg-brand-50 rounded-2xl flex items-center justify-center">
+            <svg className="w-6 h-6 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-500 mb-1">No analyses yet</p>
+            <p className="text-xs text-gray-400 leading-relaxed max-w-xs">
+              Paste qualitative data in the input panel and run your first analysis. Results are saved here automatically.
+            </p>
+          </div>
+          <div className="flex items-center gap-3 text-xs text-gray-400 mt-1">
+            <span className="flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-violet-400" />
+              COM-B mapping
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              Interventions
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+              Evidence grounding
+            </span>
+          </div>
         </div>
       )}
 
       {!loading && !hasContent && debouncedSearch && (
         <div className="flex flex-col items-center justify-center py-10 gap-2 text-center">
-          <p className="text-sm text-gray-400">No results for "{debouncedSearch}"</p>
+          <p className="text-sm text-gray-400">No results for &ldquo;{debouncedSearch}&rdquo;</p>
           <button
             onClick={() => setSearch("")}
             className="text-xs text-brand-600 hover:text-brand-700"
@@ -252,9 +272,16 @@ export default function AnalysisHistory({
                     <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-brand-50 text-brand-600">
                       {DATA_TYPE_LABELS[a.dataType] ?? a.dataType}
                     </span>
-                    {a.reviewStatus && a.reviewStatus !== "pending" && (
+                    {a.reviewStatus && (
                       <span className={`inline-flex items-center px-1.5 py-0.5 rounded border text-xs font-medium ${REVIEW_BADGE[a.reviewStatus]?.classes ?? ""}`}>
-                        {REVIEW_BADGE[a.reviewStatus]?.label}
+                        {a.reviewStatus === "pending" ? (
+                          <span className="flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                            {REVIEW_BADGE[a.reviewStatus]?.label}
+                          </span>
+                        ) : (
+                          REVIEW_BADGE[a.reviewStatus]?.label
+                        )}
                       </span>
                     )}
                     {a.piiDetected && (
@@ -295,7 +322,16 @@ export default function AnalysisHistory({
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-1 shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                  <a
+                    href={`/analysis/${a.id}`}
+                    title="Open full page"
+                    className="p-1.5 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </a>
                   <button
                     onClick={() => handleLoad(a.id)}
                     disabled={loadingId === a.id}
