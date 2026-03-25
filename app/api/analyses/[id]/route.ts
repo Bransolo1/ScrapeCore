@@ -9,7 +9,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const auth = await optionalAuth();
+    const userId = await optionalAuth();
     const { searchParams } = new URL(req.url);
     const actor = searchParams.get("actor") ?? "system";
 
@@ -19,13 +19,13 @@ export async function GET(
       return Response.json({ error: "Not found" }, { status: 404 });
     }
 
-    // If authenticated, filter by userId
-    if (auth?.userId && analysis.userId && analysis.userId !== auth.userId) {
+    // If authenticated, only allow access to own analyses
+    if (userId && analysis.userId && analysis.userId !== userId) {
       return Response.json({ error: "Not found" }, { status: 404 });
     }
 
     // Fire-and-forget audit log
-    logAudit({ event: "analysis.viewed", actor: auth?.userId ?? actor, analysisId: id, entityId: id, entityType: "analysis" });
+    logAudit({ event: "analysis.viewed", actor: userId ?? actor, analysisId: id, entityId: id, entityType: "analysis" });
 
     return Response.json({
       ...analysis,
