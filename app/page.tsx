@@ -21,6 +21,7 @@ import { scanForPII, redactPII } from "@/lib/pii";
 import type { PIIScanResult } from "@/lib/pii";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import SettingsModal from "@/components/SettingsModal";
+import SetupStatusBar from "@/components/SetupStatusBar";
 import { LogoMark } from "@/components/Logo";
 
 type InputMode = "paste" | "scrape" | "social" | "footprint" | "batch";
@@ -33,12 +34,12 @@ const INITIAL_STATE: AnalysisState = {
   durationMs: null,
 };
 
-const MODE_TABS: { id: InputMode; label: string; hint: string; group: "collect" | "manual" | "advanced"; icon: React.ReactNode }[] = [
+const MODE_TABS: { id: InputMode; label: string; hint: string; group: "web" | "upload" | "advanced"; icon: React.ReactNode }[] = [
   {
     id: "scrape",
     label: "Scrape URLs",
-    hint: "Extract text from web pages",
-    group: "collect",
+    hint: "Extract text from web pages via Firecrawl",
+    group: "web",
     icon: (
       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
@@ -48,8 +49,8 @@ const MODE_TABS: { id: InputMode; label: string; hint: string; group: "collect" 
   {
     id: "social",
     label: "Social listening",
-    hint: "Reddit, reviews, news, app stores",
-    group: "collect",
+    hint: "Reddit, reviews, news via Perplexity",
+    group: "web",
     icon: (
       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
@@ -58,9 +59,9 @@ const MODE_TABS: { id: InputMode; label: string; hint: string; group: "collect" 
   },
   {
     id: "footprint",
-    label: "Digital footprint",
-    hint: "Full company research across sources",
-    group: "collect",
+    label: "Company research",
+    hint: "Full digital footprint across all sources",
+    group: "web",
     icon: (
       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
@@ -69,12 +70,12 @@ const MODE_TABS: { id: InputMode; label: string; hint: string; group: "collect" 
   },
   {
     id: "paste",
-    label: "Paste text",
-    hint: "Paste or upload your own qualitative data",
-    group: "manual",
+    label: "Upload / Paste",
+    hint: "Upload transcripts or paste qualitative data",
+    group: "upload",
     icon: (
       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
       </svg>
     ),
   },
@@ -92,8 +93,8 @@ const MODE_TABS: { id: InputMode; label: string; hint: string; group: "collect" 
 ];
 
 const MODE_GROUPS: { key: string; label: string }[] = [
-  { key: "collect", label: "Collect data" },
-  { key: "manual", label: "Your data" },
+  { key: "web", label: "Web Intelligence" },
+  { key: "upload", label: "Your Data" },
   { key: "advanced", label: "Advanced" },
 ];
 
@@ -141,14 +142,14 @@ export default function Home() {
   // Review data (loaded from history)
   const [reviewData, setReviewData] = useState<{ status?: string; notes?: string | null }>({});
 
-  // Hero banner
-  const [showHero, setShowHero] = useState(false);
-  useEffect(() => {
-    if (!localStorage.getItem("scrapecore-hero-dismissed")) setShowHero(true);
-  }, []);
-
   // Settings modal
   const [showSettings, setShowSettings] = useState(false);
+  const [settingsProvider, setSettingsProvider] = useState<string | undefined>();
+
+  const openSettings = (provider?: string) => {
+    setSettingsProvider(provider);
+    setShowSettings(true);
+  };
 
   // History panel
   const [showHistory, setShowHistory] = useState(false);
@@ -205,7 +206,7 @@ export default function Home() {
       if (!res.ok || !res.body) {
         const err = await res.json().catch(() => ({ error: "Request failed" }));
         if (err.code === "no_api_key") {
-          setShowSettings(true);
+          openSettings("anthropic");
           setAnalysisState(INITIAL_STATE);
           return;
         }
@@ -356,7 +357,7 @@ export default function Home() {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Header />
-      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+      {showSettings && <SettingsModal onClose={() => { setShowSettings(false); setSettingsProvider(undefined); }} initialProvider={settingsProvider} />}
 
       {/* Unified onboarding / guided setup wizard */}
       {showWizard && (
@@ -410,63 +411,12 @@ export default function Home() {
       )}
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-8">
-        {/* ── Mission hero — dismissible after first view ── */}
-        {showHero && (
-          <div className="mb-6 relative bg-gradient-to-r from-brand-600 via-brand-700 to-amber-800 rounded-2xl p-6 text-white overflow-hidden">
-            <button
-              onClick={() => { localStorage.setItem("scrapecore-hero-dismissed", "1"); setShowHero(false); }}
-              className="absolute top-3 right-3 p-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
-              aria-label="Dismiss"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
-            <h2 className="text-xl font-bold mb-1">Scrape the web. Apply behavioural science. Understand your users.</h2>
-            <p className="text-brand-200 text-sm mb-4 max-w-2xl">
-              Collect data from app stores, social media, reviews, and websites — then let COM-B analysis reveal the barriers, motivators, and interventions hiding in your qualitative data.
-            </p>
-            {/* Pipeline visual */}
-            <div className="flex items-center gap-2 text-xs font-medium">
-              {[
-                { step: "1", label: "Collect", desc: "Scrape & gather data" },
-                { step: "2", label: "Preview", desc: "Select & review sources" },
-                { step: "3", label: "Analyse", desc: "COM-B behavioural analysis" },
-                { step: "4", label: "Validate", desc: "Review & refine findings" },
-              ].map((s, i) => (
-                <div key={s.step} className="flex items-center gap-2">
-                  {i > 0 && <svg className="w-4 h-4 text-white/40 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>}
-                  <div className="flex items-center gap-1.5 bg-white/15 rounded-lg px-3 py-1.5">
-                    <span className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center text-[10px] font-bold">{s.step}</span>
-                    <div>
-                      <span className="font-semibold">{s.label}</span>
-                      <span className="text-white/60 ml-1 hidden sm:inline">— {s.desc}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ── Pipeline stepper (compact, always visible) ── */}
-        <div className="mb-4 flex items-center gap-1.5 text-xs font-medium">
-          {[
-            { label: "Collect", active: analysisState.status === "idle" && !previewText },
-            { label: "Preview", active: previewText !== null },
-            { label: "Analyse", active: analysisState.status === "streaming" },
-            { label: "Validate", active: analysisState.status === "complete" },
-          ].map((s, i) => (
-            <div key={s.label} className="flex items-center gap-1.5">
-              {i > 0 && <svg className="w-3 h-3 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>}
-              <span className={`px-2.5 py-1 rounded-full transition-all ${
-                s.active
-                  ? "bg-brand-100 text-brand-700 border border-brand-200"
-                  : "text-gray-400 bg-gray-100"
-              }`}>
-                {s.label}
-              </span>
-            </div>
-          ))}
-        </div>
+        {/* ── Setup status bar (API keys + pipeline step) ── */}
+        <SetupStatusBar
+          onOpenSettings={openSettings}
+          analysisStatus={analysisState.status}
+          previewActive={previewText !== null}
+        />
 
         <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-6 items-start">
           {/* ── Input panel ── */}
@@ -662,6 +612,7 @@ export default function Home() {
                     }}
                     initialReviewStatus={reviewData.status}
                     initialReviewNotes={reviewData.notes}
+                    onSwitchMode={(m) => setMode(m as InputMode)}
                   />
                 </ErrorBoundary>
               )}

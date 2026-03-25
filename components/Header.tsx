@@ -4,36 +4,18 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "@/lib/theme";
 import { useSession, signOut } from "next-auth/react";
-import { useState } from "react";
-import PlainModeToggle from "./PlainModeToggle";
+import { useState, useRef, useEffect } from "react";
+import { usePlainMode } from "./PlainModeToggle";
 import SettingsModal from "./SettingsModal";
 import Logo from "./Logo";
 
-function SunIcon() {
-  return (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M12 7a5 5 0 100 10A5 5 0 0012 7z" />
-    </svg>
-  );
-}
-
-function MoonIcon() {
-  return (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-    </svg>
-  );
-}
-
-const NAV_GROUPS: { label: string; items: { href: string; label: string; title: string }[] }[] = [
+const NAV_GROUPS: { items: { href: string; label: string; title: string }[] }[] = [
   {
-    label: "",
     items: [
       { href: "/", label: "Collect & Analyse", title: "Scrape web data and run COM-B behavioural analysis" },
     ],
   },
   {
-    label: "Intelligence",
     items: [
       { href: "/dashboard",  label: "Dashboard",         title: "See patterns across all your analyses" },
       { href: "/compare",    label: "Compare",            title: "Diff two analyses to spot competitive gaps" },
@@ -41,7 +23,6 @@ const NAV_GROUPS: { label: string; items: { href: string; label: string; title: 
     ],
   },
   {
-    label: "Quality",
     items: [
       { href: "/eval",  label: "Quality Lab", title: "Score and validate your analysis quality" },
       { href: "/audit", label: "Audit Log",   title: "Full trail of who ran what and when" },
@@ -50,10 +31,23 @@ const NAV_GROUPS: { label: string; items: { href: string; label: string; title: 
 ];
 
 export default function Header() {
-  const { theme, toggle } = useTheme();
+  const { theme, toggle: toggleTheme } = useTheme();
+  const { isPlainMode, toggle: togglePlain } = usePlainMode();
   const pathname = usePathname();
   const { data: session } = useSession();
   const [showSettings, setShowSettings] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close menu on outside click
+  useEffect(() => {
+    if (!showMenu) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setShowMenu(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showMenu]);
 
   return (
     <>
@@ -66,14 +60,11 @@ export default function Header() {
           <Logo size={32} iconOnly className="sm:hidden" />
         </Link>
 
-        {/* Nav — grouped by mission flow */}
+        {/* Nav */}
         <nav className="flex items-center gap-0.5">
           {NAV_GROUPS.map((group, gi) => (
             <div key={gi} className="flex items-center">
               {gi > 0 && <div className="w-px h-5 bg-gray-200 mx-1.5" />}
-              {group.label && (
-                <span className="text-[9px] font-bold uppercase tracking-wider text-gray-300 mr-1 hidden lg:inline">{group.label}</span>
-              )}
               {group.items.map(({ href, label, title }) => {
                 const active = pathname === href;
                 return (
@@ -97,34 +88,66 @@ export default function Header() {
 
         {/* Right controls */}
         <div className="flex items-center gap-2">
-          <span className="hidden md:inline-flex items-center gap-1.5 text-xs font-medium text-brand-700 bg-brand-50 border border-brand-200 px-2.5 py-1 rounded-full">
-            <span className="w-1.5 h-1.5 bg-brand-500 rounded-full" />
-            COM-B · BCW · BCT
-          </span>
+          {/* Gear dropdown */}
+          <div ref={menuRef} className="relative">
+            <button
+              onClick={() => setShowMenu(!showMenu)}
+              title="Settings"
+              className="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-all"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </button>
 
-          {/* Plain language mode toggle */}
-          <PlainModeToggle />
+            {showMenu && (
+              <div className="absolute right-0 mt-1 w-56 bg-white rounded-xl border border-gray-200 shadow-lg py-1.5 z-50 animate-fade-in">
+                <button
+                  onClick={() => { setShowMenu(false); setShowSettings(true); }}
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                  </svg>
+                  API Keys
+                </button>
 
-          {/* Settings */}
-          <button
-            onClick={() => setShowSettings(true)}
-            title="Settings — API keys and preferences"
-            className="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-all"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-          </button>
+                <div className="border-t border-gray-100 my-1" />
 
-          {/* Dark mode toggle */}
-          <button
-            onClick={toggle}
-            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-            className="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-all"
-          >
-            {theme === "dark" ? <SunIcon /> : <MoonIcon />}
-          </button>
+                <button
+                  onClick={togglePlain}
+                  className="w-full flex items-center justify-between px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  <span className="flex items-center gap-2.5">
+                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+                    </svg>
+                    Plain language
+                  </span>
+                  <span className={`w-8 h-4.5 rounded-full relative transition-colors ${isPlainMode ? "bg-brand-500" : "bg-gray-300"}`}>
+                    <span className={`absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white shadow-sm transition-all ${isPlainMode ? "left-4" : "left-0.5"}`} />
+                  </span>
+                </button>
+
+                <button
+                  onClick={toggleTheme}
+                  className="w-full flex items-center justify-between px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  <span className="flex items-center gap-2.5">
+                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      {theme === "dark" ? (
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M12 7a5 5 0 100 10A5 5 0 0012 7z" />
+                      ) : (
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                      )}
+                    </svg>
+                    {theme === "dark" ? "Light mode" : "Dark mode"}
+                  </span>
+                </button>
+              </div>
+            )}
+          </div>
 
           {/* User avatar + sign-out */}
           {session?.user && (

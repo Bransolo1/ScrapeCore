@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 
 interface SettingsModalProps {
   onClose: () => void;
+  initialProvider?: string;
 }
 
 declare global {
@@ -86,7 +87,7 @@ function SpinnerIcon() {
   );
 }
 
-export default function SettingsModal({ onClose }: SettingsModalProps) {
+export default function SettingsModal({ onClose, initialProvider }: SettingsModalProps) {
   const [userKeys, setUserKeys] = useState<KeyInfo[]>([]);
   const [platformKeys, setPlatformKeys] = useState<PlatformKeys>({ anthropic: false, firecrawl: false, perplexity: false });
   const [loading, setLoading] = useState(true);
@@ -120,8 +121,12 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
   }, []);
 
   useEffect(() => {
-    fetchKeys();
-  }, [fetchKeys]);
+    fetchKeys().then(() => {
+      if (initialProvider && PROVIDERS.some((p) => p.id === initialProvider)) {
+        setEditing(initialProvider as ProviderId);
+      }
+    });
+  }, [fetchKeys, initialProvider]);
 
   const getUserKey = (provider: ProviderId): KeyInfo | undefined =>
     userKeys.find((k) => k.provider === provider);

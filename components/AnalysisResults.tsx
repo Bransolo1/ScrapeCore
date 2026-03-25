@@ -40,6 +40,7 @@ interface AnalysisResultsProps {
   onReanalyse?: (correctionContext: string) => void;
   initialReviewStatus?: string;
   initialReviewNotes?: string | null;
+  onSwitchMode?: (mode: string) => void;
 }
 
 /** Collapsible section wrapper — collapsed by default with a count badge */
@@ -93,42 +94,54 @@ function getActor() {
   return localStorage.getItem("scrapecore-user") ?? "analyst";
 }
 
-function EmptyState() {
+function EmptyState({ onSwitchMode }: { onSwitchMode?: (mode: string) => void }) {
+  const actions = [
+    { mode: "scrape", icon: "link", label: "Scrape URLs", desc: "Enter URLs to extract content via Firecrawl", color: "hover:bg-brand-50 hover:border-brand-200" },
+    { mode: "social", icon: "chat", label: "Social Listening", desc: "Pull reviews, Reddit threads, news via Perplexity", color: "hover:bg-sky-50 hover:border-sky-200" },
+    { mode: "footprint", icon: "globe", label: "Company Research", desc: "Full digital footprint analysis across sources", color: "hover:bg-amber-50 hover:border-amber-200" },
+  ];
+
   return (
     <div className="flex flex-col items-center justify-center h-full min-h-96 text-center px-8 py-10">
-      {/* Mission reminder */}
       <div className="mb-4">
         <LogoMark size={56} />
       </div>
-      <h3 className="text-base font-semibold text-gray-700 mb-1">Scrape data, then understand behaviour</h3>
+      <h3 className="text-base font-semibold text-gray-700 mb-1">Start by collecting data from the web</h3>
       <p className="text-sm text-gray-400 max-w-md leading-relaxed mb-6">
-        Use the collection tools on the left to scrape websites, app reviews, or social media — then ScrapeCore applies COM-B behavioural science to reveal barriers, motivators, and interventions.
+        ScrapeCore uses Firecrawl and Perplexity to gather data, then applies COM-B behavioural science to reveal barriers, motivators, and interventions.
       </p>
 
-      {/* Quick start suggestions */}
+      {/* Action cards */}
       <div className="w-full max-w-md space-y-2 mb-6">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Try collecting from</p>
-        {[
-          { icon: "link", label: "Scrape a competitor website", desc: "Paste a URL to extract and analyse page content" },
-          { icon: "chat", label: "Search Reddit or app reviews", desc: "Find what real users say about a product or topic" },
-          { icon: "globe", label: "Run a digital footprint scan", desc: "Automatically gather data across multiple sources" },
-        ].map((item) => (
-          <div key={item.label} className="flex items-start gap-3 px-4 py-3 bg-gray-50 hover:bg-brand-50 border border-gray-200 hover:border-brand-200 rounded-xl transition-colors text-left cursor-default">
-            <div className="w-8 h-8 bg-white rounded-lg border border-gray-200 flex items-center justify-center shrink-0 mt-0.5">
+        {actions.map((item) => (
+          <button
+            key={item.mode}
+            onClick={() => onSwitchMode?.(item.mode)}
+            className={`w-full flex items-start gap-3 px-4 py-3 bg-white border border-gray-200 rounded-xl transition-all text-left ${item.color}`}
+          >
+            <div className="w-8 h-8 bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-center shrink-0 mt-0.5">
               {item.icon === "link" && <svg className="w-4 h-4 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>}
-              {item.icon === "chat" && <svg className="w-4 h-4 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" /></svg>}
-              {item.icon === "globe" && <svg className="w-4 h-4 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>}
+              {item.icon === "chat" && <svg className="w-4 h-4 text-sky-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" /></svg>}
+              {item.icon === "globe" && <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>}
             </div>
             <div>
               <p className="text-sm font-medium text-gray-700">{item.label}</p>
               <p className="text-xs text-gray-400 mt-0.5">{item.desc}</p>
             </div>
-          </div>
+          </button>
         ))}
       </div>
 
+      {/* Upload / paste link */}
+      <button
+        onClick={() => onSwitchMode?.("paste")}
+        className="text-xs text-gray-400 hover:text-brand-600 transition-colors"
+      >
+        Or upload your own data (transcripts, surveys, etc.)
+      </button>
+
       {/* What you'll get */}
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-md mt-6">
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">What you&apos;ll get</p>
         <div className="grid grid-cols-3 gap-2">
           {[
@@ -238,7 +251,7 @@ function StreamingState({ text, onCancel }: { text: string; onCancel?: () => voi
   );
 }
 
-export default function AnalysisResults({ state, inputText, usage, onCancel, onReanalyse, initialReviewStatus, initialReviewNotes }: AnalysisResultsProps) {
+export default function AnalysisResults({ state, inputText, usage, onCancel, onReanalyse, initialReviewStatus, initialReviewNotes, onSwitchMode }: AnalysisResultsProps) {
   // Corrections state: key = "section:index"
   const [corrections, setCorrections] = useState<Map<string, Correction>>(new Map());
 
@@ -301,7 +314,7 @@ export default function AnalysisResults({ state, inputText, usage, onCancel, onR
     [state.savedId]
   );
 
-  if (state.status === "idle") return <EmptyState />;
+  if (state.status === "idle") return <EmptyState onSwitchMode={onSwitchMode} />;
   if (state.status === "streaming") return <StreamingState text={state.streamingText} onCancel={onCancel} />;
 
   if (state.status === "error") {
