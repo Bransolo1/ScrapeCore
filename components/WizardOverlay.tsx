@@ -227,7 +227,7 @@ export default function WizardOverlay({ showWelcome = true, onDone, onComplete }
               <p className="text-sm text-gray-500 leading-relaxed max-w-md mb-6">
                 ScrapeCore uses <strong className="text-gray-700">Firecrawl</strong> and <strong className="text-gray-700">Perplexity</strong> to collect data from websites, app stores, social media, and news — then applies <strong className="text-gray-700">COM-B behavioural science</strong> to uncover barriers, motivators, and interventions.
               </p>
-              <div className="grid grid-cols-3 gap-3 w-full max-w-sm mb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 w-full max-w-sm mb-4">
                 {[
                   { label: "Scrape websites", desc: "URLs, app stores, reviews", color: "bg-brand-50 text-brand-600" },
                   { label: "Social listening", desc: "Reddit, news, forums", color: "bg-sky-50 text-sky-600" },

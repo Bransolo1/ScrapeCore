@@ -60,10 +60,10 @@ export default function SetupStatusBar({ onOpenSettings, analysisStatus, preview
   if (!loaded) return null;
 
   return (
-    <div className="mb-4 flex items-center justify-between gap-4 bg-white border border-gray-200 rounded-xl px-4 py-2.5">
+    <div className="mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4 bg-white border border-gray-200 rounded-xl px-4 py-2.5">
       {/* API key status — only shown when keys are missing */}
       {hasMissing ? (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs font-medium text-gray-500">API Keys:</span>
           {PROVIDERS.map((p) => {
             const status = keys[p.id];
@@ -96,8 +96,8 @@ export default function SetupStatusBar({ onOpenSettings, analysisStatus, preview
         </div>
       )}
 
-      {/* Pipeline step indicator */}
-      <div className="flex items-center gap-1.5">
+      {/* Pipeline step indicator — hidden on mobile */}
+      <div className="hidden sm:flex items-center gap-1.5">
         {steps.map((s, i) => (
           <div key={s.label} className="flex items-center gap-1.5">
             {i > 0 && (

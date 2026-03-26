@@ -41,6 +41,7 @@ interface AnalysisResultsProps {
   initialReviewStatus?: string;
   initialReviewNotes?: string | null;
   onSwitchMode?: (mode: string) => void;
+  onOpenGuide?: () => void;
 }
 
 /** Collapsible section wrapper — collapsed by default with a count badge */
@@ -94,7 +95,7 @@ function getActor() {
   return localStorage.getItem("scrapecore-user") ?? "analyst";
 }
 
-function EmptyState({ onSwitchMode }: { onSwitchMode?: (mode: string) => void }) {
+function EmptyState({ onSwitchMode, onOpenGuide }: { onSwitchMode?: (mode: string) => void; onOpenGuide?: () => void }) {
   const actions = [
     { mode: "scrape", icon: "link", label: "Scrape URLs", desc: "Enter URLs to extract content via Firecrawl", color: "hover:bg-brand-50 hover:border-brand-200" },
     { mode: "social", icon: "chat", label: "Social Listening", desc: "Pull reviews, Reddit threads, news via Perplexity", color: "hover:bg-sky-50 hover:border-sky-200" },
@@ -102,7 +103,7 @@ function EmptyState({ onSwitchMode }: { onSwitchMode?: (mode: string) => void })
   ];
 
   return (
-    <div className="flex flex-col items-center justify-center h-full min-h-96 text-center px-8 py-10">
+    <div className="flex flex-col items-center justify-center h-full min-h-64 sm:min-h-96 text-center px-4 sm:px-8 py-6 sm:py-10">
       <div className="mb-4">
         <LogoMark size={56} />
       </div>
@@ -132,18 +133,31 @@ function EmptyState({ onSwitchMode }: { onSwitchMode?: (mode: string) => void })
         ))}
       </div>
 
-      {/* Upload / paste link */}
-      <button
-        onClick={() => onSwitchMode?.("paste")}
-        className="text-xs text-gray-400 hover:text-brand-600 transition-colors"
-      >
-        Or upload your own data (transcripts, surveys, etc.)
-      </button>
+      {/* Upload / paste link + How it works */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => onSwitchMode?.("paste")}
+          className="text-xs text-gray-400 hover:text-brand-600 transition-colors"
+        >
+          Or upload your own data
+        </button>
+        {onOpenGuide && (
+          <>
+            <span className="text-gray-300">|</span>
+            <button
+              onClick={onOpenGuide}
+              className="text-xs text-gray-400 hover:text-brand-600 transition-colors"
+            >
+              How it works
+            </button>
+          </>
+        )}
+      </div>
 
       {/* What you'll get */}
       <div className="w-full max-w-md mt-6">
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">What you&apos;ll get</p>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
           {[
             { label: "Barriers", desc: "What stops users", color: "bg-rose-50 text-rose-600" },
             { label: "Motivators", desc: "What drives users", color: "bg-emerald-50 text-emerald-600" },
@@ -251,7 +265,7 @@ function StreamingState({ text, onCancel }: { text: string; onCancel?: () => voi
   );
 }
 
-export default function AnalysisResults({ state, inputText, usage, onCancel, onReanalyse, initialReviewStatus, initialReviewNotes, onSwitchMode }: AnalysisResultsProps) {
+export default function AnalysisResults({ state, inputText, usage, onCancel, onReanalyse, initialReviewStatus, initialReviewNotes, onSwitchMode, onOpenGuide }: AnalysisResultsProps) {
   // Corrections state: key = "section:index"
   const [corrections, setCorrections] = useState<Map<string, Correction>>(new Map());
 
@@ -314,7 +328,7 @@ export default function AnalysisResults({ state, inputText, usage, onCancel, onR
     [state.savedId]
   );
 
-  if (state.status === "idle") return <EmptyState onSwitchMode={onSwitchMode} />;
+  if (state.status === "idle") return <EmptyState onSwitchMode={onSwitchMode} onOpenGuide={onOpenGuide} />;
   if (state.status === "streaming") return <StreamingState text={state.streamingText} onCancel={onCancel} />;
 
   if (state.status === "error") {

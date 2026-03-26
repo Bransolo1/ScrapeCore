@@ -22,6 +22,7 @@ import type { PIIScanResult } from "@/lib/pii";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import SettingsModal from "@/components/SettingsModal";
 import SetupStatusBar from "@/components/SetupStatusBar";
+import HowItWorksGuide from "@/components/HowItWorksGuide";
 import { LogoMark } from "@/components/Logo";
 
 type InputMode = "paste" | "scrape" | "social" | "footprint" | "batch";
@@ -145,6 +146,9 @@ export default function Home() {
   // Settings modal
   const [showSettings, setShowSettings] = useState(false);
   const [settingsProvider, setSettingsProvider] = useState<string | undefined>();
+
+  // How it works guide
+  const [showGuide, setShowGuide] = useState(false);
 
   const openSettings = (provider?: string) => {
     setSettingsProvider(provider);
@@ -356,8 +360,9 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Header />
+      <Header onOpenGuide={() => setShowGuide(true)} />
       {showSettings && <SettingsModal onClose={() => { setShowSettings(false); setSettingsProvider(undefined); }} initialProvider={settingsProvider} />}
+      <HowItWorksGuide open={showGuide} onClose={() => setShowGuide(false)} />
 
       {/* Unified onboarding / guided setup wizard */}
       {showWizard && (
@@ -410,7 +415,7 @@ export default function Home() {
         />
       )}
 
-      <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-8">
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-4 sm:py-8">
         {/* ── Setup status bar (API keys + pipeline step) ── */}
         <SetupStatusBar
           onOpenSettings={openSettings}
@@ -420,7 +425,7 @@ export default function Home() {
 
         <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-6 items-start">
           {/* ── Input panel ── */}
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden sticky top-8">
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden lg:sticky lg:top-20">
             {/* Guided setup prompt */}
             {!pasteText && mode === "paste" && (
               <div className="px-5 pt-4 pb-0">
@@ -446,7 +451,29 @@ export default function Home() {
             )}
             {/* Mode tabs — grouped by type */}
             <div className="border-b border-gray-100 px-3 pt-3 pb-0">
-              <div className="flex items-end gap-0.5">
+              {/* Mobile: horizontal scroll, no group labels */}
+              <div className="sm:hidden overflow-x-auto scrollbar-thin snap-x snap-mandatory -mx-1 px-1">
+                <div className="flex gap-1 min-w-max pb-px">
+                  {MODE_TABS.map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => handleModeSwitch(tab.id)}
+                      disabled={isLoading}
+                      title={tab.hint}
+                      className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-t-lg whitespace-nowrap snap-start transition-all ${
+                        mode === tab.id
+                          ? "text-brand-600 bg-brand-50 border border-brand-200 border-b-white -mb-px relative z-10"
+                          : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                      }`}
+                    >
+                      {tab.icon}
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {/* Desktop: grouped with labels */}
+              <div className="hidden sm:flex items-end gap-0.5">
                 {MODE_GROUPS.map((group) => {
                   const tabs = MODE_TABS.filter((t) => t.group === group.key);
                   return (
@@ -459,14 +486,14 @@ export default function Home() {
                             onClick={() => handleModeSwitch(tab.id)}
                             disabled={isLoading}
                             title={tab.hint}
-                            className={`flex items-center gap-1.5 px-2.5 py-2 text-xs font-medium rounded-t-lg transition-all ${
+                            className={`flex items-center gap-1.5 px-2.5 py-2 text-xs font-medium rounded-t-lg whitespace-nowrap transition-all ${
                               mode === tab.id
                                 ? "text-brand-600 bg-brand-50 border border-brand-200 border-b-white -mb-px relative z-10"
                                 : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
                             }`}
                           >
                             {tab.icon}
-                            <span className="hidden sm:inline">{tab.label}</span>
+                            {tab.label}
                           </button>
                         ))}
                       </div>
@@ -613,6 +640,7 @@ export default function Home() {
                     initialReviewStatus={reviewData.status}
                     initialReviewNotes={reviewData.notes}
                     onSwitchMode={(m) => setMode(m as InputMode)}
+                    onOpenGuide={() => setShowGuide(true)}
                   />
                 </ErrorBoundary>
               )}
@@ -622,14 +650,14 @@ export default function Home() {
       </main>
 
       <footer className="border-t border-gray-100 py-4 mt-auto">
-        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <LogoMark size={16} />
             <p className="text-xs text-gray-400">
               ScrapeCore · Behavioural Market Intelligence
             </p>
           </div>
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-gray-400 text-center sm:text-right">
             AI-assisted — expert review required before operational use
           </p>
         </div>

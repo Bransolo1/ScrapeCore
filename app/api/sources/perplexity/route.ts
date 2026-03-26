@@ -52,6 +52,7 @@ function buildPrompt(query: string, mode: string): PerplexityMessage[] {
 import { requireAuth } from "@/lib/apiAuth";
 import { resolveApiKey } from "@/lib/resolveApiKey";
 import { validateCSRF } from "@/lib/csrf";
+import { checkBudget, incrementUsage } from "@/lib/costGuard";
 
 export async function POST(req: Request) {
   const csrfError = validateCSRF(req);
@@ -59,6 +60,15 @@ export async function POST(req: Request) {
 
   const auth = await requireAuth();
   if (auth instanceof Response) return auth;
+
+  // Check budget before proceeding
+  const budget = await checkBudget(auth.userId, "perplexity");
+  if (!budget.allowed) {
+    return Response.json(
+      { error: `Monthly Perplexity budget exceeded ($${((budget.limit ?? 0) / 100).toFixed(2)}). Adjust in Settings > Cost Controls.`, code: "budget_exceeded" },
+      { status: 402 }
+    );
+  }
 
   const resolved = await resolveApiKey("perplexity", auth.userId);
   if (!resolved) {
@@ -126,6 +136,9 @@ export async function POST(req: Request) {
     mode === "twitter"
       ? `Twitter/X — ${query}`
       : `Perplexity research — ${query}`;
+
+  // Track usage
+  await incrementUsage(auth.userId, "perplexity", 1);
 
   return Response.json({
     title,
