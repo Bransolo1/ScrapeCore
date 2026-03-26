@@ -165,7 +165,7 @@ export default function CompanySearchBar({ onDiscovery }: CompanySearchBarProps)
             </div>
           )}
 
-          {/* Search failed (DDG blocked/timeout) */}
+          {/* Search failed (all providers exhausted) */}
           {searchFailed.length > 0 && (
             <div className="flex items-start gap-2">
               <svg className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -174,7 +174,7 @@ export default function CompanySearchBar({ onDiscovery }: CompanySearchBarProps)
               <div>
                 <p className="text-xs font-medium text-amber-600">Search unavailable</p>
                 <p className="text-xs text-amber-500 mt-0.5">
-                  {searchFailed.join(" · ")} — try entering manually
+                  {searchFailed.join(" · ")} — try entering manually or add a Brave Search API key in Settings
                 </p>
               </div>
             </div>
