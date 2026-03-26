@@ -1,17 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import type { DataType } from "@/lib/types";
 
 /**
- * Unified onboarding wizard — combines the old informational WizardOverlay
- * and the functional GuidedWizard into a single coherent flow:
+ * Unified onboarding wizard — reframed around web intelligence:
  *
- * Step 0: Welcome (what ScrapeCore does)
- * Step 1: Research question + population
- * Step 2: Data type selection
- * Step 3: Paste data
- * Step 4: Review & run
+ * Step 0: Welcome (what ScrapeCore does — web intelligence, not paste)
+ * Step 1: API Keys (Anthropic required, Firecrawl + Perplexity recommended)
+ * Step 2: Research question + population
+ * Step 3: Data type selection
+ * Step 4: Paste data (optional — can skip to collect from web)
+ * Step 5: Review & run
  *
  * Users can skip to expert mode at any point.
  */
@@ -25,20 +25,33 @@ const DATA_TYPES: { value: DataType; label: string; description: string; icon: s
   { value: "competitor", label: "Competitor intel",   description: "Reviews, messaging, or UX signals from a competitor", icon: "\u{1F50D}" },
 ];
 
-const STEP_LABELS = ["Welcome", "Research question", "Data type", "Add data", "Review & run"];
+const PROVIDERS = [
+  { id: "anthropic", label: "Anthropic (Claude)", description: "Powers all COM-B behavioural analysis", prefix: "sk-ant-", placeholder: "sk-ant-api03-…", docsUrl: "https://console.anthropic.com/settings/keys", required: true },
+  { id: "firecrawl", label: "Firecrawl", description: "Scrapes websites, app stores, and review sites", prefix: "fc-", placeholder: "fc-…", docsUrl: "https://www.firecrawl.dev/app/api-keys", required: false },
+  { id: "perplexity", label: "Perplexity", description: "AI-powered web research and social listening", prefix: "pplx-", placeholder: "pplx-…", docsUrl: "https://www.perplexity.ai/settings/api", required: false },
+];
+
+const STEP_LABELS = ["Welcome", "API Keys", "Research question", "Data type", "Add data", "Review & run"];
 
 interface WizardOverlayProps {
-  /** If true, the wizard starts at step 0 (Welcome). If false, starts at step 1 (guided setup). */
   showWelcome?: boolean;
   onDone: () => void;
   onComplete?: (params: { text: string; dataType: DataType; projectContext: string; skipAnalysis?: boolean }) => void;
 }
 
 export default function WizardOverlay({ showWelcome = true, onDone, onComplete }: WizardOverlayProps) {
-  const startStep = showWelcome ? 0 : 1;
+  const startStep = showWelcome ? 0 : 2; // Skip welcome + keys if not first-run
   const [step, setStep] = useState(startStep);
 
-  // Functional state (steps 1-4)
+  // API key state
+  const [keyInputs, setKeyInputs] = useState<Record<string, string>>({});
+  const [keySaving, setKeySaving] = useState<string | null>(null);
+  const [keySaved, setKeySaved] = useState<Set<string>>(new Set());
+  const [keyErrors, setKeyErrors] = useState<Record<string, string>>({});
+  const [platformKeys, setPlatformKeys] = useState<Record<string, boolean>>({});
+  const [allKeysConfigured, setAllKeysConfigured] = useState(false);
+
+  // Functional state
   const [question, setQuestion] = useState("");
   const [population, setPopulation] = useState("");
   const [dataType, setDataType] = useState<DataType>("survey");
@@ -52,12 +65,76 @@ export default function WizardOverlay({ showWelcome = true, onDone, onComplete }
   const wordCount = text.trim() ? text.trim().split(/\s+/).length : 0;
   const selectedType = DATA_TYPES.find((d) => d.value === dataType)!;
 
+  // Check existing keys on mount
+  const checkKeys = useCallback(async () => {
+    try {
+      const [keysRes, platformRes] = await Promise.all([
+        fetch("/api/user/keys"),
+        fetch("/api/platform-keys"),
+      ]);
+      const userKeys = keysRes.ok ? (await keysRes.json()).keys ?? [] : [];
+      const platform = platformRes.ok ? await platformRes.json() : {};
+      setPlatformKeys(platform);
+
+      const configured = new Set<string>(userKeys.map((k: { provider: string }) => k.provider));
+      const allDone = PROVIDERS.every((p) => configured.has(p.id) || platform[p.id]);
+      setAllKeysConfigured(allDone);
+      setKeySaved(configured);
+
+      // Auto-skip API keys step if all are configured
+      if (allDone && step === 1) {
+        setStep(2);
+      }
+    } catch {
+      // silent
+    }
+  }, [step]);
+
+  useEffect(() => { checkKeys(); }, [checkKeys]);
+
+  const handleSaveKey = async (providerId: string) => {
+    const value = (keyInputs[providerId] ?? "").trim();
+    const spec = PROVIDERS.find((p) => p.id === providerId)!;
+
+    if (!value) {
+      setKeyErrors((prev) => ({ ...prev, [providerId]: "Key is required" }));
+      return;
+    }
+    if (!value.startsWith(spec.prefix)) {
+      setKeyErrors((prev) => ({ ...prev, [providerId]: `Must start with "${spec.prefix}"` }));
+      return;
+    }
+
+    setKeySaving(providerId);
+    setKeyErrors((prev) => ({ ...prev, [providerId]: "" }));
+
+    try {
+      const res = await fetch("/api/user/keys", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider: providerId, key: value }),
+      });
+      if (res.ok) {
+        setKeySaved((prev) => { const next = new Set(Array.from(prev)); next.add(providerId); return next; });
+        setKeyInputs((prev) => ({ ...prev, [providerId]: "" }));
+      } else {
+        const data = await res.json();
+        setKeyErrors((prev) => ({ ...prev, [providerId]: data.error ?? "Failed to save" }));
+      }
+    } catch {
+      setKeyErrors((prev) => ({ ...prev, [providerId]: "Network error" }));
+    } finally {
+      setKeySaving(null);
+    }
+  };
+
   const canAdvance = [
     true,                                // step 0 — welcome
-    question.trim().length > 0,          // step 1 — research question
-    true,                                // step 2 — data type (always valid)
-    text.trim().length > 50,             // step 3 — data input
-    true,                                // step 4 — review
+    true,                                // step 1 — API keys (can skip)
+    question.trim().length > 0,          // step 2 — research question
+    true,                                // step 3 — data type (always valid)
+    true,                                // step 4 — data input (optional)
+    true,                                // step 5 — review
   ][step];
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -84,7 +161,7 @@ export default function WizardOverlay({ showWelcome = true, onDone, onComplete }
     onDone();
   };
 
-  // Only show step indicators for functional steps (skip welcome dot on indicator bar)
+  // Progress indicator uses functional steps (skip welcome)
   const functionalSteps = STEP_LABELS.slice(1);
   const functionalIndex = step - 1;
 
@@ -95,7 +172,7 @@ export default function WizardOverlay({ showWelcome = true, onDone, onComplete }
         <div className="px-6 pt-6 pb-4 border-b border-gray-100">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-base font-semibold text-gray-900">
-              {step === 0 ? "Welcome to ScrapeCore" : "Guided analysis setup"}
+              {step === 0 ? "Welcome to ScrapeCore" : "Guided setup"}
             </h2>
             <button
               onClick={handleSkipToExpert}
@@ -108,7 +185,7 @@ export default function WizardOverlay({ showWelcome = true, onDone, onComplete }
             </button>
           </div>
 
-          {/* Progress indicator — only shown after welcome */}
+          {/* Progress indicator */}
           {step > 0 && (
             <div className="flex items-center gap-0">
               {functionalSteps.map((label, i) => (
@@ -143,20 +220,21 @@ export default function WizardOverlay({ showWelcome = true, onDone, onComplete }
             <div className="flex flex-col items-center text-center py-4">
               <div className="w-16 h-16 bg-brand-50 rounded-2xl flex items-center justify-center mb-5">
                 <svg className="w-8 h-8 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
                 </svg>
               </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Turn the web into behavioural insights</h3>
               <p className="text-sm text-gray-500 leading-relaxed max-w-md mb-6">
-                Transform qualitative text into structured behavioural insights using the <strong className="text-gray-700">COM-B framework</strong> and <strong className="text-gray-700">Behaviour Change Wheel</strong>.
+                ScrapeCore uses <strong className="text-gray-700">Firecrawl</strong> and <strong className="text-gray-700">Perplexity</strong> to collect data from websites, app stores, social media, and news — then applies <strong className="text-gray-700">COM-B behavioural science</strong> to uncover barriers, motivators, and interventions.
               </p>
-              <div className="grid grid-cols-3 gap-3 w-full max-w-sm mb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 w-full max-w-sm mb-4">
                 {[
-                  { label: "1. Paste data", desc: "Survey, interviews, reviews" },
-                  { label: "2. AI analyses", desc: "COM-B mapping, barriers" },
-                  { label: "3. You review", desc: "Confirm, dispute, export" },
+                  { label: "Scrape websites", desc: "URLs, app stores, reviews", color: "bg-brand-50 text-brand-600" },
+                  { label: "Social listening", desc: "Reddit, news, forums", color: "bg-sky-50 text-sky-600" },
+                  { label: "Company research", desc: "Full digital footprint", color: "bg-amber-50 text-amber-600" },
                 ].map((s, i) => (
-                  <div key={i} className={`rounded-xl p-3 text-center ${["bg-rose-50", "bg-sky-50", "bg-amber-50"][i]}`}>
-                    <p className={`text-xs font-bold ${["text-rose-600", "text-sky-600", "text-amber-600"][i]}`}>{s.label}</p>
+                  <div key={i} className={`rounded-xl p-3 text-center ${s.color.split(" ")[0]}`}>
+                    <p className={`text-xs font-bold ${s.color.split(" ")[1]}`}>{s.label}</p>
                     <p className="text-[10px] text-gray-500 mt-0.5">{s.desc}</p>
                   </div>
                 ))}
@@ -167,8 +245,67 @@ export default function WizardOverlay({ showWelcome = true, onDone, onComplete }
             </div>
           )}
 
-          {/* Step 1 — Research question */}
+          {/* Step 1 — API Keys */}
           {step === 1 && (
+            <div className="space-y-3">
+              <p className="text-xs text-gray-500 mb-3 leading-relaxed">
+                ScrapeCore needs API keys to work. Add at least your <strong>Anthropic</strong> key to get started. Firecrawl and Perplexity unlock web scraping and social listening.
+              </p>
+              {PROVIDERS.map((spec) => {
+                const saved = keySaved.has(spec.id);
+                const hasPlatform = platformKeys[spec.id];
+                const configured = saved || hasPlatform;
+                const error = keyErrors[spec.id];
+
+                return (
+                  <div key={spec.id} className={`rounded-xl border p-3 transition-colors ${configured ? "border-emerald-200 bg-emerald-50/30" : "border-gray-200 bg-white"}`}>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-semibold text-gray-800">{spec.label}</p>
+                          {spec.required && <span className="text-[10px] font-medium text-brand-600 bg-brand-50 px-1.5 py-0.5 rounded">Required</span>}
+                          {!spec.required && <span className="text-[10px] font-medium text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded">Recommended</span>}
+                        </div>
+                        <p className="text-xs text-gray-400 mt-0.5">{spec.description}</p>
+                      </div>
+                      {configured && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                          {hasPlatform && !saved ? "Platform key" : "Saved"}
+                        </span>
+                      )}
+                    </div>
+                    {!configured && (
+                      <div className="mt-2 flex gap-2">
+                        <input
+                          type="password"
+                          value={keyInputs[spec.id] ?? ""}
+                          onChange={(e) => { setKeyInputs((prev) => ({ ...prev, [spec.id]: e.target.value })); setKeyErrors((prev) => ({ ...prev, [spec.id]: "" })); }}
+                          placeholder={spec.placeholder}
+                          autoComplete="off"
+                          spellCheck={false}
+                          className="flex-1 px-3 py-1.5 text-sm font-mono bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-400/50"
+                          onKeyDown={(e) => { if (e.key === "Enter") handleSaveKey(spec.id); }}
+                        />
+                        <button
+                          onClick={() => handleSaveKey(spec.id)}
+                          disabled={keySaving === spec.id}
+                          className="px-3 py-1.5 text-xs font-semibold text-white bg-brand-500 hover:bg-brand-600 rounded-lg disabled:opacity-50"
+                        >
+                          {keySaving === spec.id ? "..." : "Save"}
+                        </button>
+                        <a href={spec.docsUrl} target="_blank" rel="noopener noreferrer" className="flex items-center px-2 text-xs text-brand-500 hover:text-brand-600 underline">Get key</a>
+                      </div>
+                    )}
+                    {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Step 2 — Research question */}
+          {step === 2 && (
             <div className="space-y-4">
               <p className="text-xs text-gray-500 mb-4 leading-relaxed">
                 A clear research question guides the analysis. The more specific, the better.
@@ -201,8 +338,8 @@ export default function WizardOverlay({ showWelcome = true, onDone, onComplete }
             </div>
           )}
 
-          {/* Step 2 — Data type */}
-          {step === 2 && (
+          {/* Step 3 — Data type */}
+          {step === 3 && (
             <div>
               <p className="text-xs text-gray-500 mb-4 leading-relaxed">
                 Choose the type of data you&apos;re analysing. This helps calibrate how the model interprets the evidence.
@@ -229,12 +366,15 @@ export default function WizardOverlay({ showWelcome = true, onDone, onComplete }
             </div>
           )}
 
-          {/* Step 3 — Add data */}
-          {step === 3 && (
+          {/* Step 4 — Add data (optional) */}
+          {step === 4 && (
             <div className="space-y-3">
-              <p className="text-xs text-gray-500 leading-relaxed">
-                Paste your raw qualitative text below. Aim for at least 5-10 distinct responses.
-              </p>
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-1">Add your data <span className="text-gray-400 font-normal">(optional)</span></p>
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  Already have transcripts or survey data? Paste or upload them here. Otherwise, skip this — you can collect data from the web on the main screen.
+                </p>
+              </div>
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="text-sm font-medium text-gray-700">Your data</label>
@@ -246,7 +386,7 @@ export default function WizardOverlay({ showWelcome = true, onDone, onComplete }
                 <textarea
                   value={text}
                   onChange={(e) => setText(e.target.value)}
-                  placeholder="Paste your qualitative text here — survey responses, interview excerpts, reviews..."
+                  placeholder="Paste qualitative text here — or skip to collect from the web..."
                   rows={8}
                   className="w-full px-3 py-3 text-sm text-gray-800 placeholder-gray-400 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent resize-none font-mono leading-relaxed"
                 />
@@ -255,16 +395,13 @@ export default function WizardOverlay({ showWelcome = true, onDone, onComplete }
                     {wordCount > 0 ? `${wordCount.toLocaleString()} words` : ""}
                   </p>
                   {fileError && <p className="text-xs text-red-500">{fileError}</p>}
-                  {wordCount > 0 && wordCount < 30 && (
-                    <p className="text-xs text-amber-500">Add more text for reliable results</p>
-                  )}
                 </div>
               </div>
             </div>
           )}
 
-          {/* Step 4 — Review & run */}
-          {step === 4 && (
+          {/* Step 5 — Review & run */}
+          {step === 5 && (
             <div className="space-y-4">
               <p className="text-xs text-gray-500 leading-relaxed">
                 Review your setup before running the analysis.
@@ -288,7 +425,9 @@ export default function WizardOverlay({ showWelcome = true, onDone, onComplete }
                 </div>
                 <div className="flex items-center gap-3 px-4 py-3">
                   <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide w-28 shrink-0">Data</span>
-                  <span className="text-sm text-gray-700">{wordCount.toLocaleString()} words · {text.split(/\n+/).filter((l) => l.trim()).length} lines</span>
+                  <span className="text-sm text-gray-700">
+                    {wordCount > 0 ? `${wordCount.toLocaleString()} words · ${text.split(/\n+/).filter((l) => l.trim()).length} lines` : "None — collect from web after setup"}
+                  </span>
                 </div>
               </div>
               <div className="px-4 py-3 bg-brand-50 border border-brand-100 rounded-xl">
@@ -317,36 +456,42 @@ export default function WizardOverlay({ showWelcome = true, onDone, onComplete }
                 Back
               </button>
             )}
-            {step < 4 ? (
+            {step < 5 ? (
               <button
                 onClick={() => setStep((s) => s + 1)}
                 disabled={!canAdvance}
                 className="px-5 py-2 text-sm bg-brand-600 hover:bg-brand-700 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-lg font-medium transition-colors"
               >
-                {step === 0 ? "Get started" : "Next"}
+                {step === 0 ? "Get started" : step === 1 ? (allKeysConfigured || keySaved.size > 0 ? "Next" : "Skip for now") : step === 4 && !text.trim() ? "Skip — collect from web" : "Next"}
               </button>
             ) : (
               <>
+                {text.trim() && wordCount >= 10 && (
+                  <button
+                    onClick={() => handleRun(true)}
+                    className="px-4 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors flex items-center gap-1.5"
+                    title="Load data into the editor so you can review and edit before running"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    Load into editor
+                  </button>
+                )}
                 <button
-                  onClick={() => handleRun(true)}
-                  disabled={!text.trim() || wordCount < 10}
-                  className="px-4 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-40 transition-colors flex items-center gap-1.5"
-                  title="Load data into the editor so you can review and edit before running"
+                  onClick={() => text.trim() && wordCount >= 10 ? handleRun(false) : handleSkipToExpert()}
+                  className="px-5 py-2 text-sm bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-semibold transition-colors flex items-center gap-1.5"
                 >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                  Load into editor
-                </button>
-                <button
-                  onClick={() => handleRun(false)}
-                  disabled={!text.trim() || wordCount < 10}
-                  className="px-5 py-2 text-sm bg-brand-600 hover:bg-brand-700 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-lg font-semibold transition-colors flex items-center gap-1.5"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                  Run analysis
+                  {text.trim() && wordCount >= 10 ? (
+                    <>
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      Run analysis
+                    </>
+                  ) : (
+                    "Start collecting data"
+                  )}
                 </button>
               </>
             )}

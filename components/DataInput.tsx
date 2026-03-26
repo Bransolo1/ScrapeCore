@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useMemo } from "react";
+import { useRef, useMemo, useState } from "react";
 import type { DataType } from "@/lib/types";
 import { EXAMPLE_DATA } from "@/lib/prompts";
 import ProjectContextInput from "./ProjectContextInput";
@@ -37,16 +37,28 @@ export default function DataInput({
   onSubmit,
 }: DataInputProps) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const [dragging, setDragging] = useState(false);
 
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const readFile = (file: File) => {
+    if (file.size > 5 * 1024 * 1024) return; // 5MB limit
     const reader = new FileReader();
     reader.onload = (ev) => {
       const result = ev.target?.result;
       if (typeof result === "string") onTextChange(result);
     };
     reader.readAsText(file);
+  };
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) readFile(file);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) readFile(file);
   };
 
   const loadExample = () => {
@@ -67,23 +79,61 @@ export default function DataInput({
   );
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-4">
+      {/* Upload dropzone */}
+      <div
+        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={handleDrop}
+        onClick={() => fileRef.current?.click()}
+        className={`relative flex flex-col items-center justify-center gap-2 px-4 py-5 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
+          dragging
+            ? "border-brand-400 bg-brand-50"
+            : "border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-gray-100"
+        }`}
+      >
+        <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+        </svg>
+        <div className="text-center">
+          <p className="text-sm font-medium text-gray-600">
+            Drop a file here or <span className="text-brand-600">browse</span>
+          </p>
+          <p className="text-xs text-gray-400 mt-0.5">
+            Focus group transcripts, interview notes, survey exports (.txt, .csv, .md)
+          </p>
+        </div>
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".txt,.csv,.md"
+          className="hidden"
+          onChange={handleFile}
+        />
+      </div>
+
+      {/* Divider */}
+      <div className="flex items-center gap-2">
+        <div className="flex-1 h-px bg-gray-100" />
+        <span className="text-xs text-gray-400 font-medium">or paste text below</span>
+        <div className="flex-1 h-px bg-gray-100" />
+      </div>
+
       {/* Data type */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">Data type</label>
-        <div className="grid grid-cols-1 gap-2">
+        <div className="grid grid-cols-2 gap-1.5">
           {DATA_TYPES.map((dt) => (
             <button
               key={dt.value}
               onClick={() => onDataTypeChange(dt.value)}
-              className={`text-left px-3 py-2.5 rounded-lg border text-sm transition-all ${
+              className={`text-left px-2.5 py-2 rounded-lg border text-xs transition-all ${
                 dataType === dt.value
                   ? "border-brand-500 bg-brand-50 text-brand-700"
                   : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
               }`}
             >
               <span className="font-medium">{dt.label}</span>
-              <span className="text-xs text-gray-500 ml-2">{dt.description}</span>
             </button>
           ))}
         </div>
@@ -98,52 +148,32 @@ export default function DataInput({
 
       {/* Text input */}
       <div>
-        <div className="flex items-center justify-between mb-2">
-          <label className="block text-sm font-medium text-gray-700">Input data</label>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={loadExample}
-              className="text-xs text-brand-600 hover:text-brand-700 font-medium"
-              disabled={isLoading}
-            >
-              Load example
-            </button>
-            <span className="text-gray-300">|</span>
-            <button
-              onClick={() => fileRef.current?.click()}
-              className="text-xs text-brand-600 hover:text-brand-700 font-medium"
-              disabled={isLoading}
-            >
-              Upload file
-            </button>
-            <input
-              ref={fileRef}
-              type="file"
-              accept=".txt,.csv,.md"
-              className="hidden"
-              onChange={handleFile}
-            />
-          </div>
+        <div className="flex items-center justify-between mb-1.5">
+          <label className="block text-xs font-medium text-gray-500">Text input</label>
+          <button
+            onClick={loadExample}
+            className="text-xs text-brand-600 hover:text-brand-700 font-medium"
+            disabled={isLoading}
+          >
+            Load example
+          </button>
         </div>
         <textarea
           value={text}
           onChange={(e) => onTextChange(e.target.value)}
-          placeholder="Paste your qualitative text here — survey responses, interview excerpts, reviews, or social listening exports. Separate individual responses with line breaks.
-
-One response per line works best for the analysis."
-          className="w-full h-64 px-3 py-3 text-sm text-gray-800 placeholder-gray-400 bg-white border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent font-mono leading-relaxed"
+          placeholder="Paste qualitative text here — one response per line works best."
+          className="w-full h-48 px-3 py-3 text-sm text-gray-800 placeholder-gray-400 bg-white border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent font-mono leading-relaxed"
           disabled={isLoading}
         />
         <div className="mt-1.5 space-y-1.5">
           <div className="flex items-center justify-between">
             <p className="text-xs text-gray-400">
-              {wordCount > 0 ? `${wordCount.toLocaleString()} words · ${lineCount} text units` : "Paste or upload qualitative text to begin"}
+              {wordCount > 0 ? `${wordCount.toLocaleString()} words · ${lineCount} text units` : ""}
             </p>
             {wordCount > 0 && wordCount < 50 && (
               <p className="text-xs text-amber-500">{50 - wordCount} more words needed</p>
             )}
           </div>
-          {/* Word count progress bar — shows progress toward minimum threshold */}
           {wordCount > 0 && wordCount < 50 && (
             <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
               <div

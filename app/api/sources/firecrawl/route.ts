@@ -64,6 +64,7 @@ async function scrapeWithFirecrawl(
 import { requireAuth } from "@/lib/apiAuth";
 import { resolveApiKey } from "@/lib/resolveApiKey";
 import { validateCSRF } from "@/lib/csrf";
+import { checkBudget, incrementUsage } from "@/lib/costGuard";
 
 export async function POST(req: Request) {
   const csrfError = validateCSRF(req);
@@ -81,6 +82,15 @@ export async function POST(req: Request) {
   }
   const apiKey = resolved.key;
 
+  // Check budget before proceeding
+  const budget = await checkBudget(auth.userId, "firecrawl");
+  if (!budget.allowed) {
+    return Response.json(
+      { error: `Monthly Firecrawl budget exceeded ($${((budget.limit ?? 0) / 100).toFixed(2)}). Adjust in Settings > Cost Controls.`, code: "budget_exceeded" },
+      { status: 402 }
+    );
+  }
+
   let body: { urls?: unknown };
   try {
     body = await req.json();
@@ -88,10 +98,11 @@ export async function POST(req: Request) {
     return Response.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
+  const urlLimit = budget.maxUrls ?? MAX_URLS;
   const rawUrls = Array.isArray(body.urls) ? body.urls : [];
   const urls = rawUrls
     .filter((u): u is string => typeof u === "string")
-    .slice(0, MAX_URLS)
+    .slice(0, urlLimit)
     .filter((u) => {
       try { return ["http:", "https:"].includes(new URL(u).protocol); } catch { return false; }
     });
@@ -117,6 +128,12 @@ export async function POST(req: Request) {
       }
     })
   );
+
+  // Track usage — count successful scrapes
+  const successCount = results.filter((r) => r.success).length;
+  if (successCount > 0) {
+    await incrementUsage(auth.userId, "firecrawl", successCount);
+  }
 
   return Response.json({ results });
 }

@@ -19,6 +19,7 @@ model User {
   analyses       Analysis[]
   auditLogs      AuditLog[]
   apiKeys        UserApiKey[]
+  costSettings   UserCostSettings?
 }
 
 model UserApiKey {
@@ -129,6 +130,30 @@ model RateLimit {
   count     Int      @default(0)
   resetAt   DateTime
   updatedAt DateTime @updatedAt
+}
+
+model UserCostSettings {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Monthly budget limits (USD cents, null = no limit)
+  firecrawlBudgetCents   Int?
+  perplexityBudgetCents  Int?
+  anthropicBudgetCents   Int?
+
+  // Per-operation limits
+  maxUrlsPerScrape       Int      @default(15)
+  maxPagesPerCrawl       Int      @default(30)
+
+  // Usage tracking (reset monthly)
+  firecrawlCallsThisMonth  Int    @default(0)
+  perplexityCallsThisMonth Int    @default(0)
+  anthropicTokensThisMonth Int    @default(0)
+  usageResetAt             DateTime @default(now())
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model AuditLog {

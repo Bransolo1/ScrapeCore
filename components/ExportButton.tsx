@@ -217,7 +217,7 @@ export default function ExportButton({ analysis, inputText, corrections, reviewS
   };
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 flex-wrap">
       <span className="text-xs text-gray-500 font-medium">Export:</span>
       <button
         onClick={exportPDF}

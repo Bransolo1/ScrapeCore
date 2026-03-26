@@ -350,7 +350,7 @@ export default function CompanyFootprint({ onSourcesReady, discovery }: CompanyF
       {/* App IDs (optional) */}
       <div className="space-y-3 pt-3 border-t border-gray-100">
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">App store IDs (optional)</p>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">iOS App ID or App Store URL</label>
             <input
