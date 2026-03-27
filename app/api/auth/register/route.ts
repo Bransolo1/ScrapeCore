@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { validateCSRF } from "@/lib/csrf";
+import { logAudit } from "@/lib/audit";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -18,11 +19,17 @@ export async function POST(req: Request) {
     if (!email?.trim() || !password?.trim()) {
       return Response.json({ error: "Email and password are required." }, { status: 400 });
     }
+    if (email.trim().length > 254) {
+      return Response.json({ error: "Email is too long." }, { status: 400 });
+    }
     if (!EMAIL_RE.test(email.trim())) {
       return Response.json({ error: "Invalid email format." }, { status: 400 });
     }
     if (password.length < 8) {
       return Response.json({ error: "Password must be at least 8 characters." }, { status: 400 });
+    }
+    if (password.length > 128) {
+      return Response.json({ error: "Password must be at most 128 characters." }, { status: 400 });
     }
 
     const normalisedEmail = email.trim().toLowerCase();
@@ -49,6 +56,8 @@ export async function POST(req: Request) {
     if (!user) {
       return Response.json({ error: "Email already registered." }, { status: 409 });
     }
+
+    logAudit({ event: "auth.register.success", userId: user.id, actor: user.email });
 
     return Response.json({ id: user.id, email: user.email, role: user.role }, { status: 201 });
   } catch (err) {
