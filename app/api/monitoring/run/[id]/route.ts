@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/apiAuth";
+import { resolveApiKey } from "@/lib/resolveApiKey";
+import { runAnalysisPipeline } from "@/lib/analysisPipeline";
 
 const PERPLEXITY_API = "https://api.perplexity.ai/chat/completions";
 
@@ -72,51 +74,23 @@ export async function POST(
       }, { status: 502 });
     }
 
-    // 2 — Run analysis via the internal analyze endpoint
-    // We call the analyze API directly to reuse all existing logic (grounding, rubric, eval log, etc.)
-    const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
-    const analyzeRes = await fetch(`${baseUrl}/api/analyze`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        text: intel,
-        dataType: "competitor",
-        actor: `monitor:${monitor.name}`,
-        projectContext: `Competitor monitoring: ${monitor.competitorName}. Keywords: ${keywords.join(", ") || "none"}.`,
-        project: monitor.name,
-      }),
-    });
-
-    // The analyze route returns SSE — we need to consume it and extract the final complete event
-    const reader = analyzeRes.body?.getReader();
-    const decoder = new TextDecoder();
-    let analysisId: string | null = null;
-    let analysisTitle = `${monitor.competitorName} — auto-monitor`;
-
-    if (reader) {
-      let buffer = "";
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n\n");
-        buffer = lines.pop() ?? "";
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          try {
-            const payload = JSON.parse(line.slice(6)) as {
-              type: string;
-              savedId?: string;
-              analysis?: { title?: string };
-            };
-            if (payload.type === "complete") {
-              analysisId = payload.savedId ?? null;
-              analysisTitle = payload.analysis?.title ?? analysisTitle;
-            }
-          } catch { /* skip */ }
-        }
-      }
+    // 2 — Run analysis directly via the pipeline (no HTTP self-request)
+    const resolved = await resolveApiKey("anthropic", auth.userId);
+    if (!resolved) {
+      return Response.json({
+        error: "No Anthropic API key configured. Add your key in Settings.",
+      }, { status: 503 });
     }
+
+    const result = await runAnalysisPipeline({
+      text: intel,
+      dataType: "competitor",
+      apiKey: resolved.key,
+      userId: auth.userId ?? monitor.userId,
+      actor: `monitor:${monitor.name}`,
+      projectContext: `Competitor monitoring: ${monitor.competitorName}. Keywords: ${keywords.join(", ") || "none"}.`,
+      project: monitor.name,
+    });
 
     // 3 — Update monitor metadata
     await prisma.competitorMonitor.update({
@@ -124,7 +98,7 @@ export async function POST(
       data: {
         lastRunAt: new Date(),
         nextRunAt: nextRunDate(monitor.schedule),
-        lastAnalysisId: analysisId,
+        lastAnalysisId: result.savedId,
         runCount: { increment: 1 },
         userId: auth.userId ?? monitor.userId,
       },
@@ -132,8 +106,8 @@ export async function POST(
 
     return Response.json({
       success: true,
-      analysisId,
-      analysisTitle,
+      analysisId: result.savedId,
+      analysisTitle: result.analysis.key_behaviours?.[0]?.behaviour ?? `${monitor.competitorName} — auto-monitor`,
     });
   } catch (err) {
     return Response.json({ error: err instanceof Error ? err.message : "Unknown" }, { status: 500 });

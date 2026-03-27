@@ -1,7 +1,12 @@
 /**
  * Shared discovery logic — used by both /api/discover route and cron monitoring.
  * Auto-discovers platform identifiers for a company name via parallel searches.
+ *
+ * Uses the multi-provider webSearch module (Brave → SearXNG → DuckDuckGo fallback)
+ * instead of direct DuckDuckGo HTML scraping for reliability.
  */
+
+import { webSearchUrls } from "@/lib/webSearch";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -53,40 +58,21 @@ function setCache(company: string, result: DiscoveryResult) {
   discoveryCache.set(key, { result, expiresAt: Date.now() + CACHE_TTL });
 }
 
-// ─── DuckDuckGo search helper ───────────────────────────────────────────────
+// ─── Concurrency limiter for discovery searches ─────────────────────────────
 
-const DDG_HEADERS = {
-  "User-Agent":
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-  Accept: "text/html,application/xhtml+xml,*/*;q=0.9",
-  "Accept-Language": "en-GB,en;q=0.9",
-};
+const DISCOVERY_MAX_CONCURRENT = 5;
+let discoveryActive = 0;
 
-async function ddgSearch(query: string, retries = 1): Promise<{ urls: string[]; failed: boolean }> {
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      const res = await fetch(
-        `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`,
-        { headers: DDG_HEADERS, signal: AbortSignal.timeout(10_000) }
-      );
-      if (!res.ok) {
-        if (attempt < retries) { await new Promise((r) => setTimeout(r, 2000)); continue; }
-        return { urls: [], failed: true };
-      }
-      const html = await res.text();
-      const urls: string[] = [];
-      const re = /uddg=([^&"]+)/g;
-      let m: RegExpExecArray | null;
-      while ((m = re.exec(html)) !== null) {
-        try { urls.push(decodeURIComponent(m[1])); } catch { /* skip malformed */ }
-      }
-      return { urls, failed: false };
-    } catch {
-      if (attempt < retries) { await new Promise((r) => setTimeout(r, 2000)); continue; }
-      return { urls: [], failed: true };
-    }
+async function withConcurrencyLimit<T>(fn: () => Promise<T>): Promise<T> {
+  while (discoveryActive >= DISCOVERY_MAX_CONCURRENT) {
+    await new Promise((r) => setTimeout(r, 100));
   }
-  return { urls: [], failed: true };
+  discoveryActive++;
+  try {
+    return await fn();
+  } finally {
+    discoveryActive = Math.max(0, discoveryActive - 1);
+  }
 }
 
 // ─── Platform-specific discovery functions ───────────────────────────────────
@@ -111,7 +97,7 @@ async function discoverReddit(company: string): Promise<{ subreddits: string[]; 
 }
 
 async function discoverTrustpilot(company: string): Promise<{ domain: string | null; found: boolean; searchFailed?: boolean }> {
-  const { urls, failed } = await ddgSearch(`"${company}" site:trustpilot.com/review`);
+  const { urls, failed } = await webSearchUrls(`"${company}" site:trustpilot.com/review`);
   for (const url of urls) {
     const match = url.match(/trustpilot\.com\/review\/([a-zA-Z0-9.-]+)/i);
     if (match) return { domain: match[1], found: true };
@@ -139,7 +125,7 @@ async function discoverAppStore(company: string, country = "gb"): Promise<{ appI
 }
 
 async function discoverGooglePlay(company: string): Promise<{ packageId: string | null; appName: string | null; found: boolean; searchFailed?: boolean }> {
-  const { urls, failed } = await ddgSearch(`"${company}" app site:play.google.com/store/apps/details`);
+  const { urls, failed } = await webSearchUrls(`"${company}" app site:play.google.com/store/apps/details`);
   for (const url of urls) {
     const match = url.match(/play\.google\.com\/store\/apps\/details\?.*?id=([a-zA-Z0-9_.]+)/i);
     if (match) return { packageId: match[1], appName: null, found: true };
@@ -148,7 +134,7 @@ async function discoverGooglePlay(company: string): Promise<{ packageId: string 
 }
 
 async function discoverG2(company: string): Promise<{ slug: string | null; found: boolean; searchFailed?: boolean }> {
-  const { urls, failed } = await ddgSearch(`"${company}" site:g2.com/products`);
+  const { urls, failed } = await webSearchUrls(`"${company}" site:g2.com/products`);
   for (const url of urls) {
     const match = url.match(/g2\.com\/products\/([a-zA-Z0-9-]+)/i);
     if (match && match[1] !== "best") return { slug: match[1], found: true };
@@ -157,7 +143,7 @@ async function discoverG2(company: string): Promise<{ slug: string | null; found
 }
 
 async function discoverCapterra(company: string): Promise<{ slug: string | null; found: boolean; searchFailed?: boolean }> {
-  const { urls, failed } = await ddgSearch(`"${company}" reviews site:capterra.com`);
+  const { urls, failed } = await webSearchUrls(`"${company}" reviews site:capterra.com`);
   for (const url of urls) {
     const match = url.match(/capterra\.com\/(?:p\/\d+\/|software\/)([a-zA-Z0-9-]+)/i);
     if (match) return { slug: match[1], found: true };
@@ -168,7 +154,7 @@ async function discoverCapterra(company: string): Promise<{ slug: string | null;
 }
 
 async function discoverStockTwits(company: string): Promise<{ symbol: string | null; found: boolean; searchFailed?: boolean }> {
-  const { urls, failed } = await ddgSearch(`"${company}" site:stocktwits.com/symbol`);
+  const { urls, failed } = await webSearchUrls(`"${company}" site:stocktwits.com/symbol`);
   for (const url of urls) {
     const match = url.match(/stocktwits\.com\/symbol\/([A-Z0-9.]+)/i);
     if (match) return { symbol: match[1].toUpperCase(), found: true };
@@ -177,7 +163,7 @@ async function discoverStockTwits(company: string): Promise<{ symbol: string | n
 }
 
 async function discoverDomain(company: string): Promise<string | null> {
-  const { urls } = await ddgSearch(`"${company}" official website`);
+  const { urls } = await webSearchUrls(`"${company}" official website`);
   for (const url of urls) {
     try {
       const u = new URL(url);
@@ -191,7 +177,7 @@ async function discoverDomain(company: string): Promise<string | null> {
 }
 
 async function discoverLinkedIn(company: string): Promise<{ slug: string | null; url: string | null; found: boolean; searchFailed?: boolean }> {
-  const { urls, failed } = await ddgSearch(`"${company}" site:linkedin.com/company`);
+  const { urls, failed } = await webSearchUrls(`"${company}" site:linkedin.com/company`);
   for (const url of urls) {
     const match = url.match(/linkedin\.com\/company\/([a-zA-Z0-9_-]+)/i);
     if (match && match[1] !== "company") return { slug: match[1], url, found: true };
@@ -200,7 +186,7 @@ async function discoverLinkedIn(company: string): Promise<{ slug: string | null;
 }
 
 async function discoverGlassdoor(company: string): Promise<{ slug: string | null; url: string | null; found: boolean; searchFailed?: boolean }> {
-  const { urls, failed } = await ddgSearch(`"${company}" reviews site:glassdoor.com/Reviews`);
+  const { urls, failed } = await webSearchUrls(`"${company}" reviews site:glassdoor.com/Reviews`);
   for (const url of urls) {
     const match = url.match(/glassdoor\.com\/Reviews\/([a-zA-Z0-9-]+-Reviews-E\d+)/i);
     if (match) return { slug: match[1], url, found: true };
@@ -211,7 +197,7 @@ async function discoverGlassdoor(company: string): Promise<{ slug: string | null
 }
 
 async function discoverProductHunt(company: string): Promise<{ slug: string | null; url: string | null; found: boolean; searchFailed?: boolean }> {
-  const { urls, failed } = await ddgSearch(`"${company}" site:producthunt.com/products`);
+  const { urls, failed } = await webSearchUrls(`"${company}" site:producthunt.com/products`);
   for (const url of urls) {
     const match = url.match(/producthunt\.com\/products\/([a-zA-Z0-9-]+)/i);
     if (match) return { slug: match[1], url, found: true };
@@ -220,7 +206,7 @@ async function discoverProductHunt(company: string): Promise<{ slug: string | nu
 }
 
 async function discoverBBB(company: string): Promise<{ url: string | null; found: boolean; searchFailed?: boolean }> {
-  const { urls, failed } = await ddgSearch(`"${company}" site:bbb.org`);
+  const { urls, failed } = await webSearchUrls(`"${company}" site:bbb.org`);
   for (const url of urls) {
     if (url.includes("bbb.org/us/") || url.includes("bbb.org/ca/")) return { url, found: true };
   }
@@ -228,7 +214,7 @@ async function discoverBBB(company: string): Promise<{ url: string | null; found
 }
 
 async function discoverYouTube(company: string): Promise<{ channelUrl: string | null; found: boolean; searchFailed?: boolean }> {
-  const { urls, failed } = await ddgSearch(`"${company}" official channel site:youtube.com`);
+  const { urls, failed } = await webSearchUrls(`"${company}" official channel site:youtube.com`);
   for (const url of urls) {
     const match = url.match(/youtube\.com\/(?:@[\w-]+|channel\/[\w-]+|c\/[\w-]+|user\/[\w-]+)/i);
     if (match) return { channelUrl: match[0].startsWith("http") ? match[0] : `https://www.${match[0]}`, found: true };
@@ -243,23 +229,24 @@ export async function discoverCompany(company: string, providedDomain?: string):
   const cached = getCachedDiscovery(company);
   if (cached) return { ...cached, cached: true };
 
+  // Run discoveries with concurrency limit to avoid overwhelming search providers
   const [
     reddit, trustpilot, appstore, googleplay, g2, capterra, stocktwits,
     linkedin, glassdoor, producthunt, bbb, youtube, autoDetectedDomain,
   ] = await Promise.all([
-    discoverReddit(company),
-    discoverTrustpilot(company),
-    discoverAppStore(company),
-    discoverGooglePlay(company),
-    discoverG2(company),
-    discoverCapterra(company),
-    discoverStockTwits(company),
-    discoverLinkedIn(company),
-    discoverGlassdoor(company),
-    discoverProductHunt(company),
-    discoverBBB(company),
-    discoverYouTube(company),
-    providedDomain ? Promise.resolve(providedDomain) : discoverDomain(company),
+    withConcurrencyLimit(() => discoverReddit(company)),
+    withConcurrencyLimit(() => discoverTrustpilot(company)),
+    withConcurrencyLimit(() => discoverAppStore(company)),
+    withConcurrencyLimit(() => discoverGooglePlay(company)),
+    withConcurrencyLimit(() => discoverG2(company)),
+    withConcurrencyLimit(() => discoverCapterra(company)),
+    withConcurrencyLimit(() => discoverStockTwits(company)),
+    withConcurrencyLimit(() => discoverLinkedIn(company)),
+    withConcurrencyLimit(() => discoverGlassdoor(company)),
+    withConcurrencyLimit(() => discoverProductHunt(company)),
+    withConcurrencyLimit(() => discoverBBB(company)),
+    withConcurrencyLimit(() => discoverYouTube(company)),
+    withConcurrencyLimit(() => providedDomain ? Promise.resolve(providedDomain) : discoverDomain(company)),
   ]);
 
   const domain = typeof autoDetectedDomain === "string" ? autoDetectedDomain : null;

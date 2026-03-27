@@ -15,12 +15,13 @@ const ENV_MAP: Record<string, string> = {
   anthropic: "ANTHROPIC_API_KEY",
   firecrawl: "FIRECRAWL_API_KEY",
   perplexity: "PERPLEXITY_API_KEY",
+  brave: "BRAVE_SEARCH_API_KEY",
 };
 
 export type KeySource = "user" | "platform";
 
 export async function resolveApiKey(
-  provider: "anthropic" | "firecrawl" | "perplexity",
+  provider: "anthropic" | "firecrawl" | "perplexity" | "brave",
   userId: string | undefined
 ): Promise<{ key: string; source: KeySource } | null> {
   // 1. Try user's own key
