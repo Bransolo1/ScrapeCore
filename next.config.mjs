@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Standalone output for Electron/Docker; Vercel manages its own output
+  // Standalone output for Docker; Vercel manages its own output
   ...(process.env.VERCEL ? {} : { output: "standalone" }),
 
   // Prevent webpack from bundling native Node modules — required for Vercel
