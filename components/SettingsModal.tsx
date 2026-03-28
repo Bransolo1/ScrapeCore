@@ -153,14 +153,19 @@ function BudgetInput({ label, valueCents, onChange, maxCents = 10000 }: {
   );
 }
 
-function UsageBar({ label, usedCents, limitCents, calls }: {
+function UsageBar({ label, usedCents, limitCents, calls, costPerUnit, unitLabel }: {
   label: string;
   usedCents: number;
   limitCents: number | null;
   calls: number;
+  costPerUnit?: number;
+  unitLabel?: string;
 }) {
   const pct = limitCents ? Math.min(100, (usedCents / limitCents) * 100) : 0;
   const overBudget = limitCents !== null && usedCents >= limitCents;
+  const remainingUnits = limitCents !== null && costPerUnit
+    ? Math.floor(Math.max(0, limitCents - usedCents) / costPerUnit)
+    : null;
 
   return (
     <div>
@@ -169,7 +174,7 @@ function UsageBar({ label, usedCents, limitCents, calls }: {
         <span className={`text-xs font-mono ${overBudget ? "text-red-600 font-semibold" : "text-gray-500"}`}>
           ${(usedCents / 100).toFixed(2)}
           {limitCents !== null && <span className="text-gray-400"> / ${(limitCents / 100).toFixed(2)}</span>}
-          <span className="text-gray-300 ml-1">({calls} calls)</span>
+          <span className="text-gray-300 ml-1">({calls} {calls === 1 ? "call" : "calls"})</span>
         </span>
       </div>
       {limitCents !== null && (
@@ -181,6 +186,18 @@ function UsageBar({ label, usedCents, limitCents, calls }: {
             style={{ width: `${pct}%` }}
           />
         </div>
+      )}
+      {remainingUnits !== null && unitLabel && (
+        <p className={`text-[10px] mt-0.5 ${pct > 80 ? "text-amber-600 font-medium" : "text-gray-400"}`}>
+          {overBudget
+            ? `Budget exceeded \u2014 ${unitLabel} blocked until next month`
+            : `~${remainingUnits.toLocaleString()} ${unitLabel} remaining this month`}
+        </p>
+      )}
+      {pct > 80 && pct < 100 && (
+        <p className="text-[10px] text-amber-600 font-medium mt-0.5">
+          Approaching budget limit ({Math.round(pct)}% used)
+        </p>
       )}
     </div>
   );
@@ -616,9 +633,9 @@ export default function SettingsModal({ onClose, initialProvider }: SettingsModa
                     <p className="text-xs text-gray-400 mt-0.5">Resets at the start of each month.</p>
                   </div>
                   <div className="space-y-3 bg-gray-50 rounded-xl border border-gray-100 p-4">
-                    <UsageBar label="Firecrawl" usedCents={usage.firecrawl.cents} limitCents={costSettings?.firecrawlBudgetCents ?? null} calls={usage.firecrawl.calls} />
-                    <UsageBar label="Perplexity" usedCents={usage.perplexity.cents} limitCents={costSettings?.perplexityBudgetCents ?? null} calls={usage.perplexity.calls} />
-                    <UsageBar label="Anthropic" usedCents={usage.anthropic.cents} limitCents={costSettings?.anthropicBudgetCents ?? null} calls={usage.anthropic.tokens} />
+                    <UsageBar label="Firecrawl" usedCents={usage.firecrawl.cents} limitCents={costSettings?.firecrawlBudgetCents ?? null} calls={usage.firecrawl.calls} costPerUnit={0.1} unitLabel="pages" />
+                    <UsageBar label="Perplexity" usedCents={usage.perplexity.cents} limitCents={costSettings?.perplexityBudgetCents ?? null} calls={usage.perplexity.calls} costPerUnit={0.5} unitLabel="queries" />
+                    <UsageBar label="Anthropic" usedCents={usage.anthropic.cents} limitCents={costSettings?.anthropicBudgetCents ?? null} calls={usage.anthropic.tokens} costPerUnit={1.5} unitLabel="analyses" />
                   </div>
                 </>
               )}

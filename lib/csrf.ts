@@ -13,7 +13,9 @@ export function validateCSRF(req: Request): Response | null {
   const referer = req.headers.get("referer");
   const host = req.headers.get("host");
 
-  if (!host) return null; // can't validate without host
+  if (!host) {
+    return Response.json({ error: "Missing host header" }, { status: 403 });
+  }
 
   const source = origin ?? (referer ? new URL(referer).origin : null);
   if (!source) {

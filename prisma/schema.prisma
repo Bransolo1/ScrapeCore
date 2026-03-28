@@ -14,6 +14,8 @@ model User {
   name           String?
   passwordHash   String?
   role           String        @default("analyst")  // analyst | admin
+  failedLoginAttempts Int      @default(0)
+  lockedUntil    DateTime?
   organisationId String?
   organisation   Organisation? @relation(fields: [organisationId], references: [id])
   analyses       Analysis[]

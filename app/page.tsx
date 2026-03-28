@@ -6,6 +6,7 @@ import DataInput from "@/components/DataInput";
 import UrlScraper from "@/components/UrlScraper";
 import SocialListener from "@/components/SocialListener";
 import CompanyFootprint from "@/components/CompanyFootprint";
+import ResearchQuery from "@/components/ResearchQuery";
 import SourcesPanel from "@/components/SourcesPanel";
 import AnalysisResults from "@/components/AnalysisResults";
 import AnalysisHistory from "@/components/AnalysisHistory";
@@ -25,7 +26,7 @@ import SetupStatusBar from "@/components/SetupStatusBar";
 import HowItWorksGuide from "@/components/HowItWorksGuide";
 import { LogoMark } from "@/components/Logo";
 
-type InputMode = "paste" | "scrape" | "social" | "footprint" | "batch";
+type InputMode = "paste" | "scrape" | "social" | "footprint" | "batch" | "research";
 
 const INITIAL_STATE: AnalysisState = {
   status: "idle",
@@ -35,11 +36,24 @@ const INITIAL_STATE: AnalysisState = {
   durationMs: null,
 };
 
-const MODE_TABS: { id: InputMode; label: string; hint: string; group: "web" | "upload" | "advanced"; icon: React.ReactNode }[] = [
+const SHOW_ADVANCED = process.env.NEXT_PUBLIC_SHOW_ADVANCED_FEATURES === "true";
+
+const ALL_MODE_TABS: { id: InputMode; label: string; hint: string; group: "web" | "upload" | "advanced"; icon: React.ReactNode }[] = [
+  {
+    id: "research",
+    label: "Research",
+    hint: "AI-powered web research on any topic via Perplexity",
+    group: "web",
+    icon: (
+      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+      </svg>
+    ),
+  },
   {
     id: "scrape",
     label: "Scrape URLs",
-    hint: "Extract text from web pages via Firecrawl",
+    hint: "Extract content from specific URLs via Firecrawl",
     group: "web",
     icon: (
       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -93,10 +107,15 @@ const MODE_TABS: { id: InputMode; label: string; hint: string; group: "web" | "u
   },
 ];
 
+// Core modes always visible; footprint + batch gated behind feature flag
+const MODE_TABS = SHOW_ADVANCED
+  ? ALL_MODE_TABS
+  : ALL_MODE_TABS.filter((m) => m.id !== "footprint" && m.id !== "batch");
+
 const MODE_GROUPS: { key: string; label: string }[] = [
   { key: "web", label: "Web Intelligence" },
   { key: "upload", label: "Your Data" },
-  { key: "advanced", label: "Advanced" },
+  ...(SHOW_ADVANCED ? [{ key: "advanced", label: "Advanced" }] : []),
 ];
 
 function getActor(): string {
@@ -212,6 +231,11 @@ export default function Home() {
         if (err.code === "no_api_key") {
           openSettings("anthropic");
           setAnalysisState(INITIAL_STATE);
+          return;
+        }
+        if (err.code === "budget_exceeded") {
+          openSettings("anthropic");
+          setAnalysisState({ status: "error", streamingText: "", analysis: null, error: err.error ?? "Budget exceeded", durationMs: null });
           return;
         }
         setAnalysisState({ status: "error", streamingText: "", analysis: null, error: err.error ?? "Unknown error", durationMs: null });
@@ -515,6 +539,21 @@ export default function Home() {
                   onProjectContextChange={setProjectContext}
                   onSubmit={handlePasteAnalyse}
                 />
+              )}
+
+              {mode === "research" && (
+                <>
+                  <ResearchQuery onSourcesReady={handleNewSources} />
+                  {sources.filter((s) => s.source === "research").length > 0 && (
+                    <SourcesPanel
+                      sources={sources.filter((s) => s.source === "research")}
+                      onToggle={toggleSource}
+                      onClear={clearSources}
+                      onAnalyse={handleSourcesAnalyse}
+                      isLoading={isLoading}
+                    />
+                  )}
+                </>
               )}
 
               {mode === "scrape" && (

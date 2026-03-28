@@ -17,7 +17,12 @@ export type AuditEvent =
   | "pii.detected"
   | "pii.redacted"
   | "apikey.updated"
-  | "apikey.deleted";
+  | "apikey.deleted"
+  | "auth.login.success"
+  | "auth.login.failed"
+  | "auth.login.rate_limited"
+  | "auth.login.account_locked"
+  | "auth.register.success";
 
 export interface AuditParams {
   event: AuditEvent;

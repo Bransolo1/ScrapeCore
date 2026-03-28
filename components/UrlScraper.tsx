@@ -14,7 +14,7 @@ interface FetchStatus {
 }
 
 const FIRECRAWL_NOTE =
-  "Firecrawl renders JavaScript, handles SPAs and dynamic sites. Requires FIRECRAWL_API_KEY.";
+  "Firecrawl renders JavaScript and extracts full content from dynamic sites (G2, Capterra, SPAs). For AI-powered web research on a topic, use the Research tab.";
 
 export default function UrlScraper({ onSourcesReady }: UrlScraperProps) {
   const [urlInput, setUrlInput] = useState("");
@@ -53,8 +53,11 @@ export default function UrlScraper({ onSourcesReady }: UrlScraperProps) {
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        const msg = err.code === "budget_exceeded"
+          ? `${err.error ?? "Budget exceeded"} Open Settings > Cost Controls to adjust.`
+          : err.error ?? "Failed";
         setStatuses((prev) =>
-          prev.map((s) => ({ ...s, status: "error", message: err.error ?? "Failed" }))
+          prev.map((s) => ({ ...s, status: "error", message: msg }))
         );
         return;
       }
@@ -228,8 +231,8 @@ export default function UrlScraper({ onSourcesReady }: UrlScraperProps) {
       <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
         <p className="text-xs text-gray-500 leading-relaxed">
           {useFirecrawl
-            ? "Firecrawl renders full pages including JavaScript — ideal for G2, Capterra, SPAs, and paywalled content."
-            : "Basic fetch extracts readable text from public pages. Enable Firecrawl above for JS-heavy sites like G2 or Capterra."}
+            ? "Firecrawl renders full pages including JavaScript — ideal for G2, Capterra, SPAs, and paywalled content. For broad web research without specific URLs, try the Research tab."
+            : "Basic fetch extracts readable text from public pages. Enable Firecrawl above for JS-heavy sites. For AI-powered research across the web, try the Research tab."}
         </p>
       </div>
     </div>
