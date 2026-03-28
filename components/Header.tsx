@@ -64,7 +64,7 @@ export default function Header({ onOpenGuide }: HeaderProps) {
   return (
     <>
     {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
-    <header className="border-b border-gray-200 bg-white/95 sticky top-0 z-30 backdrop-blur-md shadow-sm">
+    <header className="border-b border-gray-200 dark:border-gray-800 bg-white/95 dark:bg-slate-900/95 sticky top-0 z-30 backdrop-blur-md shadow-sm dark:shadow-none">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
         {/* Logo */}
         <Link href="/" className="shrink-0">
@@ -114,7 +114,7 @@ export default function Header({ onOpenGuide }: HeaderProps) {
             </button>
 
             {showMenu && (
-              <div className="absolute right-0 mt-1 w-56 bg-white rounded-xl border border-gray-200 shadow-lg py-1.5 z-50 animate-fade-in">
+              <div className="absolute right-0 mt-1 w-56 bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg dark:shadow-black/30 py-1.5 z-50 animate-fade-in">
                 <button
                   onClick={() => { setShowMenu(false); setShowSettings(true); }}
                   className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
@@ -175,7 +175,7 @@ export default function Header({ onOpenGuide }: HeaderProps) {
 
           {/* User avatar + sign-out (desktop) */}
           {session?.user && (
-            <div className="hidden sm:flex items-center gap-2 pl-2 border-l border-gray-200">
+            <div className="hidden sm:flex items-center gap-2 pl-2 border-l border-gray-200 dark:border-gray-700">
               <div className="w-7 h-7 rounded-full bg-gray-700 dark:bg-gray-600 flex items-center justify-center shrink-0" title={session.user.email ?? ""}>
                 <span className="text-xs font-bold text-white leading-none">
                   {(session.user.name ?? session.user.email ?? "?")[0].toUpperCase()}
@@ -212,7 +212,7 @@ export default function Header({ onOpenGuide }: HeaderProps) {
 
       {/* Mobile menu */}
       {mobileMenuOpen && (
-        <div className="lg:hidden border-t border-gray-100 bg-white animate-fade-in">
+        <div className="lg:hidden border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-slate-900 animate-fade-in">
           <nav className="max-w-7xl mx-auto px-4 py-3 space-y-1">
             {ALL_NAV_ITEMS.map(({ href, label, title }) => {
               const active = pathname === href;
