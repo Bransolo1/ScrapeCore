@@ -30,7 +30,7 @@ Your role is to evaluate, critique, and improve every user-facing surface of Scr
 5. **Recovery paths** — When something goes wrong (bad URL, empty scrape, hallucinated quote), can the user recover without starting over?
 6. **Behavioural friction points** — Where might a user abandon the workflow? What nudge, default, or simplification prevents that?
 7. **Accessibility and inclusivity** — Colour contrast, screen reader support, keyboard navigation, plain language alternatives.
-8. **Cross-platform consistency** — Does it work on desktop (Electron), web (Vercel), and Docker self-hosted with equal quality?
+8. **Cross-platform consistency** — Does it work on web (Vercel) and Docker self-hosted with equal quality?
 
 ## Scraping-Specific UX Principles
 

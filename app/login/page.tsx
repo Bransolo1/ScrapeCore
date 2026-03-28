@@ -122,14 +122,40 @@ function LoginForm() {
           <Logo size={44} showTagline />
         </div>
 
+        {/* Tab toggle */}
+        <div className="flex bg-white/5 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.06] rounded-full p-1 mb-6">
+          <button
+            type="button"
+            onClick={() => { setIsRegisterMode(false); setError(null); }}
+            className={`flex-1 py-2 text-sm font-medium rounded-full transition-all duration-150 ${
+              !showRegister
+                ? "bg-white dark:bg-white/10 text-gray-900 dark:text-white shadow-sm"
+                : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+            }`}
+          >
+            Sign in
+          </button>
+          <button
+            type="button"
+            onClick={() => { setIsRegisterMode(true); setError(null); }}
+            className={`flex-1 py-2 text-sm font-medium rounded-full transition-all duration-150 ${
+              showRegister
+                ? "bg-white dark:bg-white/10 text-gray-900 dark:text-white shadow-sm"
+                : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+            }`}
+          >
+            Create account
+          </button>
+        </div>
+
         {/* Card */}
         <div className="bg-white dark:bg-[#0f172a]/80 rounded-2xl border border-gray-200 dark:border-white/[0.08] shadow-xl dark:shadow-2xl dark:shadow-black/20 backdrop-blur-xl p-8">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
-            {isFirstUser ? "Create your account" : showRegister ? "Create an account" : "Welcome back"}
+            {isFirstUser && showRegister ? "Set up ScrapeCore" : showRegister ? "Create an account" : "Welcome back"}
           </h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-            {isFirstUser
-              ? "Set up your admin account to get started."
+            {isFirstUser && showRegister
+              ? "Create the first account to get started."
               : showRegister
               ? "Sign up to get started with ScrapeCore."
               : "Sign in to continue to your dashboard."}

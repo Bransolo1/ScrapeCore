@@ -6,33 +6,36 @@ Built for startup founders, product managers, behavioural scientists, and insigh
 
 ---
 
-## Install the desktop app
+## Getting started
 
-No terminal. No Docker. No Node.js. Just download and run.
+ScrapeCore is a web platform. Deploy it for free using Vercel + Turso, or self-host with Docker.
 
-### 1 — Download your installer
+### Deploy to the web (free)
 
-Go to the **[Releases page](../../releases/latest)** and grab the file for your OS:
+Follow the step-by-step guide in **[DEPLOY_GUIDE.md](DEPLOY_GUIDE.md)** to deploy on Vercel + Turso in ~20 minutes at zero cost.
 
-| OS | File to download |
-|---|---|
-| **macOS** | `ScrapeCore-{version}.dmg` |
-| **Windows** | `ScrapeCore-Setup-{version}.exe` |
-| **Linux** | `ScrapeCore-{version}.AppImage` |
+### Docker (self-hosted team instance)
 
-**macOS note:** Right-click → Open on first launch (Gatekeeper prompt for unsigned apps).
-**Linux note:** `chmod +x ScrapeCore-*.AppImage` then double-click.
+```bash
+cp .env.docker.example .env.docker
+# Set ANTHROPIC_API_KEY and NEXTAUTH_SECRET in .env.docker
 
-### 2 — Add your Anthropic API key
+docker compose --env-file .env.docker up -d
+# → http://localhost:3000
+```
 
-1. Get a key at **[console.anthropic.com](https://console.anthropic.com/settings/keys)** → API Keys (free to sign up)
-2. Open ScrapeCore → click **⚙** (gear icon, top-right) → paste your key → **Save**
+### Local development
 
-The key is stored in your user data folder on disk. It never leaves your machine.
+```bash
+git clone <repo-url>
+cd ScrapeCore
+npm install
+cp .env.local.example .env.local
+# Set ANTHROPIC_API_KEY and NEXTAUTH_SECRET in .env.local
 
-### 3 — Start analysing
-
-Paste any qualitative text — interviews, reviews, survey responses, social posts — hit **Run analysis** and get a full COM-B behavioural diagnosis in ~30–60 seconds.
+npx prisma db push
+npm run dev          # → http://localhost:3000
+```
 
 ---
 
@@ -58,7 +61,7 @@ Paste any qualitative text — interviews, reviews, survey responses, social pos
 | Mode | How to use |
 |---|---|
 | **Paste text** | Paste interviews, survey open-ends, notes, transcripts directly |
-| **Scrape URLs** | Paste one or more URLs — the app fetches and extracts the text |
+| **Scrape URLs** | Paste one or more URLs — ScrapeCore fetches and extracts the text |
 | **Social listening** | Reddit, HackerNews, App Store / Play Store reviews |
 | **Digital footprint** | Competitor URL analysis |
 | **Batch** | Analyse multiple documents in one session, then compare them side-by-side |
@@ -80,7 +83,7 @@ Paste any qualitative text — interviews, reviews, survey responses, social pos
 
 ## Optional integrations
 
-Set these via **⚙ Settings** (Electron) or in your `.env.local` / `.env.docker` file:
+Set these via **⚙ Settings** or in your `.env.local` / `.env.docker` file:
 
 | Key | Enables |
 |---|---|
@@ -89,61 +92,30 @@ Set these via **⚙ Settings** (Electron) or in your `.env.local` / `.env.docker
 
 ---
 
-## For developers
-
-### Local development
-
-```bash
-git clone <repo-url>
-cd ScrapeCore
-npm install
-cp .env.local.example .env.local
-# Set ANTHROPIC_API_KEY and NEXTAUTH_SECRET in .env.local
-
-npx prisma db push
-npm run dev          # → http://localhost:3000
-```
-
-### Docker (self-hosted team instance)
-
-```bash
-cp .env.docker.example .env.docker
-# Set ANTHROPIC_API_KEY and NEXTAUTH_SECRET in .env.docker
-
-docker compose --env-file .env.docker up -d
-# → http://localhost:3000
-```
-
-### Build desktop installers
-
-```bash
-npm run dist:mac     # → dist-desktop/ScrapeCore-*.dmg
-npm run dist:win     # → dist-desktop/ScrapeCore-Setup-*.exe
-npm run dist:linux   # → dist-desktop/ScrapeCore-*.AppImage
-```
-
-Installers are also built automatically by GitHub Actions on every `v*` tag and attached to the GitHub Release as a draft.
-
-### Key commands
+## Key commands
 
 ```bash
 npm run dev          # Next.js dev server
+npm run build        # Production build
+npm run start        # Run production build
 npm run test         # Vitest unit tests (12 tests)
 npx tsc --noEmit     # TypeScript type check
 npx prisma db push   # Apply schema changes
 npx prisma studio    # Browse database in browser
-npm run electron:dev # Electron + Next.js dev mode
 ```
 
-### Environment variables
+---
+
+## Environment variables
 
 | Variable | Required | Notes |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | Yes | Claude Opus 4.6 |
-| `NEXTAUTH_SECRET` | Yes (web/Docker) | `openssl rand -base64 32` |
+| `NEXTAUTH_SECRET` | Yes | `openssl rand -base64 32` |
 | `NEXTAUTH_URL` | Production only | Your public URL |
-| `DATABASE_URL` | Optional | Defaults to `file:./dev.db` |
-| `SKIP_AUTH` | Optional | `true` disables login (Electron / local dev) |
+| `DATABASE_URL` | Optional | Defaults to `file:./dev.db`; supports `libsql://` for Turso |
+| `TURSO_AUTH_TOKEN` | Turso only | Auth token for hosted libsql |
+| `SKIP_AUTH` | Optional | `true` disables login (local dev) |
 | `PERPLEXITY_API_KEY` | Optional | Live research features |
 | `FIRECRAWL_API_KEY` | Optional | JS-render scraping |
 
@@ -155,13 +127,12 @@ npm run electron:dev # Electron + Next.js dev mode
 |---|---|
 | Framework | Next.js 14 (App Router, SSE streaming) |
 | AI | Anthropic Claude Opus 4.6 |
-| Desktop | Electron 33 + electron-builder (bundles everything — no runtime deps) |
-| Database | Prisma 7 + SQLite via libsql adapter |
+| Database | Prisma 7 + SQLite via libsql adapter (local or Turso) |
 | Auth | NextAuth.js credentials + JWT |
 | Styling | Tailwind CSS |
 | Charts | Recharts |
 | Tests | Vitest (12 unit tests — schema validation, grounding, PII, CSRF) |
-| CI | GitHub Actions — typecheck + tests on every PR; release build on `v*` tags |
+| CI | GitHub Actions — typecheck + tests on every PR |
 
 ---
 
