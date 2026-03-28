@@ -113,3 +113,19 @@ export async function getCostSettings(userId: string) {
   const settings = await ensureMonthlyReset(userId);
   return settings;
 }
+
+/**
+ * Compute remaining quota for a provider — useful for UI display.
+ * Returns remaining calls/pages/tokens and percentage used.
+ */
+export function computeRemainingQuota(
+  usedCents: number,
+  limitCents: number | null,
+  costPerUnit: number
+): { remainingUnits: number | null; pctUsed: number } {
+  if (limitCents === null) return { remainingUnits: null, pctUsed: 0 };
+  const remainingCents = Math.max(0, limitCents - usedCents);
+  const remainingUnits = costPerUnit > 0 ? Math.floor(remainingCents / costPerUnit) : 0;
+  const pctUsed = limitCents > 0 ? (usedCents / limitCents) * 100 : 0;
+  return { remainingUnits, pctUsed };
+}

@@ -2,6 +2,7 @@ import { requireAuth } from "@/lib/apiAuth";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 import { validateCSRF } from "@/lib/csrf";
 import { resolveApiKey } from "@/lib/resolveApiKey";
+import { checkBudget, incrementUsage } from "@/lib/costGuard";
 import { runAnalysisPipeline, PipelineError } from "@/lib/analysisPipeline";
 import type { DataType } from "@/lib/types";
 
@@ -48,6 +49,15 @@ export async function POST(req: Request) {
       return Response.json({ error: "No Anthropic API key configured. Add your key in Settings.", code: "no_api_key" }, { status: 503 });
     }
 
+    // Budget check — block if Anthropic monthly budget exceeded
+    const budget = await checkBudget(sessionUserId, "anthropic");
+    if (!budget.allowed) {
+      return Response.json(
+        { error: `Monthly Anthropic budget exceeded ($${((budget.limit ?? 0) / 100).toFixed(2)}). Adjust in Settings > Cost Controls.`, code: "budget_exceeded" },
+        { status: 402 }
+      );
+    }
+
     const { text, dataType, actor, piiDetected, projectContext, project } = (await req.json()) as {
       text: string;
       dataType: DataType;
@@ -87,6 +97,9 @@ export async function POST(req: Request) {
               controller.enqueue(encodeSSE({ type: "chunk", text: chunk }));
             },
           });
+
+          // Track Anthropic usage for budget enforcement
+          incrementUsage(sessionUserId, "anthropic", result.usage.inputTokens + result.usage.outputTokens);
 
           controller.enqueue(
             encodeSSE({

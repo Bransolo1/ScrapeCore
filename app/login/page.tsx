@@ -1,9 +1,39 @@
 "use client";
 
-import { useState, useEffect, FormEvent, Suspense } from "react";
+import { useState, useEffect, useMemo, FormEvent, Suspense } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Logo from "@/components/Logo";
+
+/** Map NextAuth error codes to user-friendly messages. */
+function friendlyError(error: string): string {
+  if (error.includes("TOO_MANY_ATTEMPTS"))
+    return "Too many login attempts. Please wait a few minutes before trying again.";
+  if (error.includes("ACCOUNT_LOCKED"))
+    return "This account has been temporarily locked due to multiple failed attempts. Please try again later.";
+  return "Invalid email or password.";
+}
+
+/** Compute password strength 0-4 for the strength indicator. */
+function passwordStrength(pw: string): { score: number; label: string; color: string } {
+  let score = 0;
+  if (pw.length >= 8) score++;
+  if (pw.length >= 12) score++;
+  if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) score++;
+  if (/\d/.test(pw)) score++;
+  if (/[^a-zA-Z0-9]/.test(pw)) score++;
+  // Normalize to 0-4
+  const clamped = Math.min(score, 4);
+  const labels = ["Weak", "Fair", "Good", "Strong", "Very strong"];
+  const colors = [
+    "bg-red-500",
+    "bg-orange-500",
+    "bg-yellow-500",
+    "bg-green-500",
+    "bg-emerald-500",
+  ];
+  return { score: clamped, label: labels[clamped], color: colors[clamped] };
+}
 
 function LoginForm() {
   const router = useRouter();
@@ -20,6 +50,8 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
 
   const showRegister = isFirstUser || isRegisterMode;
+
+  const strength = useMemo(() => passwordStrength(password), [password]);
 
   useEffect(() => {
     fetch("/api/auth/check-first-user")
@@ -38,12 +70,15 @@ function LoginForm() {
     setError(null);
     setLoading(true);
 
+    // Normalize email client-side for consistency
+    const normalizedEmail = email.trim().toLowerCase();
+
     try {
       if (showRegister) {
         const res = await fetch("/api/auth/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password, name }),
+          body: JSON.stringify({ email: normalizedEmail, password, name }),
         });
         const data = (await res.json()) as { error?: string };
         if (!res.ok) {
@@ -52,7 +87,7 @@ function LoginForm() {
           return;
         }
         const result = await signIn("credentials", {
-          email,
+          email: normalizedEmail,
           password,
           redirect: false,
           callbackUrl,
@@ -64,13 +99,13 @@ function LoginForm() {
         }
       } else {
         const result = await signIn("credentials", {
-          email,
+          email: normalizedEmail,
           password,
           redirect: false,
           callbackUrl,
         });
         if (result?.error) {
-          setError("Invalid email or password.");
+          setError(friendlyError(result.error));
         } else {
           router.push(callbackUrl);
         }
@@ -158,9 +193,30 @@ function LoginForm() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={8}
+                maxLength={128}
                 placeholder={showRegister ? "At least 8 characters" : ""}
                 className="w-full px-3.5 py-2.5 text-sm bg-white dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] rounded-xl text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500 dark:focus:border-brand-400 transition-all duration-150"
               />
+              {/* Password strength indicator — registration only */}
+              {showRegister && password.length > 0 && (
+                <div className="mt-2">
+                  <div className="flex gap-1">
+                    {[0, 1, 2, 3].map((i) => (
+                      <div
+                        key={i}
+                        className={`h-1 flex-1 rounded-full transition-colors duration-200 ${
+                          i <= strength.score - 1
+                            ? strength.color
+                            : "bg-gray-200 dark:bg-white/10"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
+                    {strength.label}
+                  </p>
+                </div>
+              )}
             </div>
             <button
               type="submit"
