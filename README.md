@@ -1,8 +1,33 @@
 # ScrapeCore — Behavioural Intelligence Platform
 
-> Converts raw qualitative text into structured COM-B behavioural insight, powered by Claude Opus 4.6.
+> Research any topic. Scrape any source. Get structured COM-B behavioural insight — powered by Claude Opus 4.6.
 
 Built for startup founders, product managers, behavioural scientists, and insight researchers who need a diagnosis — not a chatbot summary.
+
+### What can you research?
+
+- **Consumer behaviour** — what motivates people to quit smoking, switch banks, adopt EVs
+- **Company intelligence** — auto-discover a competitor's full digital footprint across review sites, app stores, and social channels
+- **Market trends** — barriers to adoption, sentiment shifts, emerging needs
+- **Health & policy** — patient motivations, intervention effectiveness, public attitudes
+- **Any qualitative question** — if people are talking about it, ScrapeCore can analyse it
+
+### How it works
+
+```
+Ask a question or collect sources  →  Review & select data  →  COM-B behavioural analysis
+```
+
+ScrapeCore combines two web intelligence tools with Claude's analysis engine:
+
+| Tool | What it does | Powered by |
+|---|---|---|
+| **Research** | Searches the live web and synthesises a research report from multiple sources | Perplexity AI |
+| **Scrape URLs** | Extracts full page content from specific URLs, including JavaScript-heavy sites | Firecrawl |
+
+You can also pull data from Reddit, Twitter/X, Trustpilot, App Store, Google Play, Hacker News, Google News, RSS feeds, and more — or paste your own transcripts, surveys, and interview notes.
+
+Everything feeds into the same pipeline: **sources → review → COM-B analysis → structured output**.
 
 ---
 
@@ -23,16 +48,17 @@ Go to the **[Releases page](../../releases/latest)** and grab the file for your 
 **macOS note:** Right-click → Open on first launch (Gatekeeper prompt for unsigned apps).
 **Linux note:** `chmod +x ScrapeCore-*.AppImage` then double-click.
 
-### 2 — Add your Anthropic API key
+### 2 — Add your API keys
 
-1. Get a key at **[console.anthropic.com](https://console.anthropic.com/settings/keys)** → API Keys (free to sign up)
+1. Get an Anthropic key at **[console.anthropic.com](https://console.anthropic.com/settings/keys)** → API Keys (free to sign up)
 2. Open ScrapeCore → click **⚙** (gear icon, top-right) → paste your key → **Save**
+3. *(Optional)* Add a **Perplexity API key** for AI web research and a **Firecrawl API key** for JS-rendered scraping
 
-The key is stored in your user data folder on disk. It never leaves your machine.
+Keys are stored in your user data folder on disk. They never leave your machine.
 
 ### 3 — Start analysing
 
-Paste any qualitative text — interviews, reviews, survey responses, social posts — hit **Run analysis** and get a full COM-B behavioural diagnosis in ~30–60 seconds.
+Head to the **Research** tab to ask any question, **Scrape URLs** to extract specific pages, or **Upload / Paste** your own qualitative data — then hit **Run analysis** for a full COM-B behavioural diagnosis.
 
 ---
 
