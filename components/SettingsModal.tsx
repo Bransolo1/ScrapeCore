@@ -601,12 +601,12 @@ export default function SettingsModal({ onClose, initialProvider }: SettingsModa
                     <input
                       type="range"
                       min={1}
-                      max={15}
+                      max={50}
                       value={costSettings?.maxUrlsPerScrape ?? 15}
                       onChange={(e) => updateCost("maxUrlsPerScrape", parseInt(e.target.value))}
                       className="w-20 accent-brand-500"
                     />
-                    <span className="text-xs font-mono text-gray-500 w-6 text-right">{costSettings?.maxUrlsPerScrape ?? 15}</span>
+                    <span className="text-xs font-mono text-gray-500 w-8 text-right">{costSettings?.maxUrlsPerScrape ?? 15}</span>
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
@@ -615,12 +615,12 @@ export default function SettingsModal({ onClose, initialProvider }: SettingsModa
                     <input
                       type="range"
                       min={5}
-                      max={30}
+                      max={100}
                       value={costSettings?.maxPagesPerCrawl ?? 30}
                       onChange={(e) => updateCost("maxPagesPerCrawl", parseInt(e.target.value))}
                       className="w-20 accent-brand-500"
                     />
-                    <span className="text-xs font-mono text-gray-500 w-6 text-right">{costSettings?.maxPagesPerCrawl ?? 30}</span>
+                    <span className="text-xs font-mono text-gray-500 w-8 text-right">{costSettings?.maxPagesPerCrawl ?? 30}</span>
                   </div>
                 </div>
               </div>

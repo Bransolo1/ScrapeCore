@@ -64,14 +64,14 @@ export async function PUT(req: Request) {
 
   if ("maxUrlsPerScrape" in body) {
     const val = body.maxUrlsPerScrape;
-    if (typeof val === "number" && val >= 1 && val <= 15) {
+    if (typeof val === "number" && val >= 1 && val <= 50) {
       data.maxUrlsPerScrape = Math.round(val);
     }
   }
 
   if ("maxPagesPerCrawl" in body) {
     const val = body.maxPagesPerCrawl;
-    if (typeof val === "number" && val >= 5 && val <= 30) {
+    if (typeof val === "number" && val >= 5 && val <= 100) {
       data.maxPagesPerCrawl = Math.round(val);
     }
   }

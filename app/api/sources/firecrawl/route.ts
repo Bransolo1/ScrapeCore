@@ -4,7 +4,7 @@
 // Body: { urls: string[] }
 
 const FIRECRAWL_URL = "https://api.firecrawl.dev/v1/scrape";
-const MAX_URLS = 15;
+const MAX_URLS = 50;
 const CHAR_LIMIT = 32_000;
 
 interface FirecrawlResponse {
