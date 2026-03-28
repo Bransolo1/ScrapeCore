@@ -8,7 +8,8 @@ import Logo from "@/components/Logo";
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") ?? "/";
+  const rawCallback = searchParams.get("callbackUrl") ?? "/";
+  const callbackUrl = rawCallback.startsWith("/") && !rawCallback.startsWith("//") ? rawCallback : "/";
 
   const [isFirstUser, setIsFirstUser] = useState(false);
   const [isRegisterMode, setIsRegisterMode] = useState(false);
@@ -16,10 +17,13 @@ function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const showRegister = isRegisterMode;
+  const showRegister = isFirstUser || isRegisterMode;
+  const passwordLong = password.length >= 8;
+  const passwordsMatch = password === confirmPassword;
 
   useEffect(() => {
     fetch("/api/auth/check-first-user")
@@ -40,6 +44,17 @@ function LoginForm() {
 
     try {
       if (showRegister) {
+        if (!passwordLong) {
+          setError("Password must be at least 8 characters.");
+          setLoading(false);
+          return;
+        }
+        if (!passwordsMatch) {
+          setError("Passwords do not match.");
+          setLoading(false);
+          return;
+        }
+
         const res = await fetch("/api/auth/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -75,6 +90,8 @@ function LoginForm() {
           router.push(callbackUrl);
         }
       }
+    } catch {
+      setError("Network error. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -187,10 +204,29 @@ function LoginForm() {
                 placeholder={showRegister ? "At least 8 characters" : ""}
                 className="w-full px-3.5 py-2.5 text-sm bg-white dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] rounded-xl text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500 dark:focus:border-brand-400 transition-all duration-150"
               />
+              {showRegister && password.length > 0 && !passwordLong && (
+                <p className="text-[11px] text-amber-500 mt-1">At least 8 characters required</p>
+              )}
             </div>
+            {showRegister && (
+              <div>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">Confirm password</label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  placeholder="Re-enter your password"
+                  className={`w-full px-3.5 py-2.5 text-sm bg-white dark:bg-white/[0.04] border rounded-xl text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500 dark:focus:border-brand-400 transition-all duration-150 ${confirmPassword.length > 0 && !passwordsMatch ? "border-red-300 dark:border-red-500/40" : "border-gray-200 dark:border-white/[0.08]"}`}
+                />
+                {confirmPassword.length > 0 && !passwordsMatch && (
+                  <p className="text-[11px] text-red-500 mt-1">Passwords do not match</p>
+                )}
+              </div>
+            )}
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || (showRegister && (!passwordLong || !passwordsMatch))}
               className="w-full py-2.5 bg-brand-600 hover:bg-brand-500 disabled:bg-brand-600/50 text-white text-sm font-medium rounded-xl transition-all duration-150 shadow-lg shadow-brand-600/25 hover:shadow-brand-500/30"
             >
               {loading ? (
@@ -205,6 +241,34 @@ function LoginForm() {
           </form>
         </div>
 
+        {/* Toggle between Sign in / Sign up */}
+        {!isFirstUser && (
+          <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-6">
+            {showRegister ? (
+              <>
+                Already have an account?{" "}
+                <button
+                  type="button"
+                  onClick={() => { setIsRegisterMode(false); setError(null); setConfirmPassword(""); }}
+                  className="text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 font-medium transition-colors"
+                >
+                  Sign in
+                </button>
+              </>
+            ) : (
+              <>
+                Don&apos;t have an account?{" "}
+                <button
+                  type="button"
+                  onClick={() => { setIsRegisterMode(true); setError(null); setConfirmPassword(""); }}
+                  className="text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 font-medium transition-colors"
+                >
+                  Sign up
+                </button>
+              </>
+            )}
+          </p>
+        )}
       </div>
     </div>
   );

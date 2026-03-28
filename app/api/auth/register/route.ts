@@ -51,9 +51,14 @@ export async function POST(req: Request) {
     }
 
     return Response.json({ id: user.id, email: user.email, role: user.role }, { status: 201 });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "";
-    if (msg.includes("Unique constraint")) {
+  } catch (err: unknown) {
+    // Prisma unique constraint violation (P2002) — duplicate email
+    if (
+      typeof err === "object" &&
+      err !== null &&
+      "code" in err &&
+      (err as { code: string }).code === "P2002"
+    ) {
       return Response.json({ error: "Email already registered." }, { status: 409 });
     }
     return Response.json({ error: "Registration failed. Please try again." }, { status: 500 });
