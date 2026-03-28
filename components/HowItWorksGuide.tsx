@@ -42,7 +42,7 @@ const STEPS = [
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8.228 9c.549-1.065 2.386-1.839 3.772-1.839 1.8 0 3 1.299 3 2.839 0 1.857-2.17 2.673-2.829 4.318-.117.292-.171.636-.171.982m0 2.5h.01" />
       </svg>
     ),
-    color: "bg-amber-50 text-amber-600",
+    color: "bg-violet-50 text-violet-600",
   },
   {
     number: 4,

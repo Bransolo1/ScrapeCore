@@ -97,8 +97,8 @@ export function LogoMark({ size = 32, className }: { size?: number; className?: 
       {/* Gradient definition */}
       <defs>
         <linearGradient id="sc-grad" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#ea580c" />
-          <stop offset="1" stopColor="#c2410c" />
+          <stop stopColor="#6366f1" />
+          <stop offset="1" stopColor="#4338ca" />
         </linearGradient>
       </defs>
     </svg>

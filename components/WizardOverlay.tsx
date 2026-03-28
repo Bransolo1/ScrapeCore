@@ -231,7 +231,7 @@ export default function WizardOverlay({ showWelcome = true, onDone, onComplete }
                 {[
                   { label: "Scrape websites", desc: "URLs, app stores, reviews", color: "bg-brand-50 text-brand-600" },
                   { label: "Social listening", desc: "Reddit, news, forums", color: "bg-sky-50 text-sky-600" },
-                  { label: "Company research", desc: "Full digital footprint", color: "bg-amber-50 text-amber-600" },
+                  { label: "Company research", desc: "Full digital footprint", color: "bg-violet-50 text-violet-600" },
                 ].map((s, i) => (
                   <div key={i} className={`rounded-xl p-3 text-center ${s.color.split(" ")[0]}`}>
                     <p className={`text-xs font-bold ${s.color.split(" ")[1]}`}>{s.label}</p>

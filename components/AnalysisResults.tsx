@@ -159,9 +159,9 @@ function EmptyState({ onSwitchMode, onOpenGuide }: { onSwitchMode?: (mode: strin
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">What you&apos;ll get</p>
         <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
           {[
-            { label: "Barriers", desc: "What stops users", color: "bg-rose-50 text-rose-600" },
-            { label: "Motivators", desc: "What drives users", color: "bg-emerald-50 text-emerald-600" },
-            { label: "Interventions", desc: "How to change behaviour", color: "bg-brand-50 text-brand-600" },
+            { label: "Barriers", desc: "What stops users", color: "bg-rose-50 text-rose-600 border border-rose-100" },
+            { label: "Motivators", desc: "What drives users", color: "bg-emerald-50 text-emerald-600 border border-emerald-100" },
+            { label: "Interventions", desc: "How to change behaviour", color: "bg-sky-50 text-sky-600 border border-sky-100" },
           ].map((item) => (
             <div key={item.label} className={`rounded-xl p-3 text-center ${item.color}`}>
               <p className="text-xs font-semibold">{item.label}</p>
