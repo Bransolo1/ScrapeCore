@@ -35,16 +35,16 @@ function buildPrompt(query: string, mode: string): PerplexityMessage[] {
     ];
   }
 
-  // Research mode
+  // Research mode — supports both company-specific and general consumer insight queries
   return [
     {
       role: "system",
       content:
-        "You are a market research analyst. Search the web and return a comprehensive, structured research report. Include: market overview, key players, user/customer feedback, regulatory context, trends, and notable findings. Format clearly for behavioural analysis purposes.",
+        "You are a behavioural research analyst. Search the web and return a comprehensive, structured research report. Include: key findings, user/consumer perspectives, motivations and barriers, contextual factors (social, cultural, regulatory), trends, and notable data points. Format clearly for behavioural analysis purposes. Adapt your focus to the query — this could be about a specific company, a consumer behaviour pattern, a health topic, a market trend, or any other research question.",
     },
     {
       role: "user",
-      content: `Research the following topic for market intelligence: "${query}". Provide a comprehensive report including market trends, competitor positioning, customer sentiment, key barriers and motivators, and any relevant regulatory or industry context. Aim for depth and breadth.`,
+      content: `Research the following topic in depth: "${query}". Provide a comprehensive report covering key findings, consumer or user perspectives, behavioural motivations and barriers, relevant contextual factors, and any supporting data or trends. Aim for depth and breadth.`,
     },
   ];
 }

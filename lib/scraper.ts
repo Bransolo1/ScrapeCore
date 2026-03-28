@@ -110,7 +110,7 @@ export interface Source {
   text: string;
   url: string;
   wordCount: number;
-  source: "url" | "reddit" | "hackernews" | "gnews" | "stocktwits" | "trustpilot" | "appstore" | "rss" | "googleplay" | "websearch";
+  source: "url" | "research" | "reddit" | "hackernews" | "gnews" | "stocktwits" | "trustpilot" | "appstore" | "rss" | "googleplay" | "websearch";
   meta?: string;
   selected: boolean;
 }

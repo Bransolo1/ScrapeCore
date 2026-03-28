@@ -1189,7 +1189,7 @@ export default function SocialListener({ onSourcesReady, discovery, onDiscoveryC
         <div className="space-y-3 pt-3 border-t border-gray-100">
           <GroupLabel label="Twitter / X" />
           <p className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 leading-relaxed">
-            Searches Twitter/X via <strong>Perplexity AI</strong> — requires <code className="text-xs bg-gray-100 px-1 rounded">PERPLEXITY_API_KEY</code>
+            Searches and synthesises Twitter/X discussions via <strong>Perplexity AI</strong> — requires <code className="text-xs bg-gray-100 px-1 rounded">PERPLEXITY_API_KEY</code>
           </p>
           <div>
             <label className={labelCls}>Search query</label>
@@ -1221,7 +1221,8 @@ export default function SocialListener({ onSourcesReady, discovery, onDiscoveryC
         <div className="space-y-3 pt-3 border-t border-gray-100">
           <GroupLabel label="Perplexity Research" />
           <p className="text-xs text-gray-500 bg-brand-50 border border-brand-200 rounded-lg px-3 py-2 leading-relaxed">
-            AI-powered web research — synthesises market reports, news, competitor intel. Requires <code className="text-xs bg-brand-100 px-1 rounded">PERPLEXITY_API_KEY</code>
+            AI-powered web research — synthesises reports, news, and consumer insights via Perplexity. Requires <code className="text-xs bg-brand-100 px-1 rounded">PERPLEXITY_API_KEY</code>.
+            For standalone research queries, try the <strong>Research</strong> tab for a simpler experience.
           </p>
           <div>
             <label className={labelCls}>Research query</label>
