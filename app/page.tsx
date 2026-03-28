@@ -681,7 +681,7 @@ export default function Home() {
           <div className="flex items-center gap-2">
             <LogoMark size={16} />
             <p className="text-xs text-gray-400">
-              ScrapeCore · Behavioural Market Intelligence
+              ScrapeCore · Behavioural Intelligence
             </p>
           </div>
           <p className="text-xs text-gray-400 text-center sm:text-right">

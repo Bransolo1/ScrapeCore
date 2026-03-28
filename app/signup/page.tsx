@@ -4,6 +4,7 @@ import { useState, FormEvent, Suspense } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import Logo from "@/components/Logo";
 
 function SignupForm() {
   const router = useRouter();
@@ -70,76 +71,65 @@ function SignupForm() {
   }
 
   const inputCls =
-    "w-full px-3.5 py-2.5 text-sm bg-surface-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400/50 focus:border-brand-400 focus:bg-white placeholder:text-gray-400";
+    "w-full px-3.5 py-2.5 text-sm bg-white dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] rounded-xl text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500 dark:focus:border-brand-400 transition-all duration-150";
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-surface-50 px-4">
-      {/* Subtle background pattern */}
-      <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(249,115,22,0.06),transparent_50%)]" />
-
-      <div className="w-full max-w-sm relative">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#020617] px-4">
+      <div className="w-full max-w-[400px]">
         {/* Logo */}
-        <div className="flex items-center gap-3 mb-8 justify-center">
-          <div className="w-11 h-11 bg-brand-500 rounded-xl flex items-center justify-center shadow-lg shadow-brand-500/20">
-            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-          </div>
-          <div>
-            <h1 className="text-lg font-semibold text-gray-900 leading-none">ScrapeCore</h1>
-            <p className="text-[11px] text-gray-400 mt-0.5 tracking-wide uppercase">Market Intelligence</p>
-          </div>
+        <div className="flex justify-center mb-10">
+          <Logo size={44} showTagline />
         </div>
 
         {/* Card */}
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-xl shadow-gray-200/50 p-8">
-          <h2 className="text-base font-semibold text-gray-900 mb-1">Create your account</h2>
-          <p className="text-xs text-gray-400 mb-6">
-            Get started with behavioural market intelligence.
+        <div className="bg-white dark:bg-[#0f172a]/80 rounded-2xl border border-gray-200 dark:border-white/[0.08] shadow-xl dark:shadow-2xl dark:shadow-black/20 backdrop-blur-xl p-8">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Create an account</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+            Enter your details below.
           </p>
 
           {error && (
-            <div className="mb-4 px-3 py-2.5 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-xs text-red-600">{error}</p>
+            <div className="mb-5 px-3.5 py-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-xl">
+              <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                Full name <span className="text-gray-400 font-normal">(optional)</span>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Full name <span className="text-gray-400 dark:text-gray-500 font-normal">(optional)</span>
               </label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Jane Smith"
+                placeholder="Your name"
                 className={inputCls}
                 autoFocus
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1.5">Email</label>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">Email</label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                placeholder="you@organisation.com"
+                placeholder="you@example.com"
                 className={inputCls}
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1.5">Password</label>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">Password</label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={8}
-                placeholder="At least 8 characters"
+                placeholder="Min. 8 characters"
                 className={inputCls}
               />
               {password.length > 0 && !passwordLong && (
@@ -148,14 +138,14 @@ function SignupForm() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1.5">Confirm password</label>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">Confirm password</label>
               <input
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 placeholder="Re-enter your password"
-                className={`${inputCls} ${confirmPassword.length > 0 && !passwordsMatch ? "border-red-300 focus:ring-red-400/50 focus:border-red-400" : ""}`}
+                className={`${inputCls} ${confirmPassword.length > 0 && !passwordsMatch ? "border-red-300 dark:border-red-500/30 focus:ring-red-400/50 focus:border-red-400" : ""}`}
               />
               {confirmPassword.length > 0 && !passwordsMatch && (
                 <p className="text-[11px] text-red-500 mt-1">Passwords do not match</p>
@@ -165,7 +155,7 @@ function SignupForm() {
             <button
               type="submit"
               disabled={!canSubmit}
-              className="w-full py-2.5 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-200 disabled:text-gray-400 text-white text-sm font-semibold rounded-xl transition-all shadow-sm shadow-brand-500/25 hover:shadow-md hover:shadow-brand-500/30"
+              className="w-full py-2.5 bg-brand-600 hover:bg-brand-500 disabled:bg-gray-200 dark:disabled:bg-white/[0.06] disabled:text-gray-400 dark:disabled:text-gray-500 text-white text-sm font-medium rounded-xl transition-all duration-150"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -179,20 +169,15 @@ function SignupForm() {
           </form>
 
           {/* Sign in link */}
-          <div className="mt-5 pt-4 border-t border-gray-100 text-center">
-            <p className="text-xs text-gray-400">
+          <div className="mt-5 pt-4 border-t border-gray-100 dark:border-white/[0.06] text-center">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               Already have an account?{" "}
-              <Link href="/login" className="text-brand-600 hover:text-brand-700 font-medium">
+              <Link href="/login" className="text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 font-medium">
                 Sign in
               </Link>
             </p>
           </div>
         </div>
-
-        {/* Footer hint */}
-        <p className="text-center text-[11px] text-gray-400 mt-6">
-          Powered by Claude Opus 4.6 · COM-B Framework
-        </p>
       </div>
     </div>
   );
@@ -202,7 +187,7 @@ export default function SignupPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-surface-50">
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#020617]">
           <div className="flex items-center gap-2 text-sm text-gray-400">
             <div className="w-4 h-4 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
             Loading…

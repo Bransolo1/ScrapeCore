@@ -9,7 +9,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "ScrapeCore — Behavioural Market Intelligence",
+  title: "ScrapeCore — Behavioural Intelligence",
   description:
     "Scrape data from websites, app stores, reviews, and social media — then apply COM-B behavioural science to reveal barriers, motivators, and interventions.",
   icons: {

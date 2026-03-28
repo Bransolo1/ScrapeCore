@@ -139,7 +139,7 @@ export default function SharePage() {
         <div className="max-w-5xl mx-auto px-6 flex items-center justify-center gap-2">
           <LogoMark size={16} />
           <p className="text-xs text-gray-400">
-            Shared via ScrapeCore · Behavioural Market Intelligence · AI-assisted — expert review required
+            Shared via ScrapeCore · Behavioural Intelligence · AI-assisted — expert review required
           </p>
         </div>
       </footer>

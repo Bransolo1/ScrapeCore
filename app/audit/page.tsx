@@ -246,7 +246,7 @@ export default function AuditPage() {
         <div className="max-w-5xl mx-auto px-6 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <LogoMark size={16} />
-            <p className="text-xs text-gray-400">ScrapeCore · Behavioural Market Intelligence</p>
+            <p className="text-xs text-gray-400">ScrapeCore · Behavioural Intelligence</p>
           </div>
           <p className="text-xs text-gray-400">AI-assisted — expert review required</p>
         </div>

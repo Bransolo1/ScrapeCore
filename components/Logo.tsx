@@ -122,7 +122,7 @@ export default function Logo({
           </span>
           {showTagline && (
             <span className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5 font-medium tracking-wide">
-              Behavioural Market Intelligence
+              Behavioural Intelligence
             </span>
           )}
         </div>
