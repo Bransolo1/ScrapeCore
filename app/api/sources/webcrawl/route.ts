@@ -2,6 +2,7 @@ import type { Source } from "@/lib/scraper";
 import { scrapeUrl, SCRAPE_HEADERS } from "@/lib/scraper";
 import { requireAuth } from "@/lib/apiAuth";
 import { validateCSRF } from "@/lib/csrf";
+import { checkBudget } from "@/lib/costGuard";
 
 // ─── URL priority scoring ─────────────────────────────────────────────────────
 
@@ -95,6 +96,10 @@ export async function POST(req: Request) {
       return Response.json({ error: "No domain provided" }, { status: 400 });
     }
 
+    // Read user's maxPagesPerCrawl setting (falls back to request body value)
+    const budget = await checkBudget(auth.userId, "firecrawl");
+    const effectiveMaxPages = budget.maxPages ?? maxPages;
+
     // Normalise domain → https://example.com
     let cleanDomain = domain.trim().replace(/^https?:\/\//i, "").replace(/\/$/, "");
     // Strip paths if user pasted full URL
@@ -102,7 +107,7 @@ export async function POST(req: Request) {
     if (firstSlash !== -1) cleanDomain = cleanDomain.slice(0, firstSlash);
 
     const baseUrl = `https://${cleanDomain}`;
-    const clampedMax = Math.min(Math.max(3, maxPages), 30);
+    const clampedMax = Math.min(Math.max(3, effectiveMaxPages), 100);
 
     // 1. Fetch homepage
     let homepageHtml = "";
