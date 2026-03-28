@@ -1,4 +1,4 @@
-# ScrapeCore — Behavioural Market Intelligence
+# ScrapeCore — Behavioural Intelligence Platform
 
 > Converts raw qualitative text into structured COM-B behavioural insight, powered by Claude Opus 4.6.
 
@@ -55,13 +55,34 @@ Paste any qualitative text — interviews, reviews, survey responses, social pos
 
 ## Input modes
 
+### Web Intelligence
+
 | Mode | How to use |
 |---|---|
-| **Paste text** | Paste interviews, survey open-ends, notes, transcripts directly |
-| **Scrape URLs** | Paste one or more URLs — the app fetches and extracts the text |
-| **Social listening** | Reddit, HackerNews, App Store / Play Store reviews |
-| **Digital footprint** | Competitor URL analysis |
-| **Batch** | Analyse multiple documents in one session, then compare them side-by-side |
+| **Research** | Type any question — consumer behaviour, health motivations, market trends, company sentiment — and get AI-powered web research via Perplexity, ready for COM-B analysis |
+| **Scrape URLs** | Paste one or more URLs — extract content directly from pages. Toggle Firecrawl for JavaScript-heavy sites (G2, Capterra, SPAs) |
+| **Social listening** | Multi-source social data collection — Reddit, HackerNews, Twitter/X, Trustpilot, App Store, Google Play, Google News, RSS feeds, and more |
+| **Company research** | Enter a company name to auto-discover and scrape its full digital footprint across review platforms, app stores, social channels, and the web |
+
+### Your Data
+
+| Mode | How to use |
+|---|---|
+| **Upload / Paste** | Paste interviews, survey open-ends, notes, transcripts directly |
+| **Batch** | Analyse multiple documents in one session, then compare side-by-side |
+
+### How Perplexity and Firecrawl work together
+
+ScrapeCore uses two complementary external services for web intelligence:
+
+| Service | Role | When to use |
+|---|---|---|
+| **Perplexity AI** | Searches the live web, reads multiple sources, and synthesises a research report | You have a **question** but no specific URLs — e.g. "what motivates people to switch banks", "barriers to EV adoption in the UK" |
+| **Firecrawl** | Renders JavaScript and extracts full page content from specific URLs | You have **specific pages** to extract — e.g. G2 reviews, Capterra listings, SPAs, dynamic content |
+
+**Perplexity** powers the **Research** tab (standalone queries), **Twitter/X** listening, and **Perplexity Research** within Social Listening. **Firecrawl** powers the **Scrape URLs** tab (with toggle) and website crawls within **Company Research**.
+
+They feed into the same pipeline: collected sources → user review → COM-B behavioural analysis via Claude.
 
 ---
 
@@ -84,8 +105,8 @@ Set these via **⚙ Settings** (Electron) or in your `.env.local` / `.env.docker
 
 | Key | Enables |
 |---|---|
-| `PERPLEXITY_API_KEY` | Live web research + Twitter/X listening via Perplexity Sonar |
-| `FIRECRAWL_API_KEY` | JS-rendered site scraping (G2, Capterra, SPAs) |
+| `PERPLEXITY_API_KEY` | AI web research, Twitter/X listening, and consumer insight queries via Perplexity Sonar |
+| `FIRECRAWL_API_KEY` | JS-rendered site scraping for dynamic pages (G2, Capterra, SPAs) |
 
 ---
 
@@ -144,8 +165,8 @@ npm run electron:dev # Electron + Next.js dev mode
 | `NEXTAUTH_URL` | Production only | Your public URL |
 | `DATABASE_URL` | Optional | Defaults to `file:./dev.db` |
 | `SKIP_AUTH` | Optional | `true` disables login (Electron / local dev) |
-| `PERPLEXITY_API_KEY` | Optional | Live research features |
-| `FIRECRAWL_API_KEY` | Optional | JS-render scraping |
+| `PERPLEXITY_API_KEY` | Optional | AI web research + Twitter/X listening |
+| `FIRECRAWL_API_KEY` | Optional | JS-render scraping for dynamic pages |
 
 ---
 
@@ -155,6 +176,8 @@ npm run electron:dev # Electron + Next.js dev mode
 |---|---|
 | Framework | Next.js 14 (App Router, SSE streaming) |
 | AI | Anthropic Claude Opus 4.6 |
+| Web Research | Perplexity Sonar (search + synthesis) |
+| Page Extraction | Firecrawl (JS rendering + content extraction) |
 | Desktop | Electron 33 + electron-builder (bundles everything — no runtime deps) |
 | Database | Prisma 7 + SQLite via libsql adapter |
 | Auth | NextAuth.js credentials + JWT |
