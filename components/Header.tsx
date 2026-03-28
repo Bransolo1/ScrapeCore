@@ -86,7 +86,7 @@ export default function Header({ onOpenGuide }: HeaderProps) {
                     title={title}
                     className={`px-2.5 py-1.5 rounded-lg text-sm font-medium transition-all ${
                       active
-                        ? "bg-brand-600 text-white shadow-sm"
+                        ? "bg-gray-800 dark:bg-white/[0.10] text-white shadow-sm"
                         : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
                     }`}
                   >
@@ -176,7 +176,7 @@ export default function Header({ onOpenGuide }: HeaderProps) {
           {/* User avatar + sign-out (desktop) */}
           {session?.user && (
             <div className="hidden sm:flex items-center gap-2 pl-2 border-l border-gray-200">
-              <div className="w-7 h-7 rounded-full bg-brand-600 flex items-center justify-center shrink-0" title={session.user.email ?? ""}>
+              <div className="w-7 h-7 rounded-full bg-gray-700 dark:bg-gray-600 flex items-center justify-center shrink-0" title={session.user.email ?? ""}>
                 <span className="text-xs font-bold text-white leading-none">
                   {(session.user.name ?? session.user.email ?? "?")[0].toUpperCase()}
                 </span>
@@ -223,7 +223,7 @@ export default function Header({ onOpenGuide }: HeaderProps) {
                   title={title}
                   className={`block px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
                     active
-                      ? "bg-brand-600 text-white"
+                      ? "bg-gray-800 dark:bg-white/[0.10] text-white"
                       : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                   }`}
                 >
@@ -235,7 +235,7 @@ export default function Header({ onOpenGuide }: HeaderProps) {
           {session?.user && (
             <div className="border-t border-gray-100 px-4 py-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-full bg-brand-600 flex items-center justify-center shrink-0">
+                <div className="w-7 h-7 rounded-full bg-gray-700 dark:bg-gray-600 flex items-center justify-center shrink-0">
                   <span className="text-xs font-bold text-white leading-none">
                     {(session.user.name ?? session.user.email ?? "?")[0].toUpperCase()}
                   </span>

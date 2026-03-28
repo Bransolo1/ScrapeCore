@@ -75,7 +75,7 @@ function SignupForm() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-surface-50 px-4">
       {/* Subtle background pattern */}
-      <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(99,102,241,0.06),transparent_50%)]" />
+      <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(249,115,22,0.06),transparent_50%)]" />
 
       <div className="w-full max-w-sm relative">
         {/* Logo */}
