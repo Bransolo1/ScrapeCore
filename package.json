@@ -4,22 +4,13 @@
   "version": "1.0.0",
   "description": "COM-B behavioural insight platform — scrapes web, reviews, social + RSS; analyses with Claude AI",
   "private": true,
-  "main": "electron/main.js",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
-    "postinstall": "prisma generate",
-    "electron:dev": "concurrently \"next dev\" \"wait-on http://127.0.0.1:3000 && electron .\"",
-    "build:next": "next build",
-    "build:copy-standalone": "node scripts/copy-standalone.js",
-    "build:desktop": "npm run build:next && npm run build:copy-standalone",
-    "dist:win": "npm run build:desktop && electron-builder --win --x64",
-    "dist:mac": "npm run build:desktop && electron-builder --mac",
-    "dist:linux": "npm run build:desktop && electron-builder --linux",
-    "dist": "npm run build:desktop && electron-builder"
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.37.0",
@@ -43,78 +34,13 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "autoprefixer": "^10.4.20",
-    "concurrently": "^9.1.2",
     "dotenv": "^16.6.1",
-    "electron": "^33.4.1",
-    "electron-builder": "^25.1.8",
     "eslint": "^8.57.1",
     "eslint-config-next": "^14.2.29",
     "postcss": "^8.4.49",
     "prisma": "^7.5.0",
     "tailwindcss": "^3.4.17",
     "typescript": "^5",
-    "vitest": "^4.1.0",
-    "wait-on": "^8.0.2"
-  },
-  "build": {
-    "appId": "com.scrapecore.app",
-    "productName": "ScrapeCore",
-    "copyright": "Copyright © 2024 ScrapeCore",
-    "directories": {
-      "output": "dist-desktop"
-    },
-    "asar": false,
-    "files": [
-      "electron/**/*",
-      "package.json",
-      {
-        "from": ".next/standalone",
-        "to": ".next/standalone",
-        "filter": [
-          "**/*",
-          "!dev.db",
-          "!*.db-shm",
-          "!*.db-wal"
-        ]
-      }
-    ],
-    "mac": {
-      "category": "public.app-category.productivity",
-      "target": [
-        {
-          "target": "dmg",
-          "arch": [
-            "x64",
-            "arm64"
-          ]
-        }
-      ]
-    },
-    "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        }
-      ]
-    },
-    "linux": {
-      "target": [
-        {
-          "target": "AppImage",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "category": "Utility"
-    },
-    "nsis": {
-      "oneClick": true,
-      "perMachine": false,
-      "artifactName": "${productName}-Setup-${version}.${ext}"
-    }
+    "vitest": "^4.1.0"
   }
 }

@@ -8,7 +8,7 @@
 
 ## What We're Doing
 
-Right now ScrapeCore only runs on your computer. We're going to put it on the internet so anyone with the link can use it. Two free services make this happen:
+This guide walks you through deploying ScrapeCore to the web. Two free services make this happen:
 
 - **Vercel** — hosts the app (like a free web server that runs Next.js apps)
 - **Turso** — hosts the database (like a free cloud version of your SQLite file)

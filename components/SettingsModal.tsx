@@ -7,17 +7,6 @@ interface SettingsModalProps {
   initialProvider?: string;
 }
 
-declare global {
-  interface Window {
-    electronAPI?: {
-      getApiKey: () => Promise<string>;
-      applyApiKey: (key: string) => Promise<boolean>;
-    };
-  }
-}
-
-const isElectron = typeof window !== "undefined" && !!window.electronAPI;
-
 interface KeyInfo {
   provider: string;
   hint: string;
@@ -286,10 +275,6 @@ export default function SettingsModal({ onClose, initialProvider }: SettingsModa
       if (!res.ok) {
         setError(data.error ?? "Failed to save key");
         return;
-      }
-
-      if (isElectron && provider === "anthropic") {
-        await window.electronAPI!.applyApiKey(trimmed);
       }
 
       setSuccessProvider(provider);
