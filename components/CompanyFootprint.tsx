@@ -26,7 +26,7 @@ const INITIAL_TASKS: Record<string, TaskState> = {
   trustpilot: { label: "Trustpilot reviews", status: "idle", count: 0 },
   appstore: { label: "App Store reviews", status: "idle", count: 0 },
   googleplay: { label: "Google Play reviews", status: "idle", count: 0 },
-  search: { label: "Web search (DuckDuckGo)", status: "idle", count: 0 },
+  search: { label: "Web search", status: "idle", count: 0 },
   rss: { label: "Industry RSS feeds", status: "idle", count: 0 },
 };
 
@@ -254,7 +254,7 @@ export default function CompanyFootprint({ onSourcesReady, discovery }: CompanyF
       })());
     }
 
-    // 5. DuckDuckGo web search
+    // 5. Web search (multi-provider: Brave → SearXNG → DuckDuckGo)
     taskRunners.push((async () => {
       setTask("search", { status: "running" });
       try {
@@ -269,13 +269,17 @@ export default function CompanyFootprint({ onSourcesReady, discovery }: CompanyF
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ queries, limit: 8 }),
         });
-        const data = await res.json() as { results?: WebSearchResult[]; error?: string };
+        const data = await res.json() as { results?: WebSearchResult[]; provider?: string; error?: string };
         if (data.error) throw new Error(data.error);
         const items = (data.results ?? []).map((r, i) => webSearchToSource(r, i));
+        const providerLabel = data.provider && data.provider !== "none"
+          ? data.provider.charAt(0).toUpperCase() + data.provider.slice(1)
+          : "Web";
         allSources.push(...items);
-        setTask("search", { status: "done", count: items.length });
+        setTask("search", { status: "done", count: items.length, error: items.length > 0 ? undefined : `No results (via ${providerLabel})` });
       } catch (err) {
-        setTask("search", { status: "error", error: err instanceof Error ? err.message : "Failed" });
+        const msg = err instanceof Error ? err.message : "Failed";
+        setTask("search", { status: "error", error: `${msg}. Try adding a Brave Search API key in Settings.` });
       }
     })());
 
