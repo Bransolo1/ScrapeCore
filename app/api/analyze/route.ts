@@ -41,6 +41,7 @@ import { appendEvalLog } from "@/lib/evalLog";
 import { buildProjectMemoryBlock } from "@/lib/projectMemory";
 import { validateCSRF } from "@/lib/csrf";
 import { resolveApiKey } from "@/lib/resolveApiKey";
+import { checkBudget, incrementUsage } from "@/lib/costGuard";
 
 function parseAnalysis(text: string): BehaviourAnalysis | null {
   let raw: unknown;
@@ -161,6 +162,15 @@ export async function POST(req: Request) {
       return Response.json({ error: "No Anthropic API key configured. Add your key in Settings.", code: "no_api_key" }, { status: 503 });
     }
 
+    // Budget check — block if Anthropic monthly budget exceeded
+    const budget = await checkBudget(sessionUserId, "anthropic");
+    if (!budget.allowed) {
+      return Response.json(
+        { error: `Monthly Anthropic budget exceeded ($${((budget.limit ?? 0) / 100).toFixed(2)}). Adjust in Settings > Cost Controls.`, code: "budget_exceeded" },
+        { status: 402 }
+      );
+    }
+
     const { text, dataType, actor, piiDetected: clientPiiFlag, projectContext, project } = (await req.json()) as {
       text: string;
       dataType: DataType;
@@ -228,6 +238,9 @@ export async function POST(req: Request) {
           const outputTokens = finalMessage.usage.output_tokens;
           const durationMs = Date.now() - startMs;
           const wasTruncated = finalMessage.stop_reason === "max_tokens";
+
+          // Track Anthropic usage for budget enforcement
+          incrementUsage(sessionUserId, "anthropic", inputTokens + outputTokens);
 
           const analysis = parseAnalysis(fullText);
 

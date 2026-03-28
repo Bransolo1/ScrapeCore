@@ -9,6 +9,8 @@ import { usePlainMode } from "./PlainModeToggle";
 import SettingsModal from "./SettingsModal";
 import Logo from "./Logo";
 
+const SHOW_ADVANCED = process.env.NEXT_PUBLIC_SHOW_ADVANCED_FEATURES === "true";
+
 const NAV_GROUPS: { items: { href: string; label: string; title: string }[] }[] = [
   {
     items: [
@@ -18,16 +20,18 @@ const NAV_GROUPS: { items: { href: string; label: string; title: string }[] }[] 
   {
     items: [
       { href: "/dashboard",  label: "Dashboard",         title: "See patterns across all your analyses" },
-      { href: "/compare",    label: "Compare",            title: "Diff two analyses to spot competitive gaps" },
-      { href: "/monitoring", label: "Track Competitors",  title: "Set up automated competitor scraping on a schedule" },
+      ...(SHOW_ADVANCED ? [
+        { href: "/compare",    label: "Compare",            title: "Diff two analyses to spot competitive gaps" },
+        { href: "/monitoring", label: "Track Competitors",  title: "Set up automated competitor scraping on a schedule" },
+      ] : []),
     ],
   },
-  {
+  ...(SHOW_ADVANCED ? [{
     items: [
       { href: "/eval",  label: "Quality Lab", title: "Score and validate your analysis quality" },
       { href: "/audit", label: "Audit Log",   title: "Full trail of who ran what and when" },
     ],
-  },
+  }] : []),
 ];
 
 const ALL_NAV_ITEMS = NAV_GROUPS.flatMap((g) => g.items);

@@ -53,8 +53,11 @@ export default function UrlScraper({ onSourcesReady }: UrlScraperProps) {
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        const msg = err.code === "budget_exceeded"
+          ? `${err.error ?? "Budget exceeded"} Open Settings > Cost Controls to adjust.`
+          : err.error ?? "Failed";
         setStatuses((prev) =>
-          prev.map((s) => ({ ...s, status: "error", message: err.error ?? "Failed" }))
+          prev.map((s) => ({ ...s, status: "error", message: msg }))
         );
         return;
       }

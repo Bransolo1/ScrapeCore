@@ -35,7 +35,9 @@ const INITIAL_STATE: AnalysisState = {
   durationMs: null,
 };
 
-const MODE_TABS: { id: InputMode; label: string; hint: string; group: "web" | "upload" | "advanced"; icon: React.ReactNode }[] = [
+const SHOW_ADVANCED = process.env.NEXT_PUBLIC_SHOW_ADVANCED_FEATURES === "true";
+
+const ALL_MODE_TABS: { id: InputMode; label: string; hint: string; group: "web" | "upload" | "advanced"; icon: React.ReactNode }[] = [
   {
     id: "scrape",
     label: "Scrape URLs",
@@ -93,10 +95,15 @@ const MODE_TABS: { id: InputMode; label: string; hint: string; group: "web" | "u
   },
 ];
 
+// Core modes always visible; footprint + batch gated behind feature flag
+const MODE_TABS = SHOW_ADVANCED
+  ? ALL_MODE_TABS
+  : ALL_MODE_TABS.filter((m) => m.id !== "footprint" && m.id !== "batch");
+
 const MODE_GROUPS: { key: string; label: string }[] = [
   { key: "web", label: "Web Intelligence" },
   { key: "upload", label: "Your Data" },
-  { key: "advanced", label: "Advanced" },
+  ...(SHOW_ADVANCED ? [{ key: "advanced", label: "Advanced" }] : []),
 ];
 
 function getActor(): string {
@@ -212,6 +219,11 @@ export default function Home() {
         if (err.code === "no_api_key") {
           openSettings("anthropic");
           setAnalysisState(INITIAL_STATE);
+          return;
+        }
+        if (err.code === "budget_exceeded") {
+          openSettings("anthropic");
+          setAnalysisState({ status: "error", streamingText: "", analysis: null, error: err.error ?? "Budget exceeded", durationMs: null });
           return;
         }
         setAnalysisState({ status: "error", streamingText: "", analysis: null, error: err.error ?? "Unknown error", durationMs: null });
