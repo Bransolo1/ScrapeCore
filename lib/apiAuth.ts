@@ -4,7 +4,7 @@ import { authOptions } from "./auth";
 /**
  * Enforce authentication on API routes.
  * Returns the authenticated user's ID, or a 401 Response if unauthenticated.
- * When SKIP_AUTH=true (Electron/dev), returns "anonymous".
+ * When SKIP_AUTH=true (local dev), returns "anonymous".
  */
 export async function requireAuth(): Promise<{ userId: string } | Response> {
   if (process.env.SKIP_AUTH === "true") {

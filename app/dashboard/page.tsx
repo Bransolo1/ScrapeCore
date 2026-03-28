@@ -534,7 +534,7 @@ export default function DashboardPage() {
             )}
 
             {/* CTA */}
-            <div className="bg-gradient-to-r from-brand-600 to-amber-700 rounded-2xl p-6 flex items-center justify-between gap-4">
+            <div className="bg-gradient-to-r from-gray-800 to-gray-900 rounded-2xl p-6 flex items-center justify-between gap-4">
               <div>
                 <h3 className="text-white font-semibold text-base">Ready to go deeper?</h3>
                 <p className="text-brand-200 text-sm mt-0.5">

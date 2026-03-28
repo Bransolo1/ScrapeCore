@@ -41,7 +41,7 @@ export async function resolveApiKey(
 
   // 2. Platform env var
   if (provider === "anthropic") {
-    // Use existing getApiKey() which handles Electron env file fallback
+    // Use existing getApiKey() for platform env var
     const envKey = getApiKey();
     if (envKey) return { key: envKey, source: "platform" };
   } else {

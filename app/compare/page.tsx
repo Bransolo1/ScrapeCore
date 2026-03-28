@@ -307,7 +307,7 @@ function ComparePageInner() {
             <div className="w-6 h-6 border-2 border-brand-200 border-t-brand-600 rounded-full animate-spin" />
           </div>
         ) : allAnalyses.length < 2 ? (
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800 dark:text-amber-200">
             You need at least 2 saved analyses to compare. Run a second analysis first.
           </div>
         ) : (

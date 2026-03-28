@@ -1,8 +1,7 @@
 # ScrapeCore — Session Context Tracker
 
-**Last updated:** 2026-03-18
-**Branch:** `claude/cloud-migration-plan-3jLo8`
-**Goal:** Convert desktop/local app → free web-hosted app
+**Last updated:** 2026-03-28
+**Goal:** Behavioural market intelligence web platform
 
 ---
 
@@ -14,19 +13,18 @@ A **behavioural market intelligence platform** that converts qualitative text (i
 
 ---
 
-## Current Architecture
+## Architecture
 
 | Layer | Technology | Notes |
 |---|---|---|
-| Framework | Next.js 14 (App Router, SSE streaming) | `output: "standalone"` in next.config |
+| Framework | Next.js 14 (App Router, SSE streaming) | Conditional `output: "standalone"` for Docker |
 | AI | Anthropic Claude Opus 4.6 via `@anthropic-ai/sdk` | User provides own API key |
-| Desktop | Electron 33 + electron-builder | Wraps Next.js standalone server |
-| Database | **SQLite** via Prisma 7 + `@prisma/adapter-libsql` | `lib/db.ts` already supports `libsql://` URLs (Turso) |
-| Auth | NextAuth.js credentials + JWT | `SKIP_AUTH=true` for Electron |
+| Database | **SQLite** via Prisma 7 + `@prisma/adapter-libsql` | Supports `libsql://` URLs (Turso) for cloud hosting |
+| Auth | NextAuth.js credentials + JWT | `SKIP_AUTH=true` for local dev |
 | Styling | Tailwind CSS | |
 | Charts | Recharts | |
 | Tests | Vitest (12 unit tests) | |
-| CI | GitHub Actions | Typecheck + tests on PR; release build on `v*` tags |
+| CI | GitHub Actions | Typecheck + tests on PR |
 
 ---
 
@@ -34,11 +32,11 @@ A **behavioural market intelligence platform** that converts qualitative text (i
 
 | File | Purpose |
 |---|---|
-| `lib/db.ts` | Prisma client init — **already handles `libsql://` for Turso** |
+| `lib/db.ts` | Prisma client init — handles `libsql://` for Turso |
 | `prisma/schema.prisma` | SQLite provider, 7 models (User, Organisation, Analysis, CompetitorMonitor, AnalysisCorrection, RateLimit, AuditLog) |
 | `middleware.ts` | NextAuth route protection |
 | `lib/getApiKey.ts` | API key retrieval |
-| `next.config.mjs` | `output: "standalone"` |
+| `next.config.mjs` | Conditional `output: "standalone"` for Docker |
 | `docker-compose.yml` | Docker setup with SQLite volume |
 | `Dockerfile` | Multi-stage Node 20 Alpine build |
 | `.env.local.example` | Env var template |
@@ -77,23 +75,11 @@ A **behavioural market intelligence platform** that converts qualitative text (i
 
 ---
 
-## What's Already Web-Ready
+## Deployment Options
 
-1. `lib/db.ts` supports `libsql://` URLs → Turso works with zero code changes
-2. NextAuth.js auth is fully built
-3. Dockerfile exists and works
-4. Docker-compose has env var injection
-5. SSE streaming works over HTTP
-6. All API routes are standard Next.js route handlers
-
-## What Needs Changing for Web Hosting
-
-1. **Database:** SQLite file → Turso (hosted libsql) — just change DATABASE_URL
-2. **Prisma schema:** May need `driver = "libsql"` adapter config
-3. **next.config.mjs:** Remove `output: "standalone"` for Vercel (Vercel handles this)
-4. **Environment variables:** Set in Vercel dashboard instead of .env files
-5. **Monitoring/cron:** CompetitorMonitor scheduled jobs need Vercel Cron or similar
-6. **File storage:** No persistent filesystem on Vercel — but app doesn't write files (SQLite was the only concern, solved by Turso)
+1. **Vercel + Turso** (recommended) — free cloud hosting, see `DEPLOY_GUIDE.md`
+2. **Docker** — self-hosted team instance via `docker-compose`
+3. **Local dev** — `npm run dev` with local SQLite
 
 ---
 
@@ -105,3 +91,4 @@ A **behavioural market intelligence platform** that converts qualitative text (i
 | 2026-03-18 | Implemented all code changes for Vercel + Turso hosting. 12/12 tests pass, typecheck clean. |
 | 2026-03-18 | Added DEPLOY_GUIDE.md — plain English step-by-step deployment walkthrough. |
 | 2026-03-18 | Updated prisma.config.ts for Turso adapter support. Added /api/setup endpoint for terminal-free DB setup. Updated deploy guide to be fully terminal-free. |
+| 2026-03-28 | Removed all Electron/desktop app code. ScrapeCore is now a web-only platform. |
